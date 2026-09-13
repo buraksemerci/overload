@@ -1,0 +1,1 @@
+﻿"""Seed verisi ve yükleyici."""

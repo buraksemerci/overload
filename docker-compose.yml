@@ -1,0 +1,45 @@
+# Yerel geliştirme veritabanı.
+#   docker compose up -d        -> Postgres 17 ayağa kalkar
+#   docker compose down         -> durdurur (veri kalır)
+#   docker compose down -v      -> veriyi de siler
+#
+# Neon ile aynı major sürüm kullanılıyor ki migration'lar birebir aynı davransın.
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: overload-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: overload
+      POSTGRES_PASSWORD: overload
+      POSTGRES_DB: overload
+    ports:
+      - "5432:5432"
+    volumes:
+      - overload-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U overload -d overload"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Testler ayrı bir veritabanında koşar; geliştirme verisini kirletmez.
+  db-test:
+    image: postgres:17-alpine
+    container_name: overload-db-test
+    environment:
+      POSTGRES_USER: overload
+      POSTGRES_PASSWORD: overload
+      POSTGRES_DB: overload_test
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data # test verisi diske yazılmaz, hızlı
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U overload -d overload_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  overload-pgdata:

@@ -1,0 +1,51 @@
+# --- Gizli bilgiler (asla commit'lenmez) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- Python / FastAPI ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# --- Node / Next.js ---
+node_modules/
+.next/
+out/
+build/
+dist/
+.turbo/
+*.tsbuildinfo
+.pnpm-store/
+
+# --- Test / araçlar ---
+playwright-report/
+test-results/
+.vitest/
+
+# --- Editör / OS ---
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Üretilen tipler (openapi-typescript çıktısı; CI'da yeniden üretilir) ---
+packages/shared-types/src/api.d.ts
+
+# --- Yerel veri ---
+*.sqlite
+*.db
+/tmp/

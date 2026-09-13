@@ -23,7 +23,7 @@ class TestAge:
     @pytest.mark.parametrize(
         ("birth", "today", "expected"),
         [
-            (date(2000, 1, 1), date(2026, 1, 1), 26),   # tam doğum günü
+            (date(2000, 1, 1), date(2026, 1, 1), 26),  # tam doğum günü
             (date(2000, 6, 15), date(2026, 6, 14), 25),  # bir gün öncesi
             (date(2000, 6, 15), date(2026, 6, 15), 26),
             (date(2000, 12, 31), date(2026, 1, 1), 25),  # yıl farkı yanıltmasın
@@ -48,9 +48,7 @@ class TestBMR:
         """Formülün cinsiyete göre farklı sabiti var; ortalama almak kimseyi
         doğru temsil etmez. Hesap yapılamıyorsa açıkça None dönmeli."""
         assert (
-            bmr_mifflin_st_jeor(
-                weight_kg=D("70"), height_cm=175, age=30, sex=Sex.unspecified
-            )
+            bmr_mifflin_st_jeor(weight_kg=D("70"), height_cm=175, age=30, sex=Sex.unspecified)
             is None
         )
 

@@ -13,10 +13,14 @@ export default function NutritionPage() {
         "Kalan makrolara göre öğün önerisi",
       ]}
       endpoints={[
-        "GET  /nutrition/day/{date}  — günlük log ve toplamlar",
-        "POST /nutrition/barcode     — barkodla ürün ara",
-        "GET  /nutrition/tdee        — hesaplanan hedef",
-        "POST /chat/stream           — metin/fotoğrafla AI girişi",
+        "GET  /nutrition/day           — günlük log, toplamlar, kalan makrolar",
+        "POST /nutrition/log           — öğün kalemi ekle",
+        "GET  /nutrition/target        — TDEE + makro hedefi (Mifflin-St Jeor)",
+        "GET  /foods/search            — USDA + önbellek araması",
+        "GET  /foods/barcode/{barcode} — Open Food Facts",
+        "POST /bodyweight              — günlük kilo (gün başına tek kayıt)",
+        "GET  /bodyweight/trend        — 7 günlük hareketli ortalamalı trend",
+        "POST /chat/stream             — metin/fotoğrafla AI girişi",
       ]}
     />
   );

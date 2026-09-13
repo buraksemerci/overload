@@ -19,6 +19,9 @@ from overload_api.config import get_settings
 from overload_api.core.security import auth_backend, fastapi_users
 from overload_api.db.session import dispose_engine
 from overload_api.features.chat.router import router as chat_router
+from overload_api.features.nutrition.router import router as nutrition_router
+from overload_api.features.programs.router import router as programs_router
+from overload_api.features.workouts.router import router as workouts_router
 
 settings = get_settings()
 logging.basicConfig(level=settings.log_level)
@@ -90,4 +93,7 @@ app.include_router(
 )
 
 # --- Özellik router'ları -----------------------------------------------------
+app.include_router(programs_router)
+app.include_router(workouts_router)
+app.include_router(nutrition_router)
 app.include_router(chat_router)

@@ -11,7 +11,7 @@ interface Props {
   description: string;
   /** Bu ekran bittiğinde ne yapacak — madde madde. */
   planned: string[];
-  /** Hangi backend endpoint'lerine bağlanacak. */
+  /** Bağlanacağı backend endpoint'leri. Bunlar CANLI — sadece arayüz eksik. */
   endpoints?: string[];
 }
 
@@ -25,7 +25,7 @@ export function PagePlaceholder({ title, description, planned, endpoints }: Prop
 
       <section className="card p-4">
         <p className="text-2xs uppercase tracking-wide text-[var(--color-warning)]">
-          Henüz bağlanmadı
+          Arayüz bağlanmadı — API hazır
         </p>
         <h2 className="mt-2 text-base font-medium">Bu ekranda olacaklar</h2>
         <ul className="mt-3 space-y-2">
@@ -40,7 +40,7 @@ export function PagePlaceholder({ title, description, planned, endpoints }: Prop
         {endpoints && endpoints.length > 0 && (
           <>
             <h3 className="mt-5 text-xs font-medium text-[var(--color-ink-muted)]">
-              Bağlanacağı endpoint&apos;ler
+              Bağlanacağı endpoint&apos;ler (çalışıyor)
             </h3>
             <ul className="mt-2 space-y-1">
               {endpoints.map((endpoint) => (

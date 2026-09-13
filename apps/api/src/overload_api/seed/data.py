@@ -173,7 +173,11 @@ USER_PROGRAM = ProgramSeed(
             "Pazartesi — Göğüs / Omuz / Triceps",
             (
                 PxSeed("Plate Loaded Chest Press", 2, 5, 6, "rir1"),
-                PxSeed("Smith Machine Low Incline Row", 1, 6, 8, "failure"),
+                # Kaynak JSON'da "Smith machine low incline ROW" yazıyordu. Günün
+                # geri kalanı tamamen it (göğüs/omuz/triceps) ve Cuma gününde aynı
+                # hareket "PRESS" olarak geçiyor; kullanıcı yazım hatası olduğunu
+                # doğruladı. "Row" kütüphanede duruyor, sadece bu satır düzeltildi.
+                PxSeed("Smith Machine Low Incline Press", 1, 6, 8, "failure"),
                 PxSeed("Chest Fly Machine", 2, 6, 8, "rir1"),
                 PxSeed("Shoulder Press Machine", 3, 8, 10, "failure"),
                 PxSeed("Lateral Raise", 2, 6, 8, "rir1"),

@@ -19,6 +19,121 @@
         "title": "BearerResponse",
         "type": "object"
       },
+      "BodyWeightIn": {
+        "properties": {
+          "body_fat_pct": {
+            "anyOf": [
+              {
+                "maximum": 70.0,
+                "minimum": 1.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body Fat Pct"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "weight_kg": {
+            "anyOf": [
+              {
+                "maximum": 400.0,
+                "minimum": 20.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Weight Kg"
+          }
+        },
+        "required": [
+          "weight_kg"
+        ],
+        "title": "BodyWeightIn",
+        "type": "object"
+      },
+      "BodyWeightOut": {
+        "properties": {
+          "body_fat_pct": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body Fat Pct"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "weight_kg": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Weight Kg",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "date",
+          "weight_kg",
+          "body_fat_pct",
+          "notes"
+        ],
+        "title": "BodyWeightOut",
+        "type": "object"
+      },
       "Body_auth_jwt_login_auth_jwt_login_post": {
         "properties": {
           "client_id": {
@@ -186,6 +301,120 @@
         "title": "ChatRole",
         "type": "string"
       },
+      "CompleteOut": {
+        "properties": {
+          "new_records": {
+            "items": {
+              "$ref": "#/components/schemas/RecordOut"
+            },
+            "title": "New Records",
+            "type": "array"
+          },
+          "session": {
+            "$ref": "#/components/schemas/SessionOut"
+          }
+        },
+        "required": [
+          "session",
+          "new_records"
+        ],
+        "title": "CompleteOut",
+        "type": "object"
+      },
+      "DayOut": {
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NutritionLogOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "remaining": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DayTotals"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MacroTargetOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "totals": {
+            "$ref": "#/components/schemas/DayTotals"
+          }
+        },
+        "required": [
+          "date",
+          "items",
+          "totals",
+          "target",
+          "remaining"
+        ],
+        "title": "DayOut",
+        "type": "object"
+      },
+      "DayTotals": {
+        "properties": {
+          "calories": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Calories",
+            "type": "string"
+          },
+          "carbs_g": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Carbs G",
+            "type": "string"
+          },
+          "fat_g": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Fat G",
+            "type": "string"
+          },
+          "protein_g": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Protein G",
+            "type": "string"
+          }
+        },
+        "required": [
+          "calories",
+          "protein_g",
+          "carbs_g",
+          "fat_g"
+        ],
+        "title": "DayTotals",
+        "type": "object"
+      },
+      "Equipment": {
+        "enum": [
+          "barbell",
+          "dumbbell",
+          "machine",
+          "plate_loaded",
+          "smith_machine",
+          "cable",
+          "bodyweight",
+          "other"
+        ],
+        "title": "Equipment",
+        "type": "string"
+      },
       "ErrorModel": {
         "properties": {
           "detail": {
@@ -208,6 +437,121 @@
         ],
         "title": "ErrorModel",
         "type": "object"
+      },
+      "ExerciseOut": {
+        "properties": {
+          "equipment": {
+            "$ref": "#/components/schemas/Equipment"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_custom": {
+            "title": "Is Custom",
+            "type": "boolean"
+          },
+          "is_unilateral": {
+            "title": "Is Unilateral",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "primary_muscles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Primary Muscles",
+            "type": "array"
+          },
+          "secondary_muscles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Secondary Muscles",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "equipment",
+          "is_custom",
+          "is_unilateral"
+        ],
+        "title": "ExerciseOut",
+        "type": "object"
+      },
+      "FoodOut": {
+        "properties": {
+          "brand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand"
+          },
+          "calories_per_100g": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Calories Per 100G",
+            "type": "string"
+          },
+          "carbs_g": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Carbs G",
+            "type": "string"
+          },
+          "fat_g": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Fat G",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "protein_g": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Protein G",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/FoodSource"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "brand",
+          "source",
+          "calories_per_100g",
+          "protein_g",
+          "carbs_g",
+          "fat_g"
+        ],
+        "title": "FoodOut",
+        "type": "object"
+      },
+      "FoodSource": {
+        "enum": [
+          "usda",
+          "open_food_facts",
+          "manual"
+        ],
+        "title": "FoodSource",
+        "type": "string"
       },
       "HTTPValidationError": {
         "properties": {
@@ -244,6 +588,234 @@
         ],
         "title": "Health",
         "type": "object"
+      },
+      "IntensityTechnique": {
+        "description": "Seed verisindeki `yontem` alanının karşılığı.",
+        "enum": [
+          "straight",
+          "rir1",
+          "failure",
+          "rir1_to_failure",
+          "superset_failure",
+          "drop_set",
+          "myo_reps"
+        ],
+        "title": "IntensityTechnique",
+        "type": "string"
+      },
+      "MacroTargetOut": {
+        "properties": {
+          "bmr": {
+            "title": "Bmr",
+            "type": "integer"
+          },
+          "calories": {
+            "title": "Calories",
+            "type": "integer"
+          },
+          "carbs_g": {
+            "title": "Carbs G",
+            "type": "integer"
+          },
+          "fat_g": {
+            "title": "Fat G",
+            "type": "integer"
+          },
+          "floor_applied": {
+            "title": "Floor Applied",
+            "type": "boolean"
+          },
+          "protein_g": {
+            "title": "Protein G",
+            "type": "integer"
+          },
+          "tdee": {
+            "title": "Tdee",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "calories",
+          "protein_g",
+          "carbs_g",
+          "fat_g",
+          "bmr",
+          "tdee",
+          "floor_applied"
+        ],
+        "title": "MacroTargetOut",
+        "type": "object"
+      },
+      "MealType": {
+        "enum": [
+          "breakfast",
+          "lunch",
+          "dinner",
+          "snack"
+        ],
+        "title": "MealType",
+        "type": "string"
+      },
+      "MuscleVolumeOut": {
+        "properties": {
+          "name_tr": {
+            "title": "Name Tr",
+            "type": "string"
+          },
+          "region": {
+            "title": "Region",
+            "type": "string"
+          },
+          "sets": {
+            "title": "Sets",
+            "type": "number"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "svg_id": {
+            "title": "Svg Id",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "slug",
+          "name_tr",
+          "svg_id",
+          "region",
+          "sets",
+          "target"
+        ],
+        "title": "MuscleVolumeOut",
+        "type": "object"
+      },
+      "NutritionGoal": {
+        "enum": [
+          "cut",
+          "maintain",
+          "bulk"
+        ],
+        "title": "NutritionGoal",
+        "type": "string"
+      },
+      "NutritionLogIn": {
+        "properties": {
+          "date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "food_database_entry_id": {
+            "format": "uuid",
+            "title": "Food Database Entry Id",
+            "type": "string"
+          },
+          "meal_type": {
+            "$ref": "#/components/schemas/MealType"
+          },
+          "quantity_g": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 10000.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Quantity G"
+          }
+        },
+        "required": [
+          "food_database_entry_id",
+          "quantity_g",
+          "meal_type"
+        ],
+        "title": "NutritionLogIn",
+        "type": "object"
+      },
+      "NutritionLogOut": {
+        "properties": {
+          "calories": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Calories",
+            "type": "string"
+          },
+          "carbs_g": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Carbs G",
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "fat_g": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Fat G",
+            "type": "string"
+          },
+          "food": {
+            "$ref": "#/components/schemas/FoodOut"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "meal_type": {
+            "$ref": "#/components/schemas/MealType"
+          },
+          "protein_g": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Protein G",
+            "type": "string"
+          },
+          "quantity_g": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Quantity G",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "date",
+          "meal_type",
+          "quantity_g",
+          "food",
+          "calories",
+          "protein_g",
+          "carbs_g",
+          "fat_g"
+        ],
+        "title": "NutritionLogOut",
+        "type": "object"
+      },
+      "PRType": {
+        "description": "Kişisel rekor türleri. Dördü de ayrı kutlanır çünkü farklı şeyler ölçerler:\nağır tek set (max_weight), dayanıklılık (max_reps), toplam iş (session_volume),\nve ikisini birleştiren tahmini tek tekrar maksimumu (estimated_1rm).",
+        "enum": [
+          "max_weight",
+          "max_reps",
+          "session_volume",
+          "estimated_1rm"
+        ],
+        "title": "PRType",
+        "type": "string"
       },
       "PendingActionOut": {
         "properties": {
@@ -284,6 +856,1035 @@
           "created_at"
         ],
         "title": "PendingActionOut",
+        "type": "object"
+      },
+      "PlannedExerciseOut": {
+        "properties": {
+          "equipment": {
+            "title": "Equipment",
+            "type": "string"
+          },
+          "exercise_id": {
+            "format": "uuid",
+            "title": "Exercise Id",
+            "type": "string"
+          },
+          "last_session_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Session Summary"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "order_index": {
+            "title": "Order Index",
+            "type": "integer"
+          },
+          "program_exercise_id": {
+            "format": "uuid",
+            "title": "Program Exercise Id",
+            "type": "string"
+          },
+          "progression": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProgressionOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rest_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rest Seconds"
+          },
+          "superset_group": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superset Group"
+          },
+          "target_rep_max": {
+            "title": "Target Rep Max",
+            "type": "integer"
+          },
+          "target_rep_min": {
+            "title": "Target Rep Min",
+            "type": "integer"
+          },
+          "target_sets": {
+            "title": "Target Sets",
+            "type": "integer"
+          },
+          "technique": {
+            "$ref": "#/components/schemas/IntensityTechnique"
+          }
+        },
+        "required": [
+          "program_exercise_id",
+          "exercise_id",
+          "name",
+          "equipment",
+          "order_index",
+          "target_sets",
+          "target_rep_min",
+          "target_rep_max",
+          "technique",
+          "superset_group",
+          "rest_seconds",
+          "progression",
+          "last_session_summary"
+        ],
+        "title": "PlannedExerciseOut",
+        "type": "object"
+      },
+      "ProgramDayIn": {
+        "properties": {
+          "exercises": {
+            "items": {
+              "$ref": "#/components/schemas/ProgramExerciseIn"
+            },
+            "maxItems": 20,
+            "title": "Exercises",
+            "type": "array"
+          },
+          "label": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label"
+        ],
+        "title": "ProgramDayIn",
+        "type": "object"
+      },
+      "ProgramDayOut": {
+        "properties": {
+          "exercises": {
+            "items": {
+              "$ref": "#/components/schemas/ProgramExerciseOut"
+            },
+            "title": "Exercises",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "order_index": {
+            "title": "Order Index",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "order_index",
+          "label",
+          "exercises"
+        ],
+        "title": "ProgramDayOut",
+        "type": "object"
+      },
+      "ProgramDetailOut": {
+        "properties": {
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/ProgramDayOut"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "days_per_week": {
+            "title": "Days Per Week",
+            "type": "integer"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "goal": {
+            "$ref": "#/components/schemas/ProgramGoal"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "is_template": {
+            "title": "Is Template",
+            "type": "boolean"
+          },
+          "level": {
+            "$ref": "#/components/schemas/ProgramLevel"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "source_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Name"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "goal",
+          "level",
+          "days_per_week",
+          "is_template",
+          "is_active",
+          "source_name",
+          "source_url",
+          "days"
+        ],
+        "title": "ProgramDetailOut",
+        "type": "object"
+      },
+      "ProgramExerciseIn": {
+        "properties": {
+          "exercise_id": {
+            "format": "uuid",
+            "title": "Exercise Id",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "rest_seconds": {
+            "anyOf": [
+              {
+                "maximum": 900.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rest Seconds"
+          },
+          "superset_group": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superset Group"
+          },
+          "target_rep_max": {
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Target Rep Max",
+            "type": "integer"
+          },
+          "target_rep_min": {
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Target Rep Min",
+            "type": "integer"
+          },
+          "target_sets": {
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Target Sets",
+            "type": "integer"
+          },
+          "technique": {
+            "$ref": "#/components/schemas/IntensityTechnique",
+            "default": "straight"
+          }
+        },
+        "required": [
+          "exercise_id",
+          "target_sets",
+          "target_rep_min",
+          "target_rep_max"
+        ],
+        "title": "ProgramExerciseIn",
+        "type": "object"
+      },
+      "ProgramExerciseOut": {
+        "properties": {
+          "equipment": {
+            "$ref": "#/components/schemas/Equipment"
+          },
+          "exercise_id": {
+            "format": "uuid",
+            "title": "Exercise Id",
+            "type": "string"
+          },
+          "exercise_name": {
+            "title": "Exercise Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "order_index": {
+            "title": "Order Index",
+            "type": "integer"
+          },
+          "rest_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rest Seconds"
+          },
+          "superset_group": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superset Group"
+          },
+          "target_label": {
+            "title": "Target Label",
+            "type": "string"
+          },
+          "target_rep_max": {
+            "title": "Target Rep Max",
+            "type": "integer"
+          },
+          "target_rep_min": {
+            "title": "Target Rep Min",
+            "type": "integer"
+          },
+          "target_sets": {
+            "title": "Target Sets",
+            "type": "integer"
+          },
+          "technique": {
+            "$ref": "#/components/schemas/IntensityTechnique"
+          }
+        },
+        "required": [
+          "id",
+          "exercise_id",
+          "exercise_name",
+          "equipment",
+          "order_index",
+          "target_sets",
+          "target_rep_min",
+          "target_rep_max",
+          "technique",
+          "superset_group",
+          "rest_seconds",
+          "notes",
+          "target_label"
+        ],
+        "title": "ProgramExerciseOut",
+        "type": "object"
+      },
+      "ProgramGoal": {
+        "enum": [
+          "strength",
+          "hypertrophy",
+          "powerbuilding",
+          "general_fitness"
+        ],
+        "title": "ProgramGoal",
+        "type": "string"
+      },
+      "ProgramIn": {
+        "properties": {
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/ProgramDayIn"
+            },
+            "maxItems": 7,
+            "minItems": 1,
+            "title": "Days",
+            "type": "array"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "goal": {
+            "$ref": "#/components/schemas/ProgramGoal",
+            "default": "hypertrophy"
+          },
+          "level": {
+            "$ref": "#/components/schemas/ProgramLevel",
+            "default": "intermediate"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "days"
+        ],
+        "title": "ProgramIn",
+        "type": "object"
+      },
+      "ProgramLevel": {
+        "enum": [
+          "beginner",
+          "intermediate",
+          "advanced"
+        ],
+        "title": "ProgramLevel",
+        "type": "string"
+      },
+      "ProgramPatch": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "goal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProgramGoal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "level": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProgramLevel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "ProgramPatch",
+        "type": "object"
+      },
+      "ProgramSummaryOut": {
+        "properties": {
+          "days_per_week": {
+            "title": "Days Per Week",
+            "type": "integer"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "goal": {
+            "$ref": "#/components/schemas/ProgramGoal"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "is_template": {
+            "title": "Is Template",
+            "type": "boolean"
+          },
+          "level": {
+            "$ref": "#/components/schemas/ProgramLevel"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "source_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Name"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "goal",
+          "level",
+          "days_per_week",
+          "is_template",
+          "is_active",
+          "source_name",
+          "source_url"
+        ],
+        "title": "ProgramSummaryOut",
+        "type": "object"
+      },
+      "ProgressionOut": {
+        "properties": {
+          "alternative_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alternative Label"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "plateau_sessions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plateau Sessions"
+          },
+          "reps": {
+            "title": "Reps",
+            "type": "integer"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          },
+          "weight_kg": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Weight Kg",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "weight_kg",
+          "reps",
+          "label",
+          "message"
+        ],
+        "title": "ProgressionOut",
+        "type": "object"
+      },
+      "RecordOut": {
+        "properties": {
+          "exercise_id": {
+            "format": "uuid",
+            "title": "Exercise Id",
+            "type": "string"
+          },
+          "reps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reps"
+          },
+          "type": {
+            "$ref": "#/components/schemas/PRType"
+          },
+          "value": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "exercise_id",
+          "type",
+          "value",
+          "reps"
+        ],
+        "title": "RecordOut",
+        "type": "object"
+      },
+      "SessionOut": {
+        "properties": {
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_deload": {
+            "title": "Is Deload",
+            "type": "boolean"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "program_day_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Program Day Id"
+          },
+          "sets": {
+            "items": {
+              "$ref": "#/components/schemas/SetOut"
+            },
+            "title": "Sets",
+            "type": "array"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "program_day_id",
+          "started_at",
+          "completed_at",
+          "notes",
+          "is_deload"
+        ],
+        "title": "SessionOut",
+        "type": "object"
+      },
+      "SessionStart": {
+        "properties": {
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "program_day_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Program Day Id"
+          }
+        },
+        "title": "SessionStart",
+        "type": "object"
+      },
+      "SetIn": {
+        "properties": {
+          "exercise_id": {
+            "format": "uuid",
+            "title": "Exercise Id",
+            "type": "string"
+          },
+          "is_warmup": {
+            "default": false,
+            "title": "Is Warmup",
+            "type": "boolean"
+          },
+          "reps": {
+            "maximum": 200.0,
+            "minimum": 1.0,
+            "title": "Reps",
+            "type": "integer"
+          },
+          "rir": {
+            "anyOf": [
+              {
+                "maximum": 10.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rir"
+          },
+          "set_number": {
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Set Number",
+            "type": "integer"
+          },
+          "technique": {
+            "$ref": "#/components/schemas/IntensityTechnique",
+            "default": "straight"
+          },
+          "weight_kg": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Weight Kg"
+          }
+        },
+        "required": [
+          "exercise_id",
+          "set_number",
+          "weight_kg",
+          "reps"
+        ],
+        "title": "SetIn",
+        "type": "object"
+      },
+      "SetOut": {
+        "properties": {
+          "exercise_id": {
+            "format": "uuid",
+            "title": "Exercise Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_warmup": {
+            "title": "Is Warmup",
+            "type": "boolean"
+          },
+          "reps": {
+            "title": "Reps",
+            "type": "integer"
+          },
+          "rir": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rir"
+          },
+          "set_number": {
+            "title": "Set Number",
+            "type": "integer"
+          },
+          "technique": {
+            "$ref": "#/components/schemas/IntensityTechnique"
+          },
+          "weight_kg": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Weight Kg",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "exercise_id",
+          "set_number",
+          "weight_kg",
+          "reps",
+          "rir",
+          "is_warmup",
+          "technique"
+        ],
+        "title": "SetOut",
+        "type": "object"
+      },
+      "StreakOut": {
+        "properties": {
+          "intact_weeks": {
+            "title": "Intact Weeks",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "sessions_in_streak": {
+            "title": "Sessions In Streak",
+            "type": "integer"
+          },
+          "this_week_sessions": {
+            "title": "This Week Sessions",
+            "type": "integer"
+          },
+          "weekly_target": {
+            "title": "Weekly Target",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "intact_weeks",
+          "this_week_sessions",
+          "weekly_target",
+          "sessions_in_streak",
+          "label"
+        ],
+        "title": "StreakOut",
+        "type": "object"
+      },
+      "TodayOut": {
+        "properties": {
+          "active_session_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Session Id"
+          },
+          "day_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day Label"
+          },
+          "exercises": {
+            "items": {
+              "$ref": "#/components/schemas/PlannedExerciseOut"
+            },
+            "title": "Exercises",
+            "type": "array"
+          },
+          "is_deload_suggested": {
+            "title": "Is Deload Suggested",
+            "type": "boolean"
+          },
+          "program_day_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Program Day Id"
+          },
+          "program_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Program Name"
+          }
+        },
+        "required": [
+          "program_name",
+          "program_day_id",
+          "day_label",
+          "exercises",
+          "active_session_id",
+          "is_deload_suggested"
+        ],
+        "title": "TodayOut",
         "type": "object"
       },
       "UserCreate": {
@@ -525,6 +2126,39 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "WeightTrendPoint": {
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "moving_average": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moving Average"
+          },
+          "weight_kg": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Weight Kg",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "weight_kg",
+          "moving_average"
+        ],
+        "title": "WeightTrendPoint",
         "type": "object"
       }
     },
@@ -816,6 +2450,107 @@
         ]
       }
     },
+    "/bodyweight": {
+      "post": {
+        "description": "Günde tek kayıt — aynı gün tekrar gönderilirse üzerine yazılır.\nGün içi dalgalanma (su, yemek) trend çizgisini gürültüye boğuyor.",
+        "operationId": "log_bodyweight_bodyweight_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BodyWeightIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BodyWeightOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Log Bodyweight",
+        "tags": [
+          "nutrition"
+        ]
+      }
+    },
+    "/bodyweight/trend": {
+      "get": {
+        "operationId": "bodyweight_trend_bodyweight_trend_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 90,
+              "maximum": 365,
+              "minimum": 7,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WeightTrendPoint"
+                  },
+                  "title": "Response Bodyweight Trend Bodyweight Trend Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Bodyweight Trend",
+        "tags": [
+          "nutrition"
+        ]
+      }
+    },
     "/chat/messages": {
       "get": {
         "operationId": "list_messages_chat_messages_get",
@@ -1040,6 +2775,198 @@
         ]
       }
     },
+    "/exercises": {
+      "get": {
+        "operationId": "search_exercises_exercises_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "equipment",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Equipment"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Equipment"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ExerciseOut"
+                  },
+                  "title": "Response Search Exercises Exercises Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Search Exercises",
+        "tags": [
+          "programs",
+          "exercises"
+        ]
+      }
+    },
+    "/foods/barcode/{barcode}": {
+      "get": {
+        "description": "Barkod okuma (Bölüm 4.2) — Open Food Facts.",
+        "operationId": "lookup_barcode_foods_barcode__barcode__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "barcode",
+            "required": true,
+            "schema": {
+              "title": "Barcode",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FoodOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Lookup Barcode",
+        "tags": [
+          "nutrition",
+          "nutrition"
+        ]
+      }
+    },
+    "/foods/search": {
+      "get": {
+        "description": "Önbellekte arar, bulamazsa USDA'ya gider ve sonucu önbelleğe yazar.",
+        "operationId": "search_foods_foods_search_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 120,
+              "minLength": 2,
+              "title": "Q",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FoodOut"
+                  },
+                  "title": "Response Search Foods Foods Search Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Search Foods",
+        "tags": [
+          "nutrition",
+          "nutrition"
+        ]
+      }
+    },
     "/health": {
       "get": {
         "operationId": "health_health_get",
@@ -1058,6 +2985,613 @@
         "summary": "Health",
         "tags": [
           "meta"
+        ]
+      }
+    },
+    "/nutrition/day": {
+      "get": {
+        "operationId": "nutrition_day_nutrition_day_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "on",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "On"
+            }
+          },
+          {
+            "in": "query",
+            "name": "goal",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/NutritionGoal",
+              "default": "maintain"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DayOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Nutrition Day",
+        "tags": [
+          "nutrition"
+        ]
+      }
+    },
+    "/nutrition/log": {
+      "post": {
+        "operationId": "add_nutrition_log_nutrition_log_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NutritionLogIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NutritionLogOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Add Nutrition Log",
+        "tags": [
+          "nutrition"
+        ]
+      }
+    },
+    "/nutrition/log/{log_id}": {
+      "delete": {
+        "operationId": "delete_nutrition_log_nutrition_log__log_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "log_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Log Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Delete Nutrition Log",
+        "tags": [
+          "nutrition"
+        ]
+      }
+    },
+    "/nutrition/target": {
+      "get": {
+        "operationId": "nutrition_target_nutrition_target_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "goal",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/NutritionGoal",
+              "default": "maintain"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MacroTargetOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Nutrition Target",
+        "tags": [
+          "nutrition"
+        ]
+      }
+    },
+    "/programs": {
+      "get": {
+        "operationId": "list_programs_programs_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProgramSummaryOut"
+                  },
+                  "title": "Response List Programs Programs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Programs",
+        "tags": [
+          "programs"
+        ]
+      },
+      "post": {
+        "operationId": "create_program_programs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProgramIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Create Program",
+        "tags": [
+          "programs"
+        ]
+      }
+    },
+    "/programs/templates": {
+      "get": {
+        "description": "Hazır şablon kütüphanesi (bölüm 9). Salt-okunur; `source_name` zorunlu.",
+        "operationId": "list_templates_programs_templates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProgramSummaryOut"
+                  },
+                  "title": "Response List Templates Programs Templates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Templates",
+        "tags": [
+          "programs"
+        ]
+      }
+    },
+    "/programs/{program_id}": {
+      "delete": {
+        "operationId": "delete_program_programs__program_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "program_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Program Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Delete Program",
+        "tags": [
+          "programs"
+        ]
+      },
+      "get": {
+        "operationId": "get_program_programs__program_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "program_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Program Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Program",
+        "tags": [
+          "programs"
+        ]
+      },
+      "patch": {
+        "operationId": "update_program_programs__program_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "program_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Program Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProgramPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramSummaryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Program",
+        "tags": [
+          "programs"
+        ]
+      }
+    },
+    "/programs/{program_id}/activate": {
+      "post": {
+        "description": "Programı aktif yapar.\n\nÖnce diğerlerini pasifleştiriyoruz — veritabanındaki kısmi tekil indeks\n(`uq_program_one_active_per_owner`) ikinci bir aktif programa zaten izin\nvermez, ama o bir güvenlik ağı; doğru sırayı burada kuruyoruz ki kullanıcı\nanlamsız bir kısıt ihlali hatası görmesin.",
+        "operationId": "activate_program_programs__program_id__activate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "program_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Program Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramSummaryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Activate Program",
+        "tags": [
+          "programs"
+        ]
+      }
+    },
+    "/programs/{program_id}/clone": {
+      "post": {
+        "description": "Şablondan (ya da kendi programından) derin kopya çıkarır.\n\nŞablonlar salt-okunur olduğu için \"başlat\" demek kopyalamak demek. Kopya\n`cloned_from_id` ile kaynağa bağlanıyor; ileride \"şablon güncellendi,\nprogramını yenilemek ister misin\" gibi bir özellik bunu kullanabilir.",
+        "operationId": "clone_program_programs__program_id__clone_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "program_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Program Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Clone Program",
+        "tags": [
+          "programs"
+        ]
+      }
+    },
+    "/programs/{program_id}/days": {
+      "put": {
+        "description": "Programın gün/hareket ağacını tümüyle değiştirir.\n\nDrag & drop düzenleme için tek tek PATCH yerine tam değiştirme seçildi:\nsürükle-bırak sonrası sıra numaralarının yarısı değişiyor ve bunları tek\ntek göndermek hem çok istek hem de yarı-uygulanmış sıralama riski demek.\nTek istek, tek transaction, tutarlı sonuç.",
+        "operationId": "replace_days_programs__program_id__days_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "program_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Program Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "$ref": "#/components/schemas/ProgramDayIn"
+                },
+                "title": "Payload",
+                "type": "array"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Replace Days",
+        "tags": [
+          "programs"
         ]
       }
     },
@@ -1355,6 +3889,543 @@
         "summary": "Users:Patch User",
         "tags": [
           "account"
+        ]
+      }
+    },
+    "/workouts/muscle-volume": {
+      "get": {
+        "operationId": "muscle_volume_workouts_muscle_volume_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 7,
+              "maximum": 90,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MuscleVolumeOut"
+                  },
+                  "title": "Response Muscle Volume Workouts Muscle Volume Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Muscle Volume",
+        "tags": [
+          "workouts"
+        ]
+      }
+    },
+    "/workouts/progression/{exercise_id}": {
+      "get": {
+        "operationId": "exercise_progression_workouts_progression__exercise_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "exercise_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Exercise Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Exercise Progression",
+        "tags": [
+          "workouts"
+        ]
+      }
+    },
+    "/workouts/records": {
+      "get": {
+        "operationId": "list_records_workouts_records_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RecordOut"
+                  },
+                  "title": "Response List Records Workouts Records Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Records",
+        "tags": [
+          "workouts"
+        ]
+      }
+    },
+    "/workouts/sessions": {
+      "get": {
+        "operationId": "list_sessions_workouts_sessions_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SessionOut"
+                  },
+                  "title": "Response List Sessions Workouts Sessions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Sessions",
+        "tags": [
+          "workouts"
+        ]
+      },
+      "post": {
+        "description": "Yeni seans başlatır.\n\nYarım kalmış bir seans varsa yenisi açılmaz — kullanıcı ya onu bitirmeli ya\nda silmeli. İki açık seans, set kayıtlarının hangisine gideceğini belirsiz\nyapar ve ilerleme geçmişini bozar.",
+        "operationId": "start_session_workouts_sessions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionStart"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Start Session",
+        "tags": [
+          "workouts"
+        ]
+      }
+    },
+    "/workouts/sessions/{session_id}": {
+      "delete": {
+        "operationId": "delete_session_workouts_sessions__session_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Delete Session",
+        "tags": [
+          "workouts"
+        ]
+      },
+      "get": {
+        "operationId": "get_session_workouts_sessions__session_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Session",
+        "tags": [
+          "workouts"
+        ]
+      }
+    },
+    "/workouts/sessions/{session_id}/complete": {
+      "post": {
+        "description": "Seansı kapatır ve kırılan rekorları tespit eder.\n\nRekor tespiti kapanışta yapılıyor, her set kaydında değil: seans hacmi\nrekoru ancak tüm setler girildikten sonra hesaplanabilir.",
+        "operationId": "complete_session_workouts_sessions__session_id__complete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompleteOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Complete Session",
+        "tags": [
+          "workouts"
+        ]
+      }
+    },
+    "/workouts/sessions/{session_id}/sets": {
+      "post": {
+        "description": "Tek set kaydeder. Aynı slot tekrar gönderilirse üzerine yazılır —\nkullanıcı yanlış girip düzeltmek isteyebilir.",
+        "operationId": "log_set_workouts_sessions__session_id__sets_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Log Set",
+        "tags": [
+          "workouts"
+        ]
+      }
+    },
+    "/workouts/sets/{set_id}": {
+      "delete": {
+        "operationId": "delete_set_workouts_sets__set_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "set_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Set Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Delete Set",
+        "tags": [
+          "workouts"
+        ]
+      }
+    },
+    "/workouts/streak": {
+      "get": {
+        "operationId": "streak_workouts_streak_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreakOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Streak",
+        "tags": [
+          "workouts"
+        ]
+      }
+    },
+    "/workouts/today": {
+      "get": {
+        "description": "Bugünkü planlanan antrenman, her hareket için ilerleme önerisiyle.\n\nHangi günün sırada olduğu takvim gününe göre DEĞİL, tamamlanan seans\nsayısına göre belirlenir. Sebep: kullanıcı bir günü kaçırırsa programın\ntamamı kaymamalı, kaldığı yerden devam etmeli.",
+        "operationId": "todays_workout_workouts_today_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TodayOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Todays Workout",
+        "tags": [
+          "workouts"
         ]
       }
     }

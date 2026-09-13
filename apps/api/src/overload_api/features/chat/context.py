@@ -8,14 +8,15 @@ en son kullanıcı mesajına koyduğumuzda önek sabit kalır ve önbellekten ok
 
 from __future__ import annotations
 
-from datetime import UTC, date, timedelta
+from datetime import date
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from overload_api.core.time import today_in
 from overload_api.db.models.ai import ChatMessage, ChatRole
 from overload_api.db.models.body import BodyWeightLog, InjuryNote
 from overload_api.db.models.exercise import MuscleGroup
@@ -23,43 +24,12 @@ from overload_api.db.models.nutrition import NutritionLog
 from overload_api.db.models.program import Program
 from overload_api.db.models.user import User
 from overload_api.db.models.workout import SetLog, WorkoutSession
+from overload_api.features.workouts.service import compute_streak
 from overload_api.services.ai.prompts import build_context_block
 
 #: Modele kaç geçmiş mesaj gönderilir. Daha fazlası önbelleğe girse de
 #: token maliyeti doğrusal artıyor; 30 mesaj pratikte yeterli bağlam veriyor.
 HISTORY_LIMIT = 30
-
-
-async def _streak_days(db: AsyncSession, user: User, today: date) -> int:
-    """Kaç gündür kesintisiz antrenman serisi var.
-
-    Seri "her gün antrenman" değil, "planlanan günlerde kaçırmama" olarak
-    yorumlanır; burada sade tutuluyor: bugünden geriye doğru, arada en fazla
-    bir gün boşluk olacak şekilde sayılan ardışık antrenman günleri.
-    """
-    rows = await db.execute(
-        select(func.date(WorkoutSession.started_at))
-        .where(
-            WorkoutSession.user_id == user.id,
-            WorkoutSession.completed_at.isnot(None),
-            WorkoutSession.started_at >= today - timedelta(days=120),
-        )
-        .distinct()
-        .order_by(func.date(WorkoutSession.started_at).desc())
-    )
-    days = [d for (d,) in rows.all()]
-    if not days:
-        return 0
-
-    streak = 0
-    cursor = today
-    for day in days:
-        gap = (cursor - day).days
-        if gap > 2:  # iki günden uzun boşluk seriyi kırar (dinlenme günü normal)
-            break
-        streak += 1
-        cursor = day
-    return streak
 
 
 async def _recent_sessions(db: AsyncSession, user: User) -> list[dict[str, Any]]:
@@ -121,7 +91,7 @@ async def build_history(
     metni göndermek `tool_use` bloklarını düşürür ve bir sonraki `tool_result`
     eşleşmediği için API 400 verir.
     """
-    today = _today_for(user)
+    today = today_in(user.timezone)
 
     rows = await db.execute(
         select(ChatMessage)
@@ -164,7 +134,7 @@ async def build_history(
         recent_sessions=await _recent_sessions(db, user),
         todays_nutrition=await _todays_nutrition(db, user, today),
         active_program_name=active_program,
-        streak_days=await _streak_days(db, user, today),
+        streak_label=(await compute_streak(db, user.id, today)).label,
         open_injuries=[f"{name}: {desc}" for name, desc in injuries],
     )
 
@@ -176,20 +146,3 @@ async def build_history(
 
     messages.append({"role": "user", "content": content})
     return messages
-
-
-def _today_for(user: User) -> date:
-    """Kullanıcının saat dilimindeki bugün.
-
-    UTC kullanmak Türkiye'de gece yarısından sonra 3 saat boyunca yanlış güne
-    yazardı — "dün gece yediklerim" bugüne düşerdi.
-    """
-    try:
-        from datetime import datetime as dt
-        from zoneinfo import ZoneInfo
-
-        return dt.now(ZoneInfo(user.timezone)).date()
-    except Exception:
-        from datetime import datetime as dt
-
-        return dt.now(UTC).date()

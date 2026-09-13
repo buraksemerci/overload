@@ -86,7 +86,7 @@ def build_context_block(
     recent_sessions: list[dict[str, Any]],
     todays_nutrition: dict[str, Any] | None,
     active_program_name: str | None,
-    streak_days: int,
+    streak_label: str,
     open_injuries: list[str],
 ) -> str:
     """Modele gönderilecek taze veritabanı özeti.
@@ -101,7 +101,9 @@ def build_context_block(
         lines.append(f"Kullanıcı: {display_name}")
     if active_program_name:
         lines.append(f"Aktif program: {active_program_name}")
-    lines.append(f"Antrenman serisi: {streak_days} gün")
+    # Seri programa göre ölçülür (haftalık hedefi tutturmak), takvim gününe göre
+    # değil — 5 günlük bir programda iki gün dinlenmek planın parçası.
+    lines.append(f"Antrenman serisi: {streak_label}")
 
     if open_injuries:
         lines.append("Aktif sakatlık notu: " + "; ".join(open_injuries))

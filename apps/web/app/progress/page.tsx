@@ -13,9 +13,11 @@ export default function ProgressPage() {
         "Plato uyarıları: 3 seanstır ilerlemeyen hareketler ve deload önerisi",
       ]}
       endpoints={[
-        "GET /progress/records           — kırılan PR'lar",
-        "GET /progress/exercise/{id}     — zaman serisi",
-        "GET /progress/consistency       — takvim ızgarası",
+        "GET /workouts/records                    — kırılan PR'lar (4 tür)",
+        "GET /workouts/progression/{exercise_id}  — motorun bir sonraki hedefi + plato",
+        "GET /workouts/sessions                   — seans geçmişi (takvim ızgarası)",
+        "GET /workouts/streak                     — programa göre kesintisiz hafta",
+        "GET /workouts/muscle-volume              — kas grubu bazlı hacim",
       ]}
     />
   );

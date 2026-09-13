@@ -7,26 +7,221 @@ from __future__ import annotations
 
 import uuid
 from collections import defaultdict
+from dataclasses import dataclass
+from datetime import date, timedelta
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from overload_api.db.models.exercise import Exercise
-from overload_api.db.models.program import ProgramDay, ProgramExercise
+from overload_api.db.models.exercise import (
+    Exercise,
+    ExerciseMuscleMap,
+    MuscleGroup,
+    MuscleRole,
+)
+from overload_api.db.models.program import Program, ProgramDay, ProgramExercise
 from overload_api.db.models.workout import PersonalRecord, PRType, SetLog, WorkoutSession
 from overload_api.services.progression import (
     ExerciseTarget,
     PerformedSet,
     ProgressionSuggestion,
     SessionPerformance,
+    should_suggest_deload_week,
     suggest_next_target,
 )
+
+
+def should_suggest_deload(intact_weeks: int) -> bool:
+    """Deload haftası önerilmeli mi.
+
+    Motordaki saf fonksiyonu servis yüzeyine bağlıyor; router'ların
+    `services.progression`'a doğrudan bağımlı olmasını istemiyoruz — algoritma
+    değişirse tek yer güncellenmeli.
+    """
+    return should_suggest_deload_week(intact_weeks)
+
 
 #: Motora kaç seans geçmiş verilir. Plato tespiti 3 seansa bakıyor; 8 hem
 #: yeterli tarihsel bağlam veriyor hem de sorguyu küçük tutuyor.
 HISTORY_DEPTH = 8
+
+#: Aktif program yoksa varsayılan haftalık hedef.
+DEFAULT_WEEKLY_TARGET = 3
+
+#: Seri hesabında kaç hafta geriye bakılır.
+STREAK_LOOKBACK_WEEKS = 52
+
+
+@dataclass(frozen=True, slots=True)
+class StreakInfo:
+    """Antrenman serisi.
+
+    **Takvim tabanlı değil, programa göre ölçülür.** "3 gündür ara vermedin"
+    demek 5 günlük bir programda anlamsız: haftada iki gün dinlenmek planın
+    parçası ve seriyi kırmamalı. Ölçüt "planlanan günü kaçırmamak", yani
+    haftalık hedef set sayısını tutturmak.
+
+    Bu hafta henüz bitmediği için seriyi KIRMAZ — sadece tamamlanmış haftalara
+    bakılır. Aksi halde Pazartesi sabahı herkesin serisi sıfırlanırdı.
+    """
+
+    intact_weeks: int
+    this_week_sessions: int
+    weekly_target: int
+    sessions_in_streak: int
+
+    @property
+    def label(self) -> str:
+        if self.intact_weeks == 0:
+            return f"Bu hafta {self.this_week_sessions}/{self.weekly_target}"
+        return (
+            f"{self.intact_weeks} hafta kesintisiz "
+            f"(bu hafta {self.this_week_sessions}/{self.weekly_target})"
+        )
+
+
+def _week_start(day: date) -> date:
+    """Haftanın Pazartesi'si. ISO haftası kullanılıyor (Pazartesi = 1)."""
+    return day - timedelta(days=day.weekday())
+
+
+async def compute_streak(session: AsyncSession, user_id: uuid.UUID, today: date) -> StreakInfo:
+    """Haftalık hedefi tutturarak geçirilen kesintisiz hafta sayısı."""
+    target = (
+        await session.execute(
+            select(Program.days_per_week).where(Program.owner_id == user_id, Program.is_active)
+        )
+    ).scalar_one_or_none() or DEFAULT_WEEKLY_TARGET
+
+    since = _week_start(today) - timedelta(weeks=STREAK_LOOKBACK_WEEKS)
+    rows = await session.execute(
+        select(WorkoutSession.started_at).where(
+            WorkoutSession.user_id == user_id,
+            WorkoutSession.completed_at.isnot(None),
+            WorkoutSession.started_at >= since,
+        )
+    )
+
+    per_week: dict[date, int] = defaultdict(int)
+    for (started_at,) in rows.all():
+        per_week[_week_start(started_at.date())] += 1
+
+    current_week = _week_start(today)
+    this_week = per_week.get(current_week, 0)
+
+    # Bu haftayı atlayarak geriye yürü — henüz bitmedi, yargılanamaz.
+    intact = 0
+    sessions = 0
+    cursor = current_week - timedelta(weeks=1)
+    while cursor >= since:
+        done = per_week.get(cursor, 0)
+        if done < target:
+            break
+        intact += 1
+        sessions += done
+        cursor -= timedelta(weeks=1)
+
+    return StreakInfo(
+        intact_weeks=intact,
+        this_week_sessions=this_week,
+        weekly_target=target,
+        sessions_in_streak=sessions + this_week,
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class MuscleVolumeRow:
+    slug: str
+    name_tr: str
+    svg_id: str
+    region: str
+    sets: float
+    target: int
+
+
+async def weekly_muscle_volume(
+    session: AsyncSession, user_id: uuid.UUID, today: date, *, days: int = 7
+) -> list[MuscleVolumeRow]:
+    """Kas grubu bazında efektif set hacmi (ısı haritasının verisi).
+
+    **Kesirli set (fractional set) yaklaşımı:** birincil kas 1.0, ikincil kas 0.5
+    set sayılır. Hipertrofi literatüründe yaygın olan bu ağırlıklandırma,
+    "bench press biceps çalıştırmaz ama triceps'i yarım sayar" sezgisini
+    sayısallaştırıyor. Isınma setleri sayılmaz.
+
+    Tek taraflı hareketlerde hacim iki katı sayılır — 10 tekrar sol + 10 tekrar
+    sağ, çift taraflı 10 tekrarın iki katı iş demek.
+    """
+    since = today - timedelta(days=days - 1)
+
+    rows = await session.execute(
+        select(
+            MuscleGroup.slug,
+            MuscleGroup.name_tr,
+            MuscleGroup.svg_id,
+            MuscleGroup.region,
+            MuscleGroup.weekly_set_target,
+            ExerciseMuscleMap.role,
+            Exercise.is_unilateral,
+            func.count(SetLog.id),
+        )
+        .select_from(SetLog)
+        .join(WorkoutSession, SetLog.workout_session_id == WorkoutSession.id)
+        .join(Exercise, SetLog.exercise_id == Exercise.id)
+        .join(ExerciseMuscleMap, ExerciseMuscleMap.exercise_id == Exercise.id)
+        .join(MuscleGroup, ExerciseMuscleMap.muscle_group_id == MuscleGroup.id)
+        .where(
+            SetLog.user_id == user_id,
+            SetLog.is_warmup.is_(False),
+            WorkoutSession.completed_at.isnot(None),
+            func.date(WorkoutSession.started_at) >= since,
+        )
+        .group_by(
+            MuscleGroup.slug,
+            MuscleGroup.name_tr,
+            MuscleGroup.svg_id,
+            MuscleGroup.region,
+            MuscleGroup.weekly_set_target,
+            ExerciseMuscleMap.role,
+            Exercise.is_unilateral,
+        )
+    )
+
+    totals: dict[str, MuscleVolumeRow] = {}
+    for slug, name_tr, svg_id, region, target, role, unilateral, count in rows.all():
+        weight = 1.0 if role is MuscleRole.primary else 0.5
+        if unilateral:
+            weight *= 2
+        existing = totals.get(slug)
+        accumulated = (existing.sets if existing else 0.0) + count * weight
+        totals[slug] = MuscleVolumeRow(
+            slug=slug,
+            name_tr=name_tr,
+            svg_id=svg_id,
+            region=region.value if hasattr(region, "value") else str(region),
+            sets=round(accumulated, 1),
+            target=target,
+        )
+
+    # Hiç çalışılmamış kas grupları da dönmeli — ısı haritasında "0 set" olarak
+    # görünmeleri, listede hiç olmamalarından daha bilgilendirici.
+    all_groups = await session.execute(select(MuscleGroup).order_by(MuscleGroup.slug))
+    for mg in all_groups.scalars().all():
+        totals.setdefault(
+            mg.slug,
+            MuscleVolumeRow(
+                slug=mg.slug,
+                name_tr=mg.name_tr,
+                svg_id=mg.svg_id,
+                region=mg.region.value,
+                sets=0.0,
+                target=mg.weekly_set_target,
+            ),
+        )
+
+    return sorted(totals.values(), key=lambda r: (-r.sets, r.slug))
 
 
 async def load_history(

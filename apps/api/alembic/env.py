@@ -15,7 +15,7 @@ from sqlalchemy import engine_from_config, pool
 from overload_api.config import get_settings
 
 # Tüm modellerin metadata'ya kaydolması için paketin tamamı import edilmeli.
-from overload_api.db.models import Base  # noqa: F401
+from overload_api.db.models import Base
 
 config = context.config
 

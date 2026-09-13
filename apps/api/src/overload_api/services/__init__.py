@@ -1,1 +1,1 @@
-﻿"""İş mantığı servisleri: progresif overload motoru, AI katmanı, besin kaynakları."""
+"""İş mantığı servisleri: progresif overload motoru, AI katmanı, besin kaynakları."""

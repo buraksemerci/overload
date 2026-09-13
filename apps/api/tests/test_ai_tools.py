@@ -13,9 +13,9 @@ import pytest
 from overload_api.db.models.ai import ActionType
 from overload_api.services.ai import tools
 from overload_api.services.ai.executors import (
+    _UPDATABLE,
     ProposeUpdatePayload,
     ToolExecutionError,
-    _UPDATABLE,
     _validate,
 )
 
@@ -107,9 +107,7 @@ class TestUpdateGuardrails:
     def test_entity_enum_matches_schema(self) -> None:
         """JSON şemasındaki entity listesi ile uygulanabilir liste tutarlı olmalı;
         şemada olup uygulanamayan bir değer modele yalan söylemek olur."""
-        schema_entities = set(
-            tools.PROPOSE_UPDATE["input_schema"]["properties"]["entity"]["enum"]
-        )
+        schema_entities = set(tools.PROPOSE_UPDATE["input_schema"]["properties"]["entity"]["enum"])
         assert not (schema_entities & tools.FORBIDDEN_ENTITIES)
 
     def test_unknown_field_is_rejected_not_ignored(self) -> None:

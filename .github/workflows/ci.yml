@@ -1,0 +1,118 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Aynı dal için yeni push gelirse eskisini iptal et — kuyrukta bekleyen
+# eski koşular kimseye fayda sağlamıyor.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: overload
+          POSTGRES_PASSWORD: overload
+          POSTGRES_DB: overload_test
+        ports: ["5432:5432"]
+        # Health check olmadan testler Postgres hazır olmadan başlıyor ve
+        # rastgele "connection refused" ile patlıyor.
+        options: >-
+          --health-cmd "pg_isready -U overload"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://overload:overload@localhost:5432/overload_test
+      DATABASE_URL_SYNC: postgresql+psycopg://overload:overload@localhost:5432/overload_test
+      JWT_SECRET: ci-only-not-a-real-secret
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Bağımlılıkları kur
+        working-directory: apps/api
+        run: |
+          uv venv
+          uv pip install -e ".[dev]"
+
+      - name: Lint (ruff)
+        working-directory: apps/api
+        run: |
+          .venv/bin/ruff check .
+          .venv/bin/ruff format --check .
+
+      - name: Tip kontrolü (mypy)
+        working-directory: apps/api
+        run: .venv/bin/mypy src
+
+      - name: Migration'lar uygulanıyor
+        working-directory: apps/api
+        run: .venv/bin/alembic upgrade head
+
+      - name: Migration'lar modellerle uyumlu mu
+        working-directory: apps/api
+        # autogenerate boş bir revizyon üretmeli; üretmiyorsa bir model
+        # değişikliği migration'a yansıtılmamış demektir.
+        run: |
+          .venv/bin/alembic check
+
+      - name: Testler
+        working-directory: apps/api
+        run: .venv/bin/pytest -q
+
+  openapi-senkron:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - working-directory: apps/api
+        run: |
+          uv venv
+          uv pip install -e "."
+      - name: openapi.json güncel mi
+        # Frontend'in TS tipleri bu dosyadan üretiliyor. Güncel değilse
+        # frontend eski sözleşmeye göre derlenir ve hata çalışma zamanına kaçar.
+        run: apps/api/.venv/bin/python scripts/dump_openapi.py --check
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: TS tiplerini üret
+        run: pnpm gen:types
+
+      - name: Tip kontrolü
+        run: pnpm --filter @overload/web typecheck
+
+      - name: Testler
+        run: pnpm --filter @overload/web test
+
+      - name: Derleme
+        run: pnpm --filter @overload/web build

@@ -54,7 +54,10 @@ class MuscleGroup(Base):
     # Haftalık hacim hedefi (set sayısı) — ısı haritasında "yeterli mi" eşiği.
     weekly_set_target: Mapped[int] = mapped_column(default=10, nullable=False)
 
-    __table_args__ = (non_empty("slug"), CheckConstraint("weekly_set_target > 0", name="target_positive"))
+    __table_args__ = (
+        non_empty("slug"),
+        CheckConstraint("weekly_set_target > 0", name="target_positive"),
+    )
 
 
 class Exercise(TimestampMixin, Base):

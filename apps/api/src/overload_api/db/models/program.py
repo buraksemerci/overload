@@ -43,10 +43,10 @@ class ProgramLevel(StrEnum):
 class IntensityTechnique(StrEnum):
     """Seed verisindeki `yontem` alanının karşılığı."""
 
-    straight = "straight"                  # teknik belirtilmemiş
-    rir1 = "rir1"                          # bitişe 1 tekrar kala bırak
-    failure = "failure"                    # tam kas yorgunluğuna kadar
-    rir1_to_failure = "rir1_to_failure"    # ilk setler RIR1, son set failure
+    straight = "straight"  # teknik belirtilmemiş
+    rir1 = "rir1"  # bitişe 1 tekrar kala bırak
+    failure = "failure"  # tam kas yorgunluğuna kadar
+    rir1_to_failure = "rir1_to_failure"  # ilk setler RIR1, son set failure
     superset_failure = "superset_failure"  # superset olarak failure'a kadar
     drop_set = "drop_set"
     myo_reps = "myo_reps"
@@ -95,9 +95,7 @@ class Program(TimestampMixin, Base):
             name="template_xor_owned",
         ),
         # Atıf zorunlu: şablon kaynak adı olmadan eklenemez.
-        CheckConstraint(
-            "NOT is_template OR source_name IS NOT NULL", name="template_needs_source"
-        ),
+        CheckConstraint("NOT is_template OR source_name IS NOT NULL", name="template_needs_source"),
         # Şablon "aktif" olamaz — aktiflik kullanıcıya ait bir durum.
         CheckConstraint("NOT (is_template AND is_active)", name="template_not_active"),
         Index("ix_program_owner_id", "owner_id"),
@@ -173,7 +171,7 @@ class ProgramExercise(Base):
     notes: Mapped[str | None] = mapped_column(String(500))
 
     day: Mapped[ProgramDay] = relationship(back_populates="exercises")
-    exercise: Mapped["Exercise"] = relationship(lazy="joined")  # noqa: F821
+    exercise: Mapped[Exercise] = relationship(lazy="joined")
 
     __table_args__ = (
         CheckConstraint("target_sets BETWEEN 1 AND 20", name="sets_range"),

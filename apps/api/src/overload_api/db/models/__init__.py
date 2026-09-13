@@ -79,6 +79,8 @@ RLS_TABLES: tuple[str, ...] = (
 RLS_OWNER_NULLABLE_TABLES: tuple[str, ...] = ("program", "exercise")
 
 __all__ = [
+    "RLS_OWNER_NULLABLE_TABLES",
+    "RLS_TABLES",
     "ActionLog",
     "ActionResult",
     "ActionType",
@@ -114,8 +116,6 @@ __all__ = [
     "ProgramExercise",
     "ProgramGoal",
     "ProgramLevel",
-    "RLS_OWNER_NULLABLE_TABLES",
-    "RLS_TABLES",
     "SetLog",
     "Sex",
     "SorenessCheckin",

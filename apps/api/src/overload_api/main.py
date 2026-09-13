@@ -12,8 +12,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 from fastapi_users import schemas
+from pydantic import BaseModel
 
 from overload_api.config import get_settings
 from overload_api.core.security import auth_backend, fastapi_users
@@ -78,15 +78,11 @@ async def health() -> Health:
 
 
 # --- Kimlik doğrulama --------------------------------------------------------
-app.include_router(
-    fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"]
-)
+app.include_router(fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"])
 app.include_router(
     fastapi_users.get_register_router(UserRead, UserCreate), prefix="/auth", tags=["auth"]
 )
-app.include_router(
-    fastapi_users.get_reset_password_router(), prefix="/auth", tags=["auth"]
-)
+app.include_router(fastapi_users.get_reset_password_router(), prefix="/auth", tags=["auth"])
 # Hesap ayarları (bölüm 4.3'ün sabit sınırı): SADECE buradan değişir.
 # AI'nın bu endpoint'lere karşılık gelen bir tool'u yok.
 app.include_router(

@@ -146,9 +146,7 @@ async def build_history(
         .limit(5)
     )
     active_program = (
-        await db.execute(
-            select(Program.name).where(Program.owner_id == user.id, Program.is_active)
-        )
+        await db.execute(select(Program.name).where(Program.owner_id == user.id, Program.is_active))
     ).scalar_one_or_none()
 
     injuries = (
@@ -187,12 +185,11 @@ def _today_for(user: User) -> date:
     yazardı — "dün gece yediklerim" bugüne düşerdi.
     """
     try:
+        from datetime import datetime as dt
         from zoneinfo import ZoneInfo
 
-        from datetime import datetime as dt
-
         return dt.now(ZoneInfo(user.timezone)).date()
-    except Exception:  # noqa: BLE001 - geçersiz saat dilimi kaydı akışı durdurmamalı
+    except Exception:
         from datetime import datetime as dt
 
         return dt.now(UTC).date()

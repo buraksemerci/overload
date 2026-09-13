@@ -141,7 +141,9 @@ async def _search_exercises(session: AsyncSession, user: User, payload: dict[str
     lines = []
     for e in rows:
         primary = [m.muscle_group.name_tr for m in e.muscle_map if m.role is MuscleRole.primary]
-        lines.append(f"- id={e.id} | {e.name} | {e.equipment.value} | birincil: {', '.join(primary) or '-'}")
+        lines.append(
+            f"- id={e.id} | {e.name} | {e.equipment.value} | birincil: {', '.join(primary) or '-'}"
+        )
     return f"{len(rows)} sonuç:\n" + "\n".join(lines)
 
 
@@ -258,9 +260,7 @@ async def _log_soreness(session: AsyncSession, user: User, payload: dict[str, An
         existing.level = level
     else:
         session.add(
-            SorenessCheckin(
-                user_id=user.id, date=on_date, muscle_group_id=mg.id, level=level
-            )
+            SorenessCheckin(user_id=user.id, date=on_date, muscle_group_id=mg.id, level=level)
         )
     return f"{mg.name_tr} ağrı seviyesi {level}/4 olarak kaydedildi ({on_date})."
 
@@ -274,8 +274,7 @@ async def _log_supplement(session: AsyncSession, user: User, payload: dict[str, 
     ).scalar_one_or_none()
     if supp is None:
         raise ToolExecutionError(
-            f"'{name}' adlı supplement tanımlı değil. Önce Supplement Takibi "
-            "ekranından ekle."
+            f"'{name}' adlı supplement tanımlı değil. Önce Supplement Takibi ekranından ekle."
         )
 
     on_date = _parse_date(payload.get("date"))
@@ -292,9 +291,7 @@ async def _log_supplement(session: AsyncSession, user: User, payload: dict[str, 
         existing.taken = taken
     else:
         session.add(
-            SupplementIntake(
-                user_id=user.id, supplement_id=supp.id, date=on_date, taken=taken
-            )
+            SupplementIntake(user_id=user.id, supplement_id=supp.id, date=on_date, taken=taken)
         )
     return f"{supp.name}: {on_date} tarihinde {'alındı' if taken else 'alınmadı'}."
 
@@ -393,9 +390,7 @@ async def apply_pending_action(
         case ActionType.propose_update:
             return await _apply_update(session, user, pending.payload)
         case _:
-            raise ToolExecutionError(
-                f"'{pending.action_type.value}' onay akışına ait değil."
-            )
+            raise ToolExecutionError(f"'{pending.action_type.value}' onay akışına ait değil.")
 
 
 def _validate(model: type[BaseModel], payload: dict[str, Any]) -> Any:
@@ -404,7 +399,9 @@ def _validate(model: type[BaseModel], payload: dict[str, Any]) -> Any:
     except ValidationError as exc:
         raise ToolExecutionError(
             "Öneri geçerli değil, uygulanmadı. Ayrıntı: "
-            + "; ".join(f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}" for e in exc.errors()[:5])
+            + "; ".join(
+                f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}" for e in exc.errors()[:5]
+            )
         ) from exc
 
 

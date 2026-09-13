@@ -1,1 +1,1 @@
-﻿"""Çapraz kesen altyapı: güvenlik, bağımlılıklar, hata tipleri."""
+"""Çapraz kesen altyapı: güvenlik, bağımlılıklar, hata tipleri."""

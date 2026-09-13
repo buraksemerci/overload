@@ -28,9 +28,7 @@ BASE_DAY = date(2026, 9, 1)
 
 
 def session(*sets: PerformedSet, day_offset: int = 0) -> SessionPerformance:
-    return SessionPerformance(
-        performed_on=BASE_DAY + timedelta(days=day_offset), sets=tuple(sets)
-    )
+    return SessionPerformance(performed_on=BASE_DAY + timedelta(days=day_offset), sets=tuple(sets))
 
 
 def target(
@@ -55,9 +53,9 @@ class TestNextWeight:
             # %3.75 hedef -> 1.5 kg; 2.5'lik adıma yuvarlanır -> 42.5
             (D("40"), Equipment.plate_loaded, D("42.50")),
             (D("100"), Equipment.barbell, D("102.50")),  # 3.75 -> 1 adım (2.5)
-            (D("20"), Equipment.dumbbell, D("22.00")),   # 0.75 -> en az 1 adım (2.0)
-            (D("60"), Equipment.machine, D("65.00")),    # 2.25 -> 5'lik blok
-            (D("10"), Equipment.cable, D("12.50")),      # 0.375 -> en az 1 adım
+            (D("20"), Equipment.dumbbell, D("22.00")),  # 0.75 -> en az 1 adım (2.0)
+            (D("60"), Equipment.machine, D("65.00")),  # 2.25 -> 5'lik blok
+            (D("10"), Equipment.cable, D("12.50")),  # 0.375 -> en az 1 adım
         ],
     )
     def test_snaps_to_real_plate_steps(
@@ -149,7 +147,7 @@ class TestSuggestNextTarget:
 class TestPlateau:
     def test_three_stalled_sessions_trigger_deload(self) -> None:
         history = [
-            session(PerformedSet(D("50"), 8, rir=1), day_offset=0),   # zirve
+            session(PerformedSet(D("50"), 8, rir=1), day_offset=0),  # zirve
             session(PerformedSet(D("50"), 7, rir=0), day_offset=7),
             session(PerformedSet(D("50"), 7, rir=0), day_offset=14),
             session(PerformedSet(D("47.5"), 8, rir=0), day_offset=21),

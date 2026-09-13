@@ -42,9 +42,7 @@ logger = logging.getLogger("seed")
 
 
 async def seed_muscle_groups(session: AsyncSession) -> dict[str, MuscleGroup]:
-    existing = {
-        mg.slug: mg for mg in (await session.execute(select(MuscleGroup))).scalars().all()
-    }
+    existing = {mg.slug: mg for mg in (await session.execute(select(MuscleGroup))).scalars().all()}
     for seed in MUSCLE_GROUPS:
         mg = existing.get(seed.slug)
         if mg is None:
@@ -67,8 +65,11 @@ async def seed_exercises(
     session: AsyncSession, muscles: dict[str, MuscleGroup]
 ) -> dict[str, Exercise]:
     rows = (
-        await session.execute(select(Exercise).where(Exercise.owner_id.is_(None)))
-    ).scalars().unique().all()
+        (await session.execute(select(Exercise).where(Exercise.owner_id.is_(None))))
+        .scalars()
+        .unique()
+        .all()
+    )
     existing = {e.search_name: e for e in rows}
 
     for seed in EXERCISES:
@@ -85,10 +86,14 @@ async def seed_exercises(
 
         # Kas eşlemesini sıfırdan kur — seed'de rol değişmiş olabilir.
         current = (
-            await session.execute(
-                select(ExerciseMuscleMap).where(ExerciseMuscleMap.exercise_id == exercise.id)
+            (
+                await session.execute(
+                    select(ExerciseMuscleMap).where(ExerciseMuscleMap.exercise_id == exercise.id)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         for row in current:
             await session.delete(row)
         await session.flush()
@@ -123,7 +128,9 @@ async def _build_program(
 ) -> Program | None:
     """Programı kurar. Aynı ad + sahip zaten varsa atlar (idempotent)."""
     stmt = select(Program).where(Program.name == seed.name)
-    stmt = stmt.where(Program.owner_id.is_(None) if owner_id is None else Program.owner_id == owner_id)
+    stmt = stmt.where(
+        Program.owner_id.is_(None) if owner_id is None else Program.owner_id == owner_id
+    )
     if (await session.execute(stmt)).scalar_one_or_none() is not None:
         logger.info("atlandi (zaten var): %s", seed.name)
         return None

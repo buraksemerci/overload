@@ -65,11 +65,23 @@ select = [
 ignore = [
     "E501",   # satır uzunluğu formatter'a bırakıldı
     "B008",   # FastAPI Depends() varsayılan argümanda zorunlu
+    # RUF001-003: "belirsiz Unicode karakter" uyarıları. Bu kural homoglif
+    # saldırılarını (Kiril 'а' yerine Latin 'a' gibi) yakalamak için var ve
+    # İngilizce kod tabanlarını varsayıyor. Bu projede yorumlar ve docstring'ler
+    # bilinçli olarak Türkçe; 'ı', 'ş', 'ğ', 'İ' harfleri kasıtlı ve doğru.
+    # Açık bırakılırsa ~2000 sahte uyarı üretip gerçek bulguları gömüyor.
+    "RUF001", # string içinde
+    "RUF002", # docstring içinde
+    "RUF003", # yorum içinde
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101"]           # assert testlerde serbest
-"alembic/**" = ["I001", "E402"]
+"tests/**" = ["S101"]  # assert testlerde serbest
+# S608 (SQL injection): RLS migration'ı tablo ve rol adlarını f-string ile
+# yerleştiriyor. Bunlar modül seviyesinde sabit listeler, kullanıcı girdisi
+# değil — ve SQL tanımlayıcıları (tablo/rol adı) zaten bind parametresi
+# kabul etmez, tek yol string yerleştirme.
+"alembic/**" = ["I001", "E402", "S608"]
 
 # --- pytest ------------------------------------------------------------------
 [tool.pytest.ini_options]

@@ -40,9 +40,17 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+import fastapi_users_db_sqlalchemy
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
+
+# fastapi_users_db_sqlalchemy import'u ZORUNLU ve gorunuste kullanilmiyor:
+# `user.id` ve ona referans veren tum FK sutunlari
+# `fastapi_users_db_sqlalchemy.generics.GUID()` tipiyle render ediliyor.
+# Alembic render motoru tipi tam nitelikli adiyla yaziyor ama import'u
+# eklemiyor; import olmadan migration NameError ile patlar.
+_ = fastapi_users_db_sqlalchemy
 
 revision: str = "0001"
 down_revision: str | None = None

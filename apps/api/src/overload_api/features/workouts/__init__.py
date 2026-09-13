@@ -1,1 +1,1 @@
-﻿"""Antrenman seansları, set kayıtları, progresif overload köprüsü."""
+"""Antrenman seansları, set kayıtları, progresif overload köprüsü."""

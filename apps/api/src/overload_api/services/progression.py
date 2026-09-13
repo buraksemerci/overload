@@ -146,10 +146,10 @@ class ExerciseTarget:
 
 class SuggestionKind(StrEnum):
     establish_baseline = "establish_baseline"  # geçmiş yok
-    add_reps = "add_reps"                      # aynı ağırlık, +1 tekrar
-    add_weight = "add_weight"                  # ağırlık artır, tekrar aralığın altına in
-    hold = "hold"                              # aynı ağırlık/tekrar, forma otur
-    deload = "deload"                          # plato: ağırlığı düşür
+    add_reps = "add_reps"  # aynı ağırlık, +1 tekrar
+    add_weight = "add_weight"  # ağırlık artır, tekrar aralığın altına in
+    hold = "hold"  # aynı ağırlık/tekrar, forma otur
+    deload = "deload"  # plato: ağırlığı düşür
 
 
 @dataclass(frozen=True, slots=True)
@@ -290,7 +290,12 @@ def suggest_next_target(
 
     last = sessions[-1]
     top = last.top_set
-    assert top is not None  # working_sets boş olmayan seanslar filtrelendi
+    if top is None:  # pragma: no cover - çalışma seti olmayan seanslar filtrelendi
+        # `assert` kullanılmıyor: python -O ile assert'ler tamamen atılır ve
+        # kontrol üretimde sessizce kaybolur.
+        raise ValueError(
+            "Çalışma seti olmayan seans motora ulaşmamalıydı."
+        )  # working_sets boş olmayan seanslar filtrelendi
 
     previous_summary = ", ".join(_describe_set(s) for s in last.working_sets)
     plateau = detect_plateau(sessions, target.technique)
@@ -418,7 +423,10 @@ def _suggest_by_rep_range(
     lighter = _q(weight - PLATE_INCREMENT.get(target.equipment, Decimal("2.5")))
     alternative = (
         TargetOption(
-            SuggestionKind.hold, lighter, target.rep_min, f"{_fmt_weight(lighter)}kg x {target.rep_min}"
+            SuggestionKind.hold,
+            lighter,
+            target.rep_min,
+            f"{_fmt_weight(lighter)}kg x {target.rep_min}",
         )
         if lighter > 0
         else None
@@ -443,7 +451,10 @@ def _suggest_by_volume(
     """Failure setlerinde ölçüt toplam hacim (karar defteri #2)."""
     last = sessions[-1]
     top = last.top_set
-    assert top is not None
+    if top is None:  # pragma: no cover - çalışma seti olmayan seanslar filtrelendi
+        # `assert` kullanılmıyor: python -O ile assert'ler tamamen atılır ve
+        # kontrol üretimde sessizce kaybolur.
+        raise ValueError("Çalışma seti olmayan seans motora ulaşmamalıydı.")
     last_volume = last.total_volume
 
     previous_volume = sessions[-2].total_volume if len(sessions) >= 2 else None

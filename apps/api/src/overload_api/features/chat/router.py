@@ -58,9 +58,7 @@ class ChatMessageOut(BaseModel):
 
 
 @router.get("/messages", response_model=list[ChatMessageOut])
-async def list_messages(
-    db: DbSession, user: CurrentUser, limit: int = 50
-) -> list[ChatMessage]:
+async def list_messages(db: DbSession, user: CurrentUser, limit: int = 50) -> list[ChatMessage]:
     rows = await db.execute(
         select(ChatMessage)
         .where(ChatMessage.user_id == user.id)
@@ -119,7 +117,9 @@ async def list_pending(db: DbSession, user: CurrentUser) -> list[PendingAction]:
     return list(rows.scalars().all())
 
 
-async def _load_open_action(db: DbSession, user: CurrentUser, action_id: uuid.UUID) -> PendingAction:
+async def _load_open_action(
+    db: DbSession, user: CurrentUser, action_id: uuid.UUID
+) -> PendingAction:
     pending = await db.get(PendingAction, action_id)
     # RLS zaten başkasının kaydını gizler; burada açıkça de kontrol ediyoruz ki
     # hata mesajı net olsun ve savunma tek katmana bağlı kalmasın.
@@ -134,9 +134,7 @@ async def _load_open_action(db: DbSession, user: CurrentUser, action_id: uuid.UU
 
 
 @router.post("/pending-actions/{action_id}/approve", response_model=PendingActionOut)
-async def approve_action(
-    action_id: uuid.UUID, db: DbSession, user: CurrentUser
-) -> PendingAction:
+async def approve_action(action_id: uuid.UUID, db: DbSession, user: CurrentUser) -> PendingAction:
     """Onaylanan aksiyonu uygular.
 
     `executors.apply_pending_action` payload'ı Pydantic ile YENİDEN doğrular —
@@ -185,9 +183,7 @@ async def approve_action(
 
 
 @router.post("/pending-actions/{action_id}/reject", response_model=PendingActionOut)
-async def reject_action(
-    action_id: uuid.UUID, db: DbSession, user: CurrentUser
-) -> PendingAction:
+async def reject_action(action_id: uuid.UUID, db: DbSession, user: CurrentUser) -> PendingAction:
     pending = await _load_open_action(db, user, action_id)
     now = datetime.now(UTC)
 

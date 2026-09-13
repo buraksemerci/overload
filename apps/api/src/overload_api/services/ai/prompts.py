@@ -115,10 +115,7 @@ def build_context_block(
     if recent_sessions:
         lines.append("Son antrenmanlar:")
         for s in recent_sessions[:5]:
-            lines.append(
-                f"  - {s['date']} — {s['label']}: "
-                + "; ".join(s["highlights"])
-            )
+            lines.append(f"  - {s['date']} — {s['label']}: " + "; ".join(s["highlights"]))
     else:
         lines.append("Kayıtlı antrenman yok.")
 

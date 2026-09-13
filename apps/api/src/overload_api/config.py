@@ -42,9 +42,9 @@ class Settings(BaseSettings):
     anthropic_api_key: SecretStr | None = None
     # Model katmanları. Not: SDK tarih ekli kimlikleri kabul etmez — "claude-haiku-4-5"
     # doğru biçim, "claude-haiku-4-5-20251001" değil.
-    anthropic_model_fast: str = "claude-haiku-4-5"      # foto/metin ayrıştırma, yüksek hacim
-    anthropic_model_smart: str = "claude-sonnet-5"      # sohbet, koç raporu
-    anthropic_max_tool_iterations: int = 8              # sonsuz tool döngüsüne karşı tavan
+    anthropic_model_fast: str = "claude-haiku-4-5"  # foto/metin ayrıştırma, yüksek hacim
+    anthropic_model_smart: str = "claude-sonnet-5"  # sohbet, koç raporu
+    anthropic_max_tool_iterations: int = 8  # sonsuz tool döngüsüne karşı tavan
 
     # --- Cloudflare R2 ---
     r2_access_key_id: SecretStr | None = None

@@ -66,18 +66,12 @@ def _summarize_for_card(action: ActionType, payload: dict[str, Any]) -> str:
         case ActionType.propose_program:
             days = payload.get("days", [])
             n_ex = sum(len(d.get("exercises", [])) for d in days)
-            return (
-                f"«{payload.get('name', 'İsimsiz program')}» — "
-                f"{len(days)} gün, {n_ex} hareket"
-            )
+            return f"«{payload.get('name', 'İsimsiz program')}» — {len(days)} gün, {n_ex} hareket"
         case ActionType.propose_update:
             op = "Silme" if payload.get("operation") == "delete" else "Güncelleme"
             return f"{op}: {payload.get('entity')} ({payload.get('reason', '')[:120]})"
         case ActionType.add_exercise_to_library:
-            return (
-                f"Kütüphaneye yeni hareket: «{payload.get('name')}» "
-                f"({payload.get('equipment')})"
-            )
+            return f"Kütüphaneye yeni hareket: «{payload.get('name')}» ({payload.get('equipment')})"
         case _:
             return action.value
 
@@ -204,10 +198,10 @@ async def run_turn(
     messages = list(history)
     assistant_blocks: list[dict[str, Any]] = []
 
-    for iteration in range(MAX_TOOL_ITERATIONS):
+    for _iteration in range(MAX_TOOL_ITERATIONS):
         try:
             response = await complete_chat(messages)
-        except Exception as exc:  # noqa: BLE001 - istemciye anlamlı hata dönmeli
+        except Exception as exc:
             yield TurnEvent("error", {"message": f"Model çağrısı başarısız: {exc}"})
             return
 

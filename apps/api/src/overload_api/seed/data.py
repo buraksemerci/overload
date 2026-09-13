@@ -65,14 +65,23 @@ class ExerciseSeed(NamedTuple):
 
 EXERCISES: tuple[ExerciseSeed, ...] = (
     # --- Kullanıcının mevcut programındaki hareketler ---
-    ExerciseSeed("Plate Loaded Chest Press", "plate_loaded", ("chest",), ("front_delts", "triceps")),
-    ExerciseSeed("Smith Machine Low Incline Row", "smith_machine", ("lats", "mid_back"), ("biceps", "rear_delts")),
+    ExerciseSeed(
+        "Plate Loaded Chest Press", "plate_loaded", ("chest",), ("front_delts", "triceps")
+    ),
+    ExerciseSeed(
+        "Smith Machine Low Incline Row",
+        "smith_machine",
+        ("lats", "mid_back"),
+        ("biceps", "rear_delts"),
+    ),
     ExerciseSeed("Chest Fly Machine", "machine", ("chest",), ("front_delts",)),
     ExerciseSeed("Shoulder Press Machine", "machine", ("front_delts",), ("side_delts", "triceps")),
     ExerciseSeed("Lateral Raise", "dumbbell", ("side_delts",), ("front_delts",)),
     ExerciseSeed("Triceps Pushdown", "cable", ("triceps",)),
     ExerciseSeed("Lat Pulldown", "machine", ("lats",), ("biceps", "rear_delts")),
-    ExerciseSeed("Plate Loaded Wide Grip Row", "plate_loaded", ("lats", "mid_back"), ("biceps", "rear_delts")),
+    ExerciseSeed(
+        "Plate Loaded Wide Grip Row", "plate_loaded", ("lats", "mid_back"), ("biceps", "rear_delts")
+    ),
     ExerciseSeed("Cable Row", "cable", ("mid_back", "lats"), ("biceps",)),
     ExerciseSeed("Dumbbell Curl", "dumbbell", ("biceps",), ("forearms",)),
     ExerciseSeed("Cable Curl", "cable", ("biceps",)),
@@ -82,14 +91,20 @@ EXERCISES: tuple[ExerciseSeed, ...] = (
     ExerciseSeed("Smith Machine Squat", "smith_machine", ("quads",), ("glutes", "hamstrings")),
     ExerciseSeed("Leg Extension", "machine", ("quads",)),
     ExerciseSeed("Seated Leg Curl", "machine", ("hamstrings",), ("calves",)),
-    ExerciseSeed("Smith Machine Low Incline Press", "smith_machine", ("chest",), ("front_delts", "triceps")),
+    ExerciseSeed(
+        "Smith Machine Low Incline Press", "smith_machine", ("chest",), ("front_delts", "triceps")
+    ),
     ExerciseSeed("Cable Rear Delt Fly", "cable", ("rear_delts",), ("mid_back",)),
     ExerciseSeed("Overhead Rope Extension", "cable", ("triceps",)),
     ExerciseSeed("Close Grip Lat Pulldown", "machine", ("lats",), ("biceps", "rear_delts")),
     # --- Şablon programların ihtiyaç duyduğu temel hareketler ---
-    ExerciseSeed("Barbell Back Squat", "barbell", ("quads",), ("glutes", "hamstrings", "lower_back")),
+    ExerciseSeed(
+        "Barbell Back Squat", "barbell", ("quads",), ("glutes", "hamstrings", "lower_back")
+    ),
     ExerciseSeed("Barbell Bench Press", "barbell", ("chest",), ("front_delts", "triceps")),
-    ExerciseSeed("Barbell Deadlift", "barbell", ("lower_back", "glutes"), ("hamstrings", "traps", "lats")),
+    ExerciseSeed(
+        "Barbell Deadlift", "barbell", ("lower_back", "glutes"), ("hamstrings", "traps", "lats")
+    ),
     ExerciseSeed("Barbell Overhead Press", "barbell", ("front_delts",), ("side_delts", "triceps")),
     ExerciseSeed("Barbell Row", "barbell", ("mid_back", "lats"), ("biceps", "rear_delts")),
     ExerciseSeed("Pull-Up", "bodyweight", ("lats",), ("biceps", "mid_back")),

@@ -1,0 +1,164 @@
+@import "tailwindcss";
+
+/* ============================================================================
+   Tasarım dili — "Az ve Öz" (Bölüm 7)
+
+   Tek vurgu rengi var ve az kullanılıyor. Çivit mavisi SADECE birincil
+   aksiyonlarda ve aktif/tamamlandı durumlarında görünür; her yerde kullanılırsa
+   vurgu olmaktan çıkar. Kırmızı sadece gerçek hata için — "dikkat" demek
+   istediğimizde uyarı sarısı var.
+   ============================================================================ */
+
+@theme {
+  /* --- Zemin ve yüzeyler --- */
+  --color-ground: #17171a;
+  --color-surface: #1f1f23;
+  --color-surface-raised: #26262b;
+  --color-border: #2e2e34;
+  --color-border-strong: #3a3a42;
+
+  /* --- Metin --- */
+  --color-ink: #f2f2f0;
+  --color-ink-muted: #9a9aa2;
+  --color-ink-faint: #6b6b73;
+
+  /* --- Tek vurgu: çivit mavisi --- */
+  --color-accent: #6e62e5;
+  --color-accent-hover: #7f74ea;
+  --color-accent-dim: #6e62e51a;
+
+  /* --- İkincil durumlar --- */
+  --color-success: #4a9b6e;
+  --color-warning: #c9974c;
+  --color-danger: #c9544c; /* SADECE gerçek hatalar */
+
+  /* --- Tipografi: tek grotesk aile, ayrı display font yok --- */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+
+  /* --- Disiplinli tip skalası (1.200 minor third) --- */
+  --text-2xs: 0.6875rem; /* 11px — rozet, etiket */
+  --text-xs: 0.75rem; /* 12px */
+  --text-sm: 0.8125rem; /* 13px — gövde metni varsayılanı */
+  --text-base: 0.9375rem; /* 15px */
+  --text-lg: 1.125rem; /* 18px */
+  --text-xl: 1.375rem; /* 22px */
+  --text-2xl: 1.75rem; /* 28px — sayfa başlığı, en büyüğü */
+
+  /* --- 8px tabanlı grid --- */
+  --spacing: 0.5rem;
+
+  /* --- Küçük, sabit köşe yarıçapı: sıfır değil, aşırı yuvarlak değil --- */
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 7px;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    background: var(--color-ground);
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--color-ground);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+    /* Sayısal veri hizalansın — set/tekrar/ağırlık tabloları için kritik */
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Sayı gösteren her yerde tabular hizalama */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  /* Klavye odağı görünür kalsın; fare tıklamasında görünmesin */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--color-accent-dim);
+  }
+}
+
+@layer components {
+  /* Kart: tek seviye yükseklik, gölge yok — düz yüzey + ince kenarlık */
+  .card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: var(--radius-sm);
+    padding: 0.5rem 0.875rem;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    /* Sadece kullanıcı aksiyonuna cevap — dekoratif geçiş yok */
+    transition: background-color 120ms ease, border-color 120ms ease;
+  }
+
+  .btn-primary {
+    background: var(--color-accent);
+    color: #fff;
+  }
+  .btn-primary:hover {
+    background: var(--color-accent-hover);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--color-border-strong);
+    color: var(--color-ink);
+  }
+  .btn-ghost:hover {
+    background: var(--color-surface-raised);
+  }
+}
+
+/* Set tamamlandığında tek seferlik onay animasyonu (Bölüm 7: hareket ilkesi).
+   Sayfa yüklenirken çalışan dekoratif bir efekt YOK. */
+@keyframes check-pop {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-check {
+  animation: check-pop 180ms ease-out;
+}
+
+/* Hareket azaltma tercihi olan kullanıcıda animasyonu kapat */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

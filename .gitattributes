@@ -1,0 +1,9 @@
+# Depoda LF, çalışma kopyasında platformun yerlisi. Bu satır olmadan Windows'ta
+# her dosya "değişti" görünüp diff'leri kirletiyor.
+* text=auto eol=lf
+
+# İkili dosyalara dokunma
+*.png binary
+*.jpg binary
+*.woff2 binary
+*.ico binary

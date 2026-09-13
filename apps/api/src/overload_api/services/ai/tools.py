@@ -334,8 +334,7 @@ PROPOSE_UPDATE = _tool(
         "changes": {
             "type": ["object", "null"],
             "description": (
-                "operation='update' için alan->yeni değer eşlemesi. "
-                "operation='delete' için null."
+                "operation='update' için alan->yeni değer eşlemesi. operation='delete' için null."
             ),
         },
         "reason": {

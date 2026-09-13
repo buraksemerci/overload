@@ -35,7 +35,11 @@ NAMING_CONVENTION = {
 class Base(DeclarativeBase):
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
-    type_annotation_map = {
+    # RUF012 (ClassVar olmalı) burada geçerli değil: `type_annotation_map`
+    # SQLAlchemy'nin DeclarativeBase API'sinin parçası ve sınıf değişkeni
+    # olarak sözlük bekliyor; ClassVar ile sarmalamak SQLAlchemy'nin
+    # okumasını bozmuyor ama tip belirteci gürültüsü ekliyor.
+    type_annotation_map = {  # noqa: RUF012
         dict[str, Any]: JSONB,
         list[Any]: JSONB,
         datetime: DateTime(timezone=True),
@@ -52,7 +56,10 @@ def pk_column() -> Mapped[uuid.UUID]:
     """Birincil anahtar. UUID seçildi çünkü istemci çevrimdışıyken (PWA) kayıt
     oluşturup sonra senkronlayabilmeli — sıralı integer bunu imkânsız kılar."""
     return mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, server_default=func.gen_random_uuid()
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        server_default=func.gen_random_uuid(),
     )
 
 

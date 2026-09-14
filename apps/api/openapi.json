@@ -1,6 +1,35 @@
 {
   "components": {
     "schemas": {
+      "AffectedExerciseOut": {
+        "properties": {
+          "exercise_id": {
+            "format": "uuid",
+            "title": "Exercise Id",
+            "type": "string"
+          },
+          "exercise_name": {
+            "title": "Exercise Name",
+            "type": "string"
+          },
+          "injury_description": {
+            "title": "Injury Description",
+            "type": "string"
+          },
+          "muscle_group_name": {
+            "title": "Muscle Group Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "exercise_id",
+          "exercise_name",
+          "muscle_group_name",
+          "injury_description"
+        ],
+        "title": "AffectedExerciseOut",
+        "type": "object"
+      },
       "BearerResponse": {
         "properties": {
           "access_token": {
@@ -18,6 +47,15 @@
         ],
         "title": "BearerResponse",
         "type": "object"
+      },
+      "BodyRegion": {
+        "description": "Kas haritası SVG'sinde ön/arka görünüm ayrımı için.",
+        "enum": [
+          "front",
+          "back"
+        ],
+        "title": "BodyRegion",
+        "type": "string"
       },
       "BodyWeightIn": {
         "properties": {
@@ -268,7 +306,7 @@
       },
       "ChatRequest": {
         "properties": {
-          "image_url": {
+          "image_key": {
             "anyOf": [
               {
                 "maxLength": 500,
@@ -278,7 +316,7 @@
                 "type": "null"
               }
             ],
-            "title": "Image Url"
+            "title": "Image Key"
           },
           "message": {
             "maxLength": 4000,
@@ -301,6 +339,63 @@
         "title": "ChatRole",
         "type": "string"
       },
+      "CoachReportOut": {
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "metrics": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metrics"
+          },
+          "read_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read At"
+          },
+          "week_start": {
+            "format": "date",
+            "title": "Week Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "week_start",
+          "content",
+          "metrics",
+          "generated_at",
+          "read_at"
+        ],
+        "title": "CoachReportOut",
+        "type": "object"
+      },
       "CompleteOut": {
         "properties": {
           "new_records": {
@@ -319,6 +414,46 @@
           "new_records"
         ],
         "title": "CompleteOut",
+        "type": "object"
+      },
+      "ConfirmIn": {
+        "properties": {
+          "key": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "title": "ConfirmIn",
+        "type": "object"
+      },
+      "ConsistencyDay": {
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "sessions": {
+            "title": "Sessions",
+            "type": "integer"
+          },
+          "total_volume_kg": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Volume Kg",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "sessions",
+          "total_volume_kg"
+        ],
+        "title": "ConsistencyDay",
         "type": "object"
       },
       "DayOut": {
@@ -485,6 +620,43 @@
         "title": "ExerciseOut",
         "type": "object"
       },
+      "ExercisePoint": {
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "estimated_1rm": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Estimated 1Rm",
+            "type": "string"
+          },
+          "top_reps": {
+            "title": "Top Reps",
+            "type": "integer"
+          },
+          "top_weight_kg": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Top Weight Kg",
+            "type": "string"
+          },
+          "total_volume_kg": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Volume Kg",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "top_weight_kg",
+          "top_reps",
+          "total_volume_kg",
+          "estimated_1rm"
+        ],
+        "title": "ExercisePoint",
+        "type": "object"
+      },
       "FoodOut": {
         "properties": {
           "brand": {
@@ -589,6 +761,118 @@
         "title": "Health",
         "type": "object"
       },
+      "InjuryIn": {
+        "properties": {
+          "description": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "muscle_group_slug": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Muscle Group Slug",
+            "type": "string"
+          },
+          "started_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started On"
+          }
+        },
+        "required": [
+          "muscle_group_slug",
+          "description"
+        ],
+        "title": "InjuryIn",
+        "type": "object"
+      },
+      "InjuryOut": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "muscle_group_name": {
+            "title": "Muscle Group Name",
+            "type": "string"
+          },
+          "muscle_group_slug": {
+            "title": "Muscle Group Slug",
+            "type": "string"
+          },
+          "resolved_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved On"
+          },
+          "started_on": {
+            "format": "date",
+            "title": "Started On",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "muscle_group_slug",
+          "muscle_group_name",
+          "description",
+          "started_on",
+          "resolved_on",
+          "is_active"
+        ],
+        "title": "InjuryOut",
+        "type": "object"
+      },
+      "IntakeIn": {
+        "properties": {
+          "date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "taken": {
+            "title": "Taken",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "taken"
+        ],
+        "title": "IntakeIn",
+        "type": "object"
+      },
       "IntensityTechnique": {
         "description": "Seed verisindeki `yontem` alanının karşılığı.",
         "enum": [
@@ -655,6 +939,80 @@
         ],
         "title": "MealType",
         "type": "string"
+      },
+      "MediaKind": {
+        "enum": [
+          "meal",
+          "progress"
+        ],
+        "title": "MediaKind",
+        "type": "string"
+      },
+      "MediaUrlOut": {
+        "properties": {
+          "expires_in_seconds": {
+            "title": "Expires In Seconds",
+            "type": "integer"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "url",
+          "expires_in_seconds"
+        ],
+        "title": "MediaUrlOut",
+        "type": "object"
+      },
+      "MuscleGroupOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name_en": {
+            "title": "Name En",
+            "type": "string"
+          },
+          "name_tr": {
+            "title": "Name Tr",
+            "type": "string"
+          },
+          "region": {
+            "$ref": "#/components/schemas/BodyRegion"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "svg_id": {
+            "title": "Svg Id",
+            "type": "string"
+          },
+          "weekly_set_target": {
+            "title": "Weekly Set Target",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name_tr",
+          "name_en",
+          "region",
+          "svg_id",
+          "weekly_set_target"
+        ],
+        "title": "MuscleGroupOut",
+        "type": "object"
       },
       "MuscleVolumeOut": {
         "properties": {
@@ -1143,6 +1501,23 @@
             ],
             "title": "Superset Group"
           },
+          "target_percent_1rm": {
+            "anyOf": [
+              {
+                "maximum": 120.0,
+                "minimum": 30.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Percent 1Rm"
+          },
           "target_rep_max": {
             "maximum": 100.0,
             "minimum": 1.0,
@@ -1235,6 +1610,18 @@
             "title": "Target Label",
             "type": "string"
           },
+          "target_percent_1rm": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Percent 1Rm"
+          },
           "target_rep_max": {
             "title": "Target Rep Max",
             "type": "integer"
@@ -1264,6 +1651,7 @@
           "superset_group",
           "rest_seconds",
           "notes",
+          "target_percent_1rm",
           "target_label"
         ],
         "title": "ProgramExerciseOut",
@@ -1783,6 +2171,189 @@
         "title": "SetOut",
         "type": "object"
       },
+      "SorenessIn": {
+        "properties": {
+          "date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "level": {
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Level",
+            "type": "integer"
+          },
+          "muscle_group_slug": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Muscle Group Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "muscle_group_slug",
+          "level"
+        ],
+        "title": "SorenessIn",
+        "type": "object"
+      },
+      "SorenessOut": {
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "level": {
+            "title": "Level",
+            "type": "integer"
+          },
+          "muscle_group_name": {
+            "title": "Muscle Group Name",
+            "type": "string"
+          },
+          "muscle_group_slug": {
+            "title": "Muscle Group Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "date",
+          "muscle_group_slug",
+          "muscle_group_name",
+          "level"
+        ],
+        "title": "SorenessOut",
+        "type": "object"
+      },
+      "StandardOut": {
+        "properties": {
+          "bodyweight_ratio": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Bodyweight Ratio",
+            "type": "string"
+          },
+          "estimated_1rm": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Estimated 1Rm",
+            "type": "string"
+          },
+          "level": {
+            "$ref": "#/components/schemas/StrengthLevel"
+          },
+          "level_label": {
+            "title": "Level Label",
+            "type": "string"
+          },
+          "lift_key": {
+            "title": "Lift Key",
+            "type": "string"
+          },
+          "lift_label": {
+            "title": "Lift Label",
+            "type": "string"
+          },
+          "next_level": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StrengthLevel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "next_level_kg": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Level Kg"
+          },
+          "progress_to_next": {
+            "title": "Progress To Next",
+            "type": "number"
+          }
+        },
+        "required": [
+          "lift_key",
+          "lift_label",
+          "estimated_1rm",
+          "bodyweight_ratio",
+          "level",
+          "level_label",
+          "next_level",
+          "next_level_kg",
+          "progress_to_next"
+        ],
+        "title": "StandardOut",
+        "type": "object"
+      },
+      "StandardsOut": {
+        "properties": {
+          "bodyweight_kg": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bodyweight Kg"
+          },
+          "is_estimated": {
+            "title": "Is Estimated",
+            "type": "boolean"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/StandardOut"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unavailable Reason"
+          }
+        },
+        "required": [
+          "bodyweight_kg",
+          "is_estimated",
+          "results",
+          "unavailable_reason"
+        ],
+        "title": "StandardsOut",
+        "type": "object"
+      },
       "StreakOut": {
         "properties": {
           "intact_weeks": {
@@ -1814,6 +2385,179 @@
           "label"
         ],
         "title": "StreakOut",
+        "type": "object"
+      },
+      "StrengthLevel": {
+        "enum": [
+          "untrained",
+          "novice",
+          "intermediate",
+          "advanced",
+          "elite"
+        ],
+        "title": "StrengthLevel",
+        "type": "string"
+      },
+      "SupplementIn": {
+        "properties": {
+          "dose": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dose"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "schedule": {
+            "$ref": "#/components/schemas/SupplementSchedule",
+            "default": "daily"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "SupplementIn",
+        "type": "object"
+      },
+      "SupplementOut": {
+        "properties": {
+          "dose": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dose"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "schedule": {
+            "$ref": "#/components/schemas/SupplementSchedule"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "dose",
+          "schedule",
+          "is_active"
+        ],
+        "title": "SupplementOut",
+        "type": "object"
+      },
+      "SupplementPatch": {
+        "properties": {
+          "dose": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dose"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "schedule": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SupplementSchedule"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "SupplementPatch",
+        "type": "object"
+      },
+      "SupplementSchedule": {
+        "enum": [
+          "daily",
+          "training_days",
+          "rest_days",
+          "as_needed"
+        ],
+        "title": "SupplementSchedule",
+        "type": "string"
+      },
+      "SupplementTodayOut": {
+        "properties": {
+          "due_today": {
+            "title": "Due Today",
+            "type": "boolean"
+          },
+          "supplement": {
+            "$ref": "#/components/schemas/SupplementOut"
+          },
+          "taken": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taken"
+          }
+        },
+        "required": [
+          "supplement",
+          "taken",
+          "due_today"
+        ],
+        "title": "SupplementTodayOut",
         "type": "object"
       },
       "TodayOut": {
@@ -1885,6 +2629,60 @@
           "is_deload_suggested"
         ],
         "title": "TodayOut",
+        "type": "object"
+      },
+      "UploadUrlIn": {
+        "properties": {
+          "content_type": {
+            "maxLength": 60,
+            "minLength": 3,
+            "title": "Content Type",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/MediaKind"
+          },
+          "size_bytes": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 15728640.0,
+            "title": "Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "content_type",
+          "size_bytes"
+        ],
+        "title": "UploadUrlIn",
+        "type": "object"
+      },
+      "UploadUrlOut": {
+        "properties": {
+          "expires_in_seconds": {
+            "title": "Expires In Seconds",
+            "type": "integer"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "required_content_type": {
+            "title": "Required Content Type",
+            "type": "string"
+          },
+          "upload_url": {
+            "title": "Upload Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "upload_url",
+          "required_content_type",
+          "expires_in_seconds"
+        ],
+        "title": "UploadUrlOut",
         "type": "object"
       },
       "UserCreate": {
@@ -2126,6 +2924,26 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "WeeklyMetricsOut": {
+        "description": "Rapor henüz üretilmemişken bile gösterilebilecek ham sayılar.\n\nBöylece kullanıcı Pazartesi sabahı rapor gelmeden de haftasını görebiliyor —\nAI metni gecikse bile ekran boş kalmıyor.",
+        "properties": {
+          "has_report": {
+            "title": "Has Report",
+            "type": "boolean"
+          },
+          "metrics": {
+            "additionalProperties": true,
+            "title": "Metrics",
+            "type": "object"
+          }
+        },
+        "required": [
+          "metrics",
+          "has_report"
+        ],
+        "title": "WeeklyMetricsOut",
         "type": "object"
       },
       "WeightTrendPoint": {
@@ -2775,6 +3593,154 @@
         ]
       }
     },
+    "/coach/current-week": {
+      "get": {
+        "description": "İçinde bulunulan haftanın canlı metrikleri (rapor beklemeden).",
+        "operationId": "current_week_coach_current_week_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeeklyMetricsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Current Week",
+        "tags": [
+          "coach"
+        ]
+      }
+    },
+    "/coach/reports": {
+      "get": {
+        "operationId": "list_reports_coach_reports_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 12,
+              "maximum": 52,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CoachReportOut"
+                  },
+                  "title": "Response List Reports Coach Reports Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Reports",
+        "tags": [
+          "coach"
+        ]
+      }
+    },
+    "/coach/reports/latest": {
+      "get": {
+        "operationId": "latest_report_coach_reports_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachReportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Latest Report",
+        "tags": [
+          "coach"
+        ]
+      }
+    },
+    "/coach/reports/{report_id}/read": {
+      "post": {
+        "operationId": "mark_read_coach_reports__report_id__read_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Report Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Mark Read",
+        "tags": [
+          "coach"
+        ]
+      }
+    },
     "/exercises": {
       "get": {
         "operationId": "search_exercises_exercises_get",
@@ -2985,6 +3951,405 @@
         "summary": "Health",
         "tags": [
           "meta"
+        ]
+      }
+    },
+    "/injuries": {
+      "get": {
+        "operationId": "list_injuries_injuries_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "active_only",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Active Only",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/InjuryOut"
+                  },
+                  "title": "Response List Injuries Injuries Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Injuries",
+        "tags": [
+          "body"
+        ]
+      },
+      "post": {
+        "operationId": "create_injury_injuries_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InjuryIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InjuryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Create Injury",
+        "tags": [
+          "body"
+        ]
+      }
+    },
+    "/injuries/affected-exercises": {
+      "get": {
+        "description": "Aktif sakatlıkların uyarı vereceği hareketler.\n\nYalnızca **birincil** kas eşleşmesi dikkate alınıyor. İkincil eşleşmeyi de\nsaysaydık neredeyse her hareket işaretlenir ve uyarı anlamını yitirirdi.",
+        "operationId": "affected_exercises_injuries_affected_exercises_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AffectedExerciseOut"
+                  },
+                  "title": "Response Affected Exercises Injuries Affected Exercises Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Affected Exercises",
+        "tags": [
+          "body"
+        ]
+      }
+    },
+    "/injuries/{injury_id}/resolve": {
+      "post": {
+        "description": "Sakatlığı kapatır. Kayıt silinmiyor — geçmiş sakatlık bilgisi, ileride\naynı bölge tekrar ağrırsa değerli bir bağlam.",
+        "operationId": "resolve_injury_injuries__injury_id__resolve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "injury_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Injury Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "on",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "On"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Resolve Injury",
+        "tags": [
+          "body"
+        ]
+      }
+    },
+    "/media/confirm": {
+      "post": {
+        "description": "Yüklemenin gerçekten tamamlandığını doğrular ve okuma adresi döndürür.",
+        "operationId": "confirm_upload_media_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaUrlOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Confirm Upload",
+        "tags": [
+          "media"
+        ]
+      }
+    },
+    "/media/upload-url": {
+      "post": {
+        "operationId": "create_upload_url_media_upload_url_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadUrlIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadUrlOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Create Upload Url",
+        "tags": [
+          "media"
+        ]
+      }
+    },
+    "/media/url": {
+      "get": {
+        "description": "Saklanan bir anahtar için taze okuma adresi.\n\nAdresler süreli olduğu için veritabanına URL değil **anahtar** yazılıyor;\ngörüntüleme anında burada taze URL üretiliyor.",
+        "operationId": "get_media_url_media_url_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaUrlOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Media Url",
+        "tags": [
+          "media"
+        ]
+      }
+    },
+    "/media/{key}": {
+      "delete": {
+        "operationId": "delete_media_media__key__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Delete Media",
+        "tags": [
+          "media"
+        ]
+      }
+    },
+    "/muscle-groups": {
+      "get": {
+        "description": "Kas haritası SVG'sinin ve check-in ekranlarının ihtiyaç duyduğu referans liste.",
+        "operationId": "list_muscle_groups_muscle_groups_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MuscleGroupOut"
+                  },
+                  "title": "Response List Muscle Groups Muscle Groups Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Muscle Groups",
+        "tags": [
+          "body",
+          "reference"
         ]
       }
     },
@@ -3592,6 +4957,573 @@
         "summary": "Replace Days",
         "tags": [
           "programs"
+        ]
+      }
+    },
+    "/progress/consistency": {
+      "get": {
+        "description": "GitHub katkı ızgarası tarzı günlük yoğunluk.\n\nAntrenman yapılmayan günler de **0 değerle** dönüyor. Izgarayı frontend'de\nçizerken boşlukları doldurmak gerekiyor; bunu burada yapmak istemci tarafında\ntarih aritmetiği tekrarını önlüyor.",
+        "operationId": "consistency_progress_consistency_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 365,
+              "maximum": 730,
+              "minimum": 7,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConsistencyDay"
+                  },
+                  "title": "Response Consistency Progress Consistency Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Consistency",
+        "tags": [
+          "progress"
+        ]
+      }
+    },
+    "/progress/exercise/{exercise_id}": {
+      "get": {
+        "description": "Bir hareketin seans bazında ağırlık / hacim / tahmini 1RM serisi.",
+        "operationId": "exercise_history_progress_exercise__exercise_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "exercise_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Exercise Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ExercisePoint"
+                  },
+                  "title": "Response Exercise History Progress Exercise  Exercise Id  Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Exercise History",
+        "tags": [
+          "progress"
+        ]
+      }
+    },
+    "/progress/strength-standards": {
+      "get": {
+        "description": "Bench / Squat / Deadlift / OHP için vücut ağırlığına göre seviye.\n\nHer hareketin en iyi tahmini 1RM'i tüm geçmişten alınıyor (tek bir seansın\nkötü gününe takılmamak için).",
+        "operationId": "strength_standards_progress_strength_standards_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Strength Standards",
+        "tags": [
+          "progress"
+        ]
+      }
+    },
+    "/soreness": {
+      "get": {
+        "operationId": "list_soreness_soreness_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "on",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "On"
+            }
+          },
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "maximum": 90,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SorenessOut"
+                  },
+                  "title": "Response List Soreness Soreness Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Soreness",
+        "tags": [
+          "body"
+        ]
+      },
+      "post": {
+        "operationId": "log_soreness_soreness_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SorenessIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SorenessOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Log Soreness",
+        "tags": [
+          "body"
+        ]
+      }
+    },
+    "/supplements": {
+      "get": {
+        "operationId": "list_supplements_supplements_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "include_inactive",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Inactive",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SupplementOut"
+                  },
+                  "title": "Response List Supplements Supplements Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Supplements",
+        "tags": [
+          "body"
+        ]
+      },
+      "post": {
+        "operationId": "create_supplement_supplements_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupplementIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplementOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Create Supplement",
+        "tags": [
+          "body"
+        ]
+      }
+    },
+    "/supplements/today": {
+      "get": {
+        "description": "Bugünün işaretleme listesi.",
+        "operationId": "supplements_today_supplements_today_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "on",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "On"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SupplementTodayOut"
+                  },
+                  "title": "Response Supplements Today Supplements Today Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Supplements Today",
+        "tags": [
+          "body"
+        ]
+      }
+    },
+    "/supplements/{supplement_id}": {
+      "delete": {
+        "description": "Kalıcı siler. Geçmiş kayıtları korumak isteyen `is_active: false` kullanmalı —\nsilmek `supplement_intake` satırlarını da CASCADE ile götürür.",
+        "operationId": "delete_supplement_supplements__supplement_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "supplement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Supplement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Delete Supplement",
+        "tags": [
+          "body"
+        ]
+      },
+      "patch": {
+        "operationId": "update_supplement_supplements__supplement_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "supplement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Supplement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupplementPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplementOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Supplement",
+        "tags": [
+          "body"
+        ]
+      }
+    },
+    "/supplements/{supplement_id}/intake": {
+      "post": {
+        "operationId": "mark_intake_supplements__supplement_id__intake_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "supplement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Supplement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IntakeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Mark Intake",
+        "tags": [
+          "body"
         ]
       }
     },

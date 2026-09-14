@@ -314,6 +314,7 @@ class _ProgramExerciseIn(BaseModel):
     superset_group: int | None = None
     rest_seconds: int | None = Field(default=None, ge=0, le=900)
     notes: str | None = Field(default=None, max_length=500)
+    target_percent_1rm: Decimal | None = Field(default=None, ge=30, le=120)
 
     @field_validator("target_rep_max")
     @classmethod
@@ -460,6 +461,7 @@ async def _apply_propose_program(
                     superset_group=ex_in.superset_group,
                     rest_seconds=ex_in.rest_seconds,
                     notes=ex_in.notes,
+                    target_percent_1rm=ex_in.target_percent_1rm,
                 )
             )
     return program.id

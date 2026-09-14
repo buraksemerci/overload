@@ -9,6 +9,7 @@ oluşturma, şablondan klonlama ve AI önerisinin onaylanması **aynı** satırl
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
@@ -56,6 +57,8 @@ class ProgramExerciseOut(BaseModel):
     superset_group: int | None
     rest_seconds: int | None
     notes: str | None
+    #: Yüzde tabanlı programlarda antrenman maksimumunun yüzdesi; yoksa None.
+    target_percent_1rm: Decimal | None
     target_label: str
 
 
@@ -94,6 +97,7 @@ class ProgramExerciseIn(BaseModel):
     superset_group: int | None = None
     rest_seconds: int | None = Field(default=None, ge=0, le=900)
     notes: str | None = Field(default=None, max_length=500)
+    target_percent_1rm: Decimal | None = Field(default=None, ge=30, le=120)
 
     @field_validator("target_rep_max")
     @classmethod
@@ -174,6 +178,7 @@ def _detail_out(program: Program) -> ProgramDetailOut:
                         superset_group=px.superset_group,
                         rest_seconds=px.rest_seconds,
                         notes=px.notes,
+                        target_percent_1rm=px.target_percent_1rm,
                         target_label=px.target_label,
                     )
                     for px in day.exercises
@@ -371,6 +376,7 @@ async def clone_program(
                     superset_group=px.superset_group,
                     rest_seconds=px.rest_seconds,
                     notes=px.notes,
+                    target_percent_1rm=px.target_percent_1rm,
                 )
             )
 

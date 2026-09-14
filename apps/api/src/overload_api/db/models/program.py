@@ -11,12 +11,14 @@ kullanıcının elle kurduğu şeyle birebir aynı satırlardır ve aynı ekrand
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal
 from enum import StrEnum
 
 from sqlalchemy import (
     CheckConstraint,
     ForeignKey,
     Index,
+    Numeric,
     SmallInteger,
     String,
     UniqueConstraint,
@@ -162,6 +164,13 @@ class ProgramExercise(Base):
     target_sets: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     target_rep_min: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     target_rep_max: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    # Yüzde tabanlı programlar (5/3/1, nSuns, Candito) için antrenman maksimumunun
+    # yüzdesi. NULL ise ağırlık progresif overload motoruna bırakılır.
+    #
+    # Bu alan olmadan 5/3/1'i kaydetmek yanlış veri üretirdi: program "%85 x 5+"
+    # diyor, biz "5 tekrar" yazsak kullanıcı ağırlığı kendi uydururdu ve
+    # programın bütün mantığı (yüzde döngüsü) kaybolurdu.
+    target_percent_1rm: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
     technique: Mapped[IntensityTechnique] = enum_column(
         IntensityTechnique, default=IntensityTechnique.straight, nullable=False
     )
@@ -180,19 +189,30 @@ class ProgramExercise(Base):
         CheckConstraint(
             "rest_seconds IS NULL OR rest_seconds BETWEEN 0 AND 900", name="rest_range"
         ),
+        # %30 altı ısınma, %120 üstü gerçekçi değil (supramaksimal çalışma
+        # bu uygulamanın kapsamı dışında).
+        CheckConstraint(
+            "target_percent_1rm IS NULL OR target_percent_1rm BETWEEN 30 AND 120",
+            name="percent_range",
+        ),
         UniqueConstraint("program_day_id", "order_index", name="uq_program_exercise_order"),
         Index("ix_program_exercise_exercise_id", "exercise_id"),
     )
 
     @property
     def target_label(self) -> str:
-        """'2x5-6' / '3x8' biçiminde okunur etiket."""
+        """'2x5-6', '3x8' ya da yüzde tabanlıysa '1x5 @%85' biçiminde etiket."""
         reps = (
             str(self.target_rep_min)
             if self.target_rep_min == self.target_rep_max
             else f"{self.target_rep_min}-{self.target_rep_max}"
         )
-        return f"{self.target_sets}x{reps}"
+        label = f"{self.target_sets}x{reps}"
+        if self.target_percent_1rm is not None:
+            # normalize(): 85.00 -> 85, 67.50 -> 67.5
+            percent = format(self.target_percent_1rm.normalize(), "f")
+            label += f" @%{percent}"
+        return label
 
 
 from overload_api.db.models.exercise import Exercise  # noqa: E402  (döngüsel import kaçınması)

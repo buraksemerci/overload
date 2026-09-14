@@ -92,6 +92,23 @@ def main() -> None:
     downgrade_body = render_python_code(ops.UpgradeOps(ops=drop_ops), migration_context=ctx)
 
     target = API_ROOT / "alembic" / "versions" / "0001_initial_schema.py"
+
+    # TEK SEFERLIK BETIK. Sonraki migration'lar `alembic revision --autogenerate`
+    # ile uretiliyor; bu betigi tekrar calistirmak 0001'i GUNCEL metadata'dan
+    # yeniden yazar ve sonraki migration'lari (0002 RLS, 0003 yuzde alani)
+    # gecersiz kilar: 0001 zaten o sutunu olusturdugu icin 0003 "column already
+    # exists" ile patlar.
+    if target.exists() and "--force" not in sys.argv:
+        print(
+            f"HATA: {target.name} zaten var.\n"
+            "Bu betik TEK SEFERLIKTIR — tekrar calistirmak sonraki migration'lari "
+            "gecersiz kilar.\n"
+            "Yeni bir sema degisikligi icin:  alembic revision --autogenerate -m 'aciklama'\n"
+            "Gercekten yeniden uretmek istiyorsan (bos veritabani + tum migration'lari "
+            "silerek):  python scripts/build_initial_migration.py --force"
+        )
+        raise SystemExit(1)
+
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(HEADER + upgrade_body + FOOTER + downgrade_body + "\n", encoding="utf-8")
 

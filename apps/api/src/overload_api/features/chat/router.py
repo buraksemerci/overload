@@ -27,13 +27,16 @@ from overload_api.db.models.ai import (
 )
 from overload_api.features.chat.context import build_history
 from overload_api.services.ai import executors, runtime
+from overload_api.services.media import r2
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
-    image_url: str | None = Field(default=None, max_length=500)
+    #: R2 anahtarı (URL değil). Ön-imzalı URL'ler süreli olduğu için veritabanına
+    #: anahtar yazılıyor; modele gönderilecek taze URL burada üretiliyor.
+    image_key: str | None = Field(default=None, max_length=500)
 
 
 class PendingActionOut(BaseModel):
@@ -75,7 +78,18 @@ async def stream_chat(payload: ChatRequest, db: DbSession, user: CurrentUser) ->
     Akış SSE çünkü tek yönlü: sunucudan istemciye token akışı. WebSocket çift yönlü
     kanal kurup yeniden bağlanma/kalp atışı yönetimi getirirdi; burada karşılığı yok.
     """
-    history = await build_history(db, user, payload.message, payload.image_url)
+    # Anahtar -> ön-imzalı URL. Anthropic görseli bu adresten çekiyor, bu yüzden
+    # bucket'ın herkese açık olmasına gerek yok.
+    image_url: str | None = None
+    if payload.image_key:
+        if not r2.owns_key(user.id, payload.image_key):
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Bu görsel sana ait değil.")
+        try:
+            image_url = r2.presigned_get(payload.image_key)
+        except r2.MediaError as exc:
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
+
+    history = await build_history(db, user, payload.message, image_url)
     assistant_blocks: list[dict[str, Any]] = []
 
     async def event_source() -> Any:
@@ -89,7 +103,8 @@ async def stream_chat(payload: ChatRequest, db: DbSession, user: CurrentUser) ->
             db,
             user,
             user_text=payload.message,
-            image_url=payload.image_url,
+            # Süreli URL değil, anahtar saklanıyor.
+            image_url=payload.image_key,
             assistant_blocks=assistant_blocks,
         )
         await db.commit()

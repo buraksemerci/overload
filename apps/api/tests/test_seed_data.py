@@ -8,6 +8,8 @@ burada, migration çalıştırmadan önce öğreniriz.
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pytest
 
 from overload_api.db.models.exercise import Equipment
@@ -122,3 +124,48 @@ class TestPrograms:
     def test_days_per_week_matches_day_count(self) -> None:
         for program in ALL_PROGRAMS:
             assert 1 <= len(program.days) <= 7, program.name
+
+    @pytest.mark.parametrize("program", ALL_PROGRAMS, ids=lambda p: p.name)
+    def test_percentages_are_within_database_constraint(self, program: ProgramSeed) -> None:
+        """Veritabanı CHECK kısıtı %30-120 arası istiyor. Seed yüklenirken
+        patlamak yerine burada yakalansın."""
+        for day in program.days:
+            for px in day.exercises:
+                if px.percent is None:
+                    continue
+                value = Decimal(px.percent)
+                assert Decimal(30) <= value <= Decimal(120), (
+                    f"{program.name}/{px.exercise}: %{value} kısıt dışı"
+                )
+
+    def test_percentage_programs_actually_carry_percentages(self) -> None:
+        """5/3/1 ve nSuns yüzde tabanlı programlar. Yüzdesiz kaydedilirlerse
+        kullanıcı ağırlığı kendi uydurur ve programın mantığı kaybolur —
+        bu testin amacı o regresyonu yakalamak."""
+        percentage_based = {"5/3/1 Boring But Big", "nSuns 5/3/1 LP", "GZCLP"}
+        for template in TEMPLATES:
+            if template.name not in percentage_based:
+                continue
+            has_percent = any(
+                px.percent is not None for day in template.days for px in day.exercises
+            )
+            assert has_percent, f"{template.name}: yüzde tabanlı ama hiç yüzde yok"
+
+    def test_all_section_nine_templates_are_present(self) -> None:
+        """Bölüm 9'daki şablon listesinin tamamı kütüphanede olmalı."""
+        names = {t.name for t in TEMPLATES}
+        expected_fragments = [
+            "StrongLifts",
+            "Starting Strength",
+            "Greg Nuckols",
+            "5/3/1",
+            "GZCLP",
+            "Candito",
+            "PHUL",
+            "PHAT",
+            "PPL",
+            "Nuñez",
+            "nSuns",
+        ]
+        for fragment in expected_fragments:
+            assert any(fragment in name for name in names), f"eksik şablon: {fragment}"

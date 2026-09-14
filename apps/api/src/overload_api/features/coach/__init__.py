@@ -1,0 +1,1 @@
+"""Haftalık AI koç raporu."""

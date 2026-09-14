@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -171,6 +172,7 @@ async def _build_program(
                     target_rep_max=px.rep_max,
                     technique=IntensityTechnique(px.technique),
                     superset_group=px.superset_group,
+                    target_percent_1rm=Decimal(px.percent) if px.percent else None,
                 )
             )
     logger.info("program kuruldu: %s (%d gün)", seed.name, len(seed.days))

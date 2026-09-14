@@ -18,9 +18,13 @@ from pydantic import BaseModel
 from overload_api.config import get_settings
 from overload_api.core.security import auth_backend, fastapi_users
 from overload_api.db.session import dispose_engine
+from overload_api.features.body.router import router as body_router
 from overload_api.features.chat.router import router as chat_router
+from overload_api.features.coach.router import router as coach_router
+from overload_api.features.media.router import router as media_router
 from overload_api.features.nutrition.router import router as nutrition_router
 from overload_api.features.programs.router import router as programs_router
+from overload_api.features.progress.router import router as progress_router
 from overload_api.features.workouts.router import router as workouts_router
 
 settings = get_settings()
@@ -95,5 +99,9 @@ app.include_router(
 # --- Özellik router'ları -----------------------------------------------------
 app.include_router(programs_router)
 app.include_router(workouts_router)
+app.include_router(progress_router)
 app.include_router(nutrition_router)
+app.include_router(body_router)
+app.include_router(coach_router)
+app.include_router(media_router)
 app.include_router(chat_router)

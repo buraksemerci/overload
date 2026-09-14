@@ -243,6 +243,15 @@ _PROGRAM_EXERCISE_SCHEMA: Final[dict[str, Any]] = {
         },
         "rest_seconds": {"type": ["integer", "null"], "minimum": 0, "maximum": 900},
         "notes": {"type": ["string", "null"], "maxLength": 500},
+        "target_percent_1rm": {
+            "type": ["number", "null"],
+            "minimum": 30,
+            "maximum": 120,
+            "description": (
+                "Yüzde tabanlı programlarda (5/3/1 gibi) antrenman maksimumunun "
+                "yüzdesi. Tekrar aralığına göre ilerleyen normal programlarda null."
+            ),
+        },
     },
     "required": [
         "exercise_id",
@@ -253,6 +262,7 @@ _PROGRAM_EXERCISE_SCHEMA: Final[dict[str, Any]] = {
         "superset_group",
         "rest_seconds",
         "notes",
+        "target_percent_1rm",
     ],
     "additionalProperties": False,
 }

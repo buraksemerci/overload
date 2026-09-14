@@ -1,0 +1,5 @@
+﻿
+# Serwist tarafindan uretilen servis worker
+public/sw.js
+public/sw.js.map
+public/swe-worker-*.js

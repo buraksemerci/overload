@@ -11,6 +11,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { api, streamChat } from "@/lib/api";
+import { uploadPhoto } from "@/lib/upload";
 
 interface PendingAction {
   id: string;
@@ -37,22 +38,48 @@ export default function ChatPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resolved, setResolved] = useState<Record<string, "approved" | "rejected">>({});
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const fileRef = useRef<HTMLInputElement | null>(null);
 
   const send = useCallback(async () => {
     const message = input.trim();
-    if (!message || busy) return;
+    if ((!message && !photo) || busy) return;
 
+    const pendingPhoto = photo;
     setInput("");
+    setPhoto(null);
+    if (fileRef.current) fileRef.current.value = "";
     setError(null);
     setBusy(true);
-    setTurns((t) => [...t, { role: "user", text: message }, { role: "assistant", text: "" }]);
+    setTurns((t) => [
+      ...t,
+      { role: "user", text: message || "(fotoğraf)" },
+      { role: "assistant", text: "" },
+    ]);
 
     const controller = new AbortController();
     abortRef.current = controller;
 
     try {
-      for await (const event of streamChat(message, undefined, controller.signal)) {
+      // Fotoğraf varsa önce R2'ye yükleniyor; modele anahtar değil, backend'in
+      // ürettiği taze ön-imzalı URL gidiyor.
+      let imageKey: string | undefined;
+      if (pendingPhoto) {
+        setUploading(true);
+        try {
+          imageKey = await uploadPhoto(pendingPhoto, "meal");
+        } finally {
+          setUploading(false);
+        }
+      }
+
+      for await (const event of streamChat(
+        message || "Bu fotoğraftaki yemeği kaydet.",
+        imageKey,
+        controller.signal,
+      )) {
         if (event.type === "text") {
           const { text } = event.data as { text: string };
           setTurns((t) => {
@@ -81,7 +108,7 @@ export default function ChatPage() {
       setBusy(false);
       abortRef.current = null;
     }
-  }, [input, busy]);
+  }, [input, busy, photo]);
 
   const resolve = useCallback(async (id: string, decision: "approve" | "reject") => {
     try {
@@ -182,24 +209,68 @@ export default function ChatPage() {
         )}
       </div>
 
-      <form
-        className="sticky bottom-20 mt-4 flex gap-2 sm:bottom-0"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void send();
-        }}
-      >
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Bir şey sor ya da anlat…"
-          className="flex-1 rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 py-2 text-sm outline-none placeholder:text-[var(--color-ink-faint)]"
-          disabled={busy}
-        />
-        <button type="submit" className="btn btn-primary" disabled={busy || !input.trim()}>
-          Gönder
-        </button>
-      </form>
+      <div className="sticky bottom-20 mt-4 sm:bottom-0">
+        {photo && (
+          <div className="mb-2 flex items-center gap-2 rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-2.5 py-1.5 text-xs">
+            <span className="min-w-0 flex-1 truncate">{photo.name}</span>
+            <span className="tnum shrink-0 text-[var(--color-ink-faint)]">
+              {(photo.size / 1024 / 1024).toFixed(1)} MB
+            </span>
+            <button
+              onClick={() => {
+                setPhoto(null);
+                if (fileRef.current) fileRef.current.value = "";
+              }}
+              aria-label="Fotoğrafı kaldır"
+              className="shrink-0 text-[var(--color-ink-faint)] hover:text-[var(--color-danger)]"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        <form
+          className="flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void send();
+          }}
+        >
+          {/* `capture` telefonda doğrudan kamerayı açıyor — tabaktaki yemeği
+              kaydetmenin en kısa yolu. Masaüstünde yok sayılıyor. */}
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/heic"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
+          />
+          <button
+            type="button"
+            aria-label="Fotoğraf ekle"
+            onClick={() => fileRef.current?.click()}
+            disabled={busy}
+            className="grid size-10 shrink-0 place-items-center rounded-[3px] border border-[var(--color-border-strong)] text-[var(--color-ink-muted)] disabled:opacity-40"
+          >
+            📷
+          </button>
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={photo ? "Not ekle (isteğe bağlı)…" : "Bir şey sor ya da anlat…"}
+            className="min-w-0 flex-1 rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 py-2 text-sm outline-none placeholder:text-[var(--color-ink-faint)]"
+            disabled={busy}
+          />
+          <button
+            type="submit"
+            className="btn btn-primary shrink-0"
+            disabled={busy || (!input.trim() && !photo)}
+          >
+            {uploading ? "Yükleniyor…" : "Gönder"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,18 @@
 {
   "components": {
     "schemas": {
+      "ActivityLevel": {
+        "description": "TDEE çarpanları — `nutrition/tdee.py` içinde sayısal karşılıkları var.",
+        "enum": [
+          "sedentary",
+          "light",
+          "moderate",
+          "active",
+          "very_active"
+        ],
+        "title": "ActivityLevel",
+        "type": "string"
+      },
       "AffectedExerciseOut": {
         "properties": {
           "exercise_id": {
@@ -2171,6 +2183,16 @@
         "title": "SetOut",
         "type": "object"
       },
+      "Sex": {
+        "description": "TDEE (Mifflin-St Jeor) formülü biyolojik cinsiyete göre farklı sabit kullanır.\n`unspecified` seçilirse TDEE hesabı yapılmaz, kullanıcı hedefini elle girer.",
+        "enum": [
+          "male",
+          "female",
+          "unspecified"
+        ],
+        "title": "Sex",
+        "type": "string"
+      },
       "SorenessIn": {
         "properties": {
           "date": {
@@ -2753,6 +2775,22 @@
       },
       "UserRead": {
         "properties": {
+          "activity_level": {
+            "$ref": "#/components/schemas/ActivityLevel",
+            "default": "moderate"
+          },
+          "birth_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birth Date"
+          },
           "display_name": {
             "anyOf": [
               {
@@ -2768,6 +2806,17 @@
             "format": "email",
             "title": "Email",
             "type": "string"
+          },
+          "height_cm": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height Cm"
           },
           "id": {
             "format": "uuid",
@@ -2789,6 +2838,10 @@
             "title": "Is Verified",
             "type": "boolean"
           },
+          "sex": {
+            "$ref": "#/components/schemas/Sex",
+            "default": "unspecified"
+          },
           "timezone": {
             "default": "Europe/Istanbul",
             "title": "Timezone",
@@ -2803,7 +2856,30 @@
         "type": "object"
       },
       "UserUpdate": {
+        "description": "Hesap ayarları — AI'nın erişemediği bölge (Bölüm 4.3'ün sabit sınırı).\n\nBu alanları değiştiren tek yol bu endpoint; karşılık gelen bir AI tool'u\nyok ve olmayacak.",
         "properties": {
+          "activity_level": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActivityLevel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "birth_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birth Date"
+          },
           "display_name": {
             "anyOf": [
               {
@@ -2826,6 +2902,19 @@
               }
             ],
             "title": "Email"
+          },
+          "height_cm": {
+            "anyOf": [
+              {
+                "maximum": 260.0,
+                "minimum": 80.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height Cm"
           },
           "is_active": {
             "anyOf": [
@@ -2870,6 +2959,16 @@
               }
             ],
             "title": "Password"
+          },
+          "sex": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Sex"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "timezone": {
             "anyOf": [

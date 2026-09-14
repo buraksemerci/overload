@@ -116,3 +116,38 @@ jobs:
 
       - name: Derleme
         run: pnpm --filter @overload/web build
+
+  e2e:
+    runs-on: ubuntu-latest
+    # Frontend işi geçmeden e2e koşmak anlamsız: derleme kırıksa uçtan uca
+    # testler de kırılır ve gerçek sebebi gizler.
+    needs: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm gen:types
+
+      - name: Playwright tarayıcıları
+        run: pnpm --filter @overload/web exec playwright install --with-deps chromium
+
+      - name: Uçtan uca testler
+        # Backend taklit ediliyor (bkz. apps/web/e2e/fixtures.ts); veritabanı
+        # gerekmiyor. Playwright yapılandırması sunucuyu kendisi ayağa kaldırıyor.
+        run: pnpm --filter @overload/web e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-raporu
+          path: apps/web/playwright-report/
+          retention-days: 7

@@ -3,107 +3,65 @@
 /**
  * Antrenman Modu (Bölüm 8, ekran 3).
  *
- * Bu ekranın tek işi var: salonda, tek elle, terli parmakla, hızlıca set girmek.
- * Tasarım kararları buna göre:
- *  - Dokunma hedefleri büyük (min 44px), sayı girişleri numeric klavye açar.
+ * Salonda, tek elle, terli parmakla kullanılacak. Tasarım kararları buna göre:
+ *  - Dokunma hedefleri en az 44px; sayı alanları `inputMode="decimal"`.
  *  - Set tamamlanınca TEK bir onay animasyonu — başka hareket yok.
- *  - Dinlenme sayacı otomatik başlar; bitince titreşim (sesli bildirim
- *    tarayıcıda kullanıcı etkileşimi gerektirdiği için titreşim öncelikli).
- *  - Bir önceki seansın rakamı her satırda görünür; motorun önerisi üstte.
+ *  - Dinlenme sayacı otomatik başlar; bitince titreşim.
+ *  - Her set ANINDA sunucuya yazılır. Telefon kilitlenir, uygulama arka plana
+ *    atılır, bağlantı kopar — yarım antrenman kaybolmamalı.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { ErrorBox, Empty, Loading } from "@/components/States";
+import {
+  useCompleteSession,
+  useLogSet,
+  useSession,
+  useStartSession,
+  useToday,
+  type PersonalRecordRow,
+  type PlannedExercise,
+} from "@/lib/queries";
 
-interface PlannedExercise {
-  id: string;
-  name: string;
-  targetSets: number;
-  repMin: number;
-  repMax: number;
-  technique: string;
-  suggestion: string;
-  lastTime: string | null;
-  restSeconds: number;
-}
-
-interface LoggedSet {
+interface Draft {
   weight: string;
   reps: string;
   rir: string;
-  done: boolean;
 }
 
-// Örnek plan — backend bağlandığında GET /workouts/today ile gelecek.
-const PLAN: PlannedExercise[] = [
-  {
-    id: "1",
-    name: "Plate Loaded Chest Press",
-    targetSets: 2,
-    repMin: 5,
-    repMax: 6,
-    technique: "RIR1",
-    suggestion: "42.5kg x 5 — geçen sefer 40kg x 6 RIR1 yaptın",
-    lastTime: "40kg x 6 RIR1, 40kg x 5 RIR1",
-    restSeconds: 180,
-  },
-  {
-    id: "2",
-    name: "Chest Fly Machine",
-    targetSets: 2,
-    repMin: 6,
-    repMax: 8,
-    technique: "RIR1",
-    suggestion: "35kg x 8 — aralık içindesin, bir tekrar ekle",
-    lastTime: "35kg x 7 RIR1",
-    restSeconds: 120,
-  },
-];
+const PR_LABEL: Record<string, string> = {
+  max_weight: "en ağır set",
+  max_reps: "en çok tekrar",
+  session_volume: "seans hacmi",
+  estimated_1rm: "tahmini 1RM",
+};
 
 export default function WorkoutPage() {
-  const [logs, setLogs] = useState<Record<string, LoggedSet[]>>(() =>
-    Object.fromEntries(
-      PLAN.map((ex) => [
-        ex.id,
-        Array.from({ length: ex.targetSets }, () => ({
-          weight: "",
-          reps: "",
-          rir: "",
-          done: false,
-        })),
-      ]),
-    ),
-  );
+  const today = useToday();
+  const startSession = useStartSession();
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const session = useSession(sessionId);
+  const logSet = useLogSet();
+  const complete = useCompleteSession();
+
+  const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [rest, setRest] = useState<{ remaining: number; total: number } | null>(null);
+  const [newRecords, setNewRecords] = useState<PersonalRecordRow[] | null>(null);
 
-  const update = useCallback(
-    (exerciseId: string, index: number, patch: Partial<LoggedSet>) => {
-      setLogs((prev) => {
-        const sets = prev[exerciseId];
-        if (!sets) return prev;
-        const next = [...sets];
-        const current = next[index];
-        if (!current) return prev;
-        next[index] = { ...current, ...patch };
-        return { ...prev, [exerciseId]: next };
-      });
-    },
-    [],
-  );
+  // Devam eden seans varsa otomatik devral — kullanıcı uygulamayı kapatıp
+  // açtığında kaldığı yerden devam etmeli.
+  useEffect(() => {
+    if (sessionId === null && today.data?.active_session_id) {
+      setSessionId(today.data.active_session_id);
+    }
+  }, [sessionId, today.data?.active_session_id]);
 
-  const completeSet = useCallback(
-    (exercise: PlannedExercise, index: number) => {
-      update(exercise.id, index, { done: true });
-      setRest({ remaining: exercise.restSeconds, total: exercise.restSeconds });
-    },
-    [update],
-  );
-
-  // Dinlenme sayacı. setInterval yerine her saniye yeniden kurulmuyor;
-  // tek interval + fonksiyonel güncelleme ile sürüklenme (drift) engelleniyor.
+  // Dinlenme sayacı. Tek zamanlayıcı + fonksiyonel güncelleme ile sürüklenme yok.
   useEffect(() => {
     if (rest === null) return;
     if (rest.remaining <= 0) {
-      // Titreşim: kullanıcı etkileşimi gerektirmez, ses gerektirir.
+      // Titreşim kullanıcı etkileşimi gerektirmiyor; ses gerektiriyor.
       if (typeof navigator !== "undefined" && "vibrate" in navigator) {
         navigator.vibrate([200, 100, 200]);
       }
@@ -117,88 +75,245 @@ export default function WorkoutPage() {
     return () => clearTimeout(timer);
   }, [rest]);
 
-  const totalSets = Object.values(logs).flat().length;
-  const doneSets = Object.values(logs).flat().filter((s) => s.done).length;
+  const draftKey = (exerciseId: string, setNumber: number) => `${exerciseId}:${setNumber}`;
+
+  const updateDraft = useCallback(
+    (key: string, patch: Partial<Draft>) => {
+      setDrafts((prev) => ({
+        ...prev,
+        [key]: { weight: "", reps: "", rir: "", ...prev[key], ...patch },
+      }));
+    },
+    [],
+  );
+
+  const submitSet = useCallback(
+    async (exercise: PlannedExercise, setNumber: number) => {
+      if (!sessionId) return;
+      const key = draftKey(exercise.exercise_id, setNumber);
+      const draft = drafts[key];
+      if (!draft?.weight || !draft.reps) return;
+
+      await logSet.mutateAsync({
+        sessionId,
+        exercise_id: exercise.exercise_id,
+        set_number: setNumber,
+        // Türkçe klavyede virgül yazılabiliyor; nokta bekleyen API'ye
+        // göndermeden önce normalize ediyoruz.
+        weight_kg: Number.parseFloat(draft.weight.replace(",", ".")),
+        reps: Number.parseInt(draft.reps, 10),
+        rir: draft.rir === "" ? null : Number.parseInt(draft.rir, 10),
+        technique: exercise.technique,
+      });
+
+      setRest({
+        remaining: exercise.rest_seconds ?? 150,
+        total: exercise.rest_seconds ?? 150,
+      });
+    },
+    [drafts, logSet, sessionId],
+  );
+
+  if (today.isLoading) return <Loading />;
+  if (today.isError) return <ErrorBox error={today.error} onRetry={() => void today.refetch()} />;
+
+  const workout = today.data;
+  if (!workout || workout.exercises.length === 0) {
+    return (
+      <Empty
+        title="Bugün için planlanmış antrenman yok"
+        hint="Önce bir program seçip aktif hâle getirmen gerekiyor."
+        action={
+          <Link href="/programs" className="btn btn-primary">
+            Programlara git
+          </Link>
+        }
+      />
+    );
+  }
+
+  const loggedSets = session.data?.sets ?? [];
+  const isLogged = (exerciseId: string, setNumber: number) =>
+    loggedSets.some((s) => s.exercise_id === exerciseId && s.set_number === setNumber);
+
+  const totalPlanned = workout.exercises.reduce((sum, e) => sum + e.target_sets, 0);
+  const doneCount = loggedSets.filter((s) => !s.is_warmup).length;
+
+  // --- Rekor kutlaması (Bölüm 4.4) ---
+  if (newRecords !== null) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-semibold tracking-tight">Antrenman bitti</h1>
+        {newRecords.length > 0 ? (
+          <section className="card p-4" style={{ borderColor: "var(--color-accent)" }}>
+            <p className="text-2xs uppercase tracking-wide" style={{ color: "var(--color-accent)" }}>
+              {newRecords.length} yeni rekor
+            </p>
+            <ul className="mt-3 space-y-2">
+              {newRecords.map((record, i) => (
+                <li key={i} className="tnum text-sm">
+                  <span className="animate-check inline-block">🏆</span>{" "}
+                  {PR_LABEL[record.type] ?? record.type}: {record.value}
+                  {record.reps !== null && ` x ${record.reps}`}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : (
+          <p className="text-sm text-[var(--color-ink-muted)]">
+            Bu seansta rekor kırılmadı — ama {doneCount} set tamamladın, hacim birikiyor.
+          </p>
+        )}
+        <div className="flex gap-2">
+          <Link href="/" className="btn btn-primary">
+            Panele dön
+          </Link>
+          <Link href="/progress" className="btn btn-ghost">
+            İlerlemeyi gör
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <header className="flex items-baseline justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight">Antrenman</h1>
-          <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
-            Pazartesi — Göğüs / Omuz / Triceps
+          <p className="mt-1 truncate text-sm text-[var(--color-ink-muted)]">
+            {workout.day_label}
           </p>
         </div>
         <p className="tnum shrink-0 text-sm text-[var(--color-ink-muted)]">
-          {doneSets} / {totalSets} set
+          {doneCount} / {totalPlanned} set
         </p>
       </header>
 
-      {rest && <RestTimer remaining={rest.remaining} total={rest.total} onSkip={() => setRest(null)} />}
+      {sessionId === null ? (
+        <button
+          className="btn btn-primary w-full"
+          disabled={startSession.isPending}
+          onClick={async () => {
+            const created = await startSession.mutateAsync({
+              program_day_id: workout.program_day_id,
+            });
+            setSessionId(created.id);
+          }}
+        >
+          {startSession.isPending ? "Başlatılıyor…" : "Antrenmanı başlat"}
+        </button>
+      ) : (
+        rest && (
+          <RestTimer
+            remaining={rest.remaining}
+            total={rest.total}
+            onSkip={() => setRest(null)}
+          />
+        )
+      )}
 
-      {PLAN.map((exercise) => (
-        <section key={exercise.id} className="card p-4">
-          <h2 className="text-base font-medium">{exercise.name}</h2>
+      {startSession.isError && <ErrorBox error={startSession.error} />}
+      {logSet.isError && <ErrorBox error={logSet.error} />}
+
+      {workout.exercises.map((exercise) => (
+        <section key={exercise.program_exercise_id} className="card p-4">
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="text-base font-medium">{exercise.name}</h2>
+            {exercise.superset_group !== null && (
+              <span className="shrink-0 rounded-[3px] border border-[var(--color-border-strong)] px-1.5 py-0.5 text-2xs text-[var(--color-ink-muted)]">
+                superset {exercise.superset_group}
+              </span>
+            )}
+          </div>
           <p className="tnum mt-0.5 text-xs text-[var(--color-ink-faint)]">
-            {exercise.targetSets}x{exercise.repMin}-{exercise.repMax} · {exercise.technique}
+            {exercise.target_sets}x{exercise.target_rep_min}
+            {exercise.target_rep_min !== exercise.target_rep_max && `-${exercise.target_rep_max}`}
+            {" · "}
+            {exercise.technique}
           </p>
 
-          {/* Motorun önerisi — vurgu rengi burada çünkü ekranın birincil bilgisi */}
-          <p className="mt-3 rounded-[3px] bg-[var(--color-accent-dim)] px-2.5 py-2 text-xs text-[var(--color-ink)]">
-            {exercise.suggestion}
-          </p>
-          {exercise.lastTime && (
+          {exercise.progression && (
+            <>
+              <p className="mt-3 rounded-[3px] bg-[var(--color-accent-dim)] px-2.5 py-2 text-xs">
+                {exercise.progression.message}
+              </p>
+              {exercise.progression.warnings.map((warning, i) => (
+                <p key={i} className="mt-1.5 text-xs" style={{ color: "var(--color-warning)" }}>
+                  {warning}
+                </p>
+              ))}
+            </>
+          )}
+          {exercise.last_session_summary && (
             <p className="tnum mt-1.5 text-xs text-[var(--color-ink-faint)]">
-              Geçen sefer: {exercise.lastTime}
+              Geçen sefer: {exercise.last_session_summary}
             </p>
           )}
 
           <div className="mt-3 space-y-2">
-            {(logs[exercise.id] ?? []).map((set, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <span className="tnum w-5 shrink-0 text-xs text-[var(--color-ink-faint)]">
-                  {index + 1}
-                </span>
-                <NumberField
-                  label="kg"
-                  value={set.weight}
-                  onChange={(v) => update(exercise.id, index, { weight: v })}
-                  disabled={set.done}
-                />
-                <NumberField
-                  label="tekrar"
-                  value={set.reps}
-                  onChange={(v) => update(exercise.id, index, { reps: v })}
-                  disabled={set.done}
-                />
-                <NumberField
-                  label="RIR"
-                  value={set.rir}
-                  onChange={(v) => update(exercise.id, index, { rir: v })}
-                  disabled={set.done}
-                />
-                <button
-                  type="button"
-                  aria-label={`Set ${index + 1} tamamlandı`}
-                  disabled={set.done || !set.weight || !set.reps}
-                  onClick={() => completeSet(exercise, index)}
-                  className={`grid size-11 shrink-0 place-items-center rounded-[3px] border transition-colors ${
-                    set.done
-                      ? "border-transparent bg-[var(--color-success)] text-white"
-                      : "border-[var(--color-border-strong)] text-[var(--color-ink-muted)] disabled:opacity-40"
-                  }`}
-                >
-                  <span className={set.done ? "animate-check" : undefined}>✓</span>
-                </button>
-              </div>
-            ))}
+            {Array.from({ length: exercise.target_sets }, (_, index) => {
+              const setNumber = index + 1;
+              const key = draftKey(exercise.exercise_id, setNumber);
+              const draft = drafts[key] ?? { weight: "", reps: "", rir: "" };
+              const done = isLogged(exercise.exercise_id, setNumber);
+
+              return (
+                <div key={setNumber} className="flex items-center gap-2">
+                  <span className="tnum w-5 shrink-0 text-xs text-[var(--color-ink-faint)]">
+                    {setNumber}
+                  </span>
+                  <NumberField
+                    label="kg"
+                    value={draft.weight}
+                    onChange={(v) => updateDraft(key, { weight: v })}
+                    disabled={done || sessionId === null}
+                  />
+                  <NumberField
+                    label="tekrar"
+                    value={draft.reps}
+                    onChange={(v) => updateDraft(key, { reps: v })}
+                    disabled={done || sessionId === null}
+                  />
+                  <NumberField
+                    label="RIR"
+                    value={draft.rir}
+                    onChange={(v) => updateDraft(key, { rir: v })}
+                    disabled={done || sessionId === null}
+                  />
+                  <button
+                    type="button"
+                    aria-label={`Set ${setNumber} tamamlandı`}
+                    disabled={done || sessionId === null || !draft.weight || !draft.reps}
+                    onClick={() => void submitSet(exercise, setNumber)}
+                    className={`grid size-11 shrink-0 place-items-center rounded-[3px] border transition-colors ${
+                      done
+                        ? "border-transparent bg-[var(--color-success)] text-white"
+                        : "border-[var(--color-border-strong)] text-[var(--color-ink-muted)] disabled:opacity-40"
+                    }`}
+                  >
+                    <span className={done ? "animate-check" : undefined}>✓</span>
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </section>
       ))}
 
-      <button className="btn btn-primary w-full" disabled={doneSets === 0}>
-        Antrenmanı bitir
-      </button>
+      {sessionId !== null && (
+        <button
+          className="btn btn-primary w-full"
+          disabled={doneCount === 0 || complete.isPending}
+          onClick={async () => {
+            const result = await complete.mutateAsync(sessionId);
+            setNewRecords(result.new_records);
+          }}
+        >
+          {complete.isPending ? "Kapatılıyor…" : "Antrenmanı bitir"}
+        </button>
+      )}
+      {complete.isError && <ErrorBox error={complete.error} />}
     </div>
   );
 }
@@ -218,8 +333,8 @@ function NumberField({
     <label className="min-w-0 flex-1">
       <span className="sr-only">{label}</span>
       <input
-        // inputMode="decimal": mobilde sayısal klavye açar ama virgül/nokta da yazılabilir.
-        // type="number" kullanılmıyor — iOS'ta ok tuşları ekranı daraltıyor.
+        // inputMode="decimal": mobilde sayısal klavye açar ama virgül de yazılabilir.
+        // type="number" kullanılmıyor — iOS'ta ok tuşları alanı daraltıyor.
         inputMode="decimal"
         value={value}
         disabled={disabled}
@@ -243,17 +358,11 @@ function RestTimer({
   const minutes = Math.floor(remaining / 60);
   const seconds = remaining % 60;
   const progress = total > 0 ? (total - remaining) / total : 0;
-  const ref = useRef<HTMLDivElement>(null);
 
   return (
-    <div
-      ref={ref}
-      className="card sticky top-16 z-10 flex items-center gap-3 p-3"
-      role="timer"
-      aria-live="off"
-    >
+    <div className="card sticky top-16 z-10 flex items-center gap-3 p-3" role="timer">
       <div className="relative size-11 shrink-0">
-        <svg viewBox="0 0 36 36" className="size-11 -rotate-90">
+        <svg viewBox="0 0 36 36" className="size-11 -rotate-90" aria-hidden="true">
           <circle cx="18" cy="18" r="16" fill="none" stroke="var(--color-border)" strokeWidth="3" />
           <circle
             cx="18"

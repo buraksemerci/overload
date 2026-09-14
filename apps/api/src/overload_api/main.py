@@ -9,14 +9,16 @@ import logging
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from datetime import date
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_users import schemas
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from overload_api.config import get_settings
 from overload_api.core.security import auth_backend, fastapi_users
+from overload_api.db.models.user import ActivityLevel, Sex
 from overload_api.db.session import dispose_engine
 from overload_api.features.body.router import router as body_router
 from overload_api.features.chat.router import router as chat_router
@@ -37,6 +39,11 @@ logging.basicConfig(level=settings.log_level)
 class UserRead(schemas.BaseUser[uuid.UUID]):
     display_name: str | None = None
     timezone: str = "Europe/Istanbul"
+    # TDEE ve güç standartları bu üç alana bağlı; olmadan hesap yapılamıyor.
+    birth_date: date | None = None
+    sex: Sex = Sex.unspecified
+    height_cm: int | None = None
+    activity_level: ActivityLevel = ActivityLevel.moderate
 
 
 class UserCreate(schemas.BaseUserCreate):
@@ -44,8 +51,18 @@ class UserCreate(schemas.BaseUserCreate):
 
 
 class UserUpdate(schemas.BaseUserUpdate):
+    """Hesap ayarları — AI'nın erişemediği bölge (Bölüm 4.3'ün sabit sınırı).
+
+    Bu alanları değiştiren tek yol bu endpoint; karşılık gelen bir AI tool'u
+    yok ve olmayacak.
+    """
+
     display_name: str | None = None
     timezone: str | None = None
+    birth_date: date | None = None
+    sex: Sex | None = None
+    height_cm: int | None = Field(default=None, ge=80, le=260)
+    activity_level: ActivityLevel | None = None
 
 
 class Health(BaseModel):

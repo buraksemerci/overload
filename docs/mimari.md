@@ -256,7 +256,135 @@ tuşları ekranı daraltıyor; salonda tek elle kullanımda sorun çıkarıyor.
 
 ---
 
-## 10. Ruff'ta kapatılan kurallar
+## 10. Frontend veri katmanı — neden TanStack Query
+
+Bu uygulamada ekranlar birbirini etkiliyor: bir set kaydedince ana paneldeki
+seri, kas haritası ve ilerleme grafikleri bayatlıyor. Elle yazılmış
+`useEffect` + `useState` mantığında bu bağımlılıkları takip etmek kısa sürede
+dağılır — "şu ekranı da yenilemeyi unuttum" hatası sessizdir ve kullanıcı eski
+sayıya bakarak karar verir.
+
+Sorgu anahtarları hiyerarşik (`["workouts", "today"]`), böylece
+`invalidateQueries({ queryKey: ["workouts"] })` tüm antrenman sorgularını tek
+seferde tazeliyor.
+
+İki varsayılan bilerek değiştirildi:
+- `refetchOnWindowFocus: false` — salonda bağlantı zayıf, her odak değişiminde
+  istek atmak hem veri harcıyor hem arayüzü titretiyor.
+- `retry`: 4xx'te tekrar denenmiyor. İstek yanlışsa tekrarlamak hatayı
+  düzeltmez, sadece kullanıcıyı bekletir.
+
+`QueryClient` modül seviyesinde değil `useState` içinde kuruluyor: modül
+seviyesindeki tek istemci, sunucu render'ında farklı kullanıcıların önbelleğini
+paylaştırırdı.
+
+---
+
+## 11. PWA — Serwist ve webpack istisnası
+
+`build` betiği `--webpack` bayrağıyla koşuyor. Sebep: Next 16'da Turbopack
+varsayılan, ama Serwist servis worker'ı bir **webpack eklentisi** olarak
+üretiyor. Turbopack altında eklenti çalışmıyor ve `public/sw.js` hiç
+oluşmuyor. Geliştirmede Turbopack kullanılmaya devam ediyor — orada servis
+worker zaten `disable` ile kapalı, dolayısıyla kayıp yok.
+
+**Ne önbelleğe alınıyor:** uygulama kabuğu (JS/CSS/font/ikon). Salonda zayıf
+bağlantıda uygulamanın açılması buna bağlı.
+
+**Ne alınmıyor:** API yanıtları. Antrenman verisi kişisel ve hızla bayatlıyor;
+eski bir "bugünkü antrenman" göstermek hiç göstermemekten daha kötü — kullanıcı
+yanlış ağırlıkla çalışır.
+
+İkonlar `scripts/generate_icons.py` ile üretiliyor: saf Python, harici bağımlılık
+yok. Pillow ya da bir SVG işleyici eklemek, bu kadar basit bir glif (koyu zemin +
+çivit mavisi halter plakası) için orantısız olurdu.
+
+---
+
+## 12. Medya — neden ön-imzalı URL
+
+Fotoğraf backend'den **geçmiyor**. İstemci backend'den ön-imzalı bir PUT adresi
+alıyor ve dosyayı doğrudan R2'ye yüklüyor.
+
+Alternatif (dosyayı backend'e gönderip oradan R2'ye yazmak) üç sorun getiriyordu:
+telefon fotoğrafı 3-5 MB ve her yükleme backend'in belleğini/bant genişliğini
+tüketir; yükleme süresince bir worker bloke olur; zayıf bağlantıda yarıda kalan
+yükleme backend'i de meşgul eder.
+
+Üç adımlı akış (`upload-url` → doğrudan PUT → `confirm`) — son adım atlanabilir
+gibi görünür ama atlanmamalı: yükleme yarıda kesilirse veritabanına kırık bir
+anahtar yazılır ve sonradan boş görsel olarak döner. `confirm`, R2'ye
+`head_object` atıp gerçekten orada mı diye bakıyor.
+
+**Veritabanında URL değil anahtar saklanıyor.** Ön-imzalı URL'ler süreli;
+kaydedilen bir URL bir saat sonra ölü bağlantı olur. Görüntüleme anında taze
+URL üretiliyor.
+
+Sahiplik kontrolü anahtar düzenine iniyor: `{user_id}/...` — istemciden gelen
+her anahtar için `owns_key()` çağrılıyor, aksi halde kullanıcı başkasının
+anahtarını gönderip okuma adresi alabilirdi.
+
+---
+
+## 13. Haftalık koç raporu — neden iki aşamalı
+
+Anthropic Batch API senkron değil; sonuçlar dakikalar ile 24 saat arasında hazır
+oluyor. Tek bir "raporu üret" fonksiyonu yazıp sonucu beklemek, gece çalışan bir
+işi saatlerce ayakta tutmak demek olurdu.
+
+    submit  → haftanın verisini toplar, batch'i gönderir, id döndürür
+    collect → hazır sonuçları CoachReport satırlarına yazar
+
+Batch tercih edildi çünkü rapor gecikmeye duyarlı değil (kullanıcı sabah
+okuyacak) ve batch anlık API'nin yarı fiyatına çalışıyor.
+
+Sonuçlar **gönderim sırasıyla gelmiyor** — eşleştirme `custom_id` ile yapılıyor,
+konuma göre değil.
+
+Hiç verisi olmayan kullanıcı için rapor üretilmiyor: hem token harcar hem de
+"bu hafta hiçbir şey yapmadın" demekten ibaret olur.
+
+Arayüz tarafında rapor beklemeden haftanın **canlı metrikleri** gösteriliyor;
+AI metni gecikse bile ekran boş kalmıyor.
+
+---
+
+## 14. Güç standartlarının bilinçli sınırları
+
+Oranlar yayımlanmış tabloların (Lon Kilgore, ExRx, strengthlevel.com gibi
+topluluk veri setleri) ortak eğilimini temsil ediyor; tek bir otoritenin resmi
+tablosu değiller.
+
+Üç şey bilerek **yapılmadı**:
+- **Yaş düzeltmesi yok.** Veri kaynakları bu konuda tutarsız; uydurulmuş bir
+  katsayı sahte kesinlik olurdu.
+- **`Sex.unspecified` için sonuç üretilmiyor.** Erkek/kadın tabloları belirgin
+  biçimde farklı; ortalama almak kimseyi doğru temsil etmez. Arayüz bunun
+  sebebini açıkça yazıyor.
+- **1RM tahmin.** Epley formülüyle hesaplanıyor, gerçek tek tekrar testi değil.
+  Bu, çıktının her yerinde belirtiliyor.
+
+---
+
+## 15. E2E stratejisi — backend neden taklit ediliyor
+
+Playwright testleri gerçek API'yi çağırmıyor; yanıtlar ağ katmanında taklit
+ediliyor (`e2e/fixtures.ts`).
+
+Gerekçe: bu testlerin işi frontend'in uçtan uca davranışını doğrulamak —
+yönlendirme, oturum kontrolü, form akışları, hata durumları. Gerçek bir
+Postgres + FastAPI ayağa kaldırmak testleri yavaşlatır, CI'ı kırılgan yapar ve
+backend'in kendi 357 testinin zaten kapsadığını tekrarlar.
+
+Sözleşme kayması riski şuradan kapatılıyor: taklit yanıtlar OpenAPI'den üretilen
+tiplerle aynı alan adlarını kullanıyor; şema değişirse `pnpm typecheck` kırılır.
+
+Testler iki viewport'ta koşuyor (Pixel 7 + masaüstü Chrome) çünkü gezinme
+çubuğu viewport'a göre değişiyor ve bu gerçek bir kırılma noktası.
+
+---
+
+## 16. Ruff'ta kapatılan kurallar
 
 `RUF001/002/003` ("belirsiz Unicode karakter") kapatıldı. Bu kural homoglif
 saldırılarını (Kiril `а` yerine Latin `a` gibi) yakalamak için var ve İngilizce kod

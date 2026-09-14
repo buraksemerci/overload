@@ -89,7 +89,9 @@ export const api = {
  */
 export async function* streamChat(
   message: string,
-  imageUrl?: string,
+  /** R2 anahtarı — URL değil. Ön-imzalı URL'ler süreli; backend anahtardan
+   *  her istekte taze URL üretiyor. */
+  imageKey?: string,
   signal?: AbortSignal,
 ): AsyncGenerator<{ type: string; data: unknown }> {
   const token = getToken();
@@ -99,7 +101,7 @@ export async function* streamChat(
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({ message, image_url: imageUrl ?? null }),
+    body: JSON.stringify({ message, image_key: imageKey ?? null }),
     signal,
   });
 

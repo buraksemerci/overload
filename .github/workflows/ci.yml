@@ -58,6 +58,13 @@ jobs:
         working-directory: apps/api
         run: .venv/bin/mypy src
 
+      - name: Migration SQL'i geçerli mi (bağlantısız)
+        working-directory: apps/api
+        # Çevrimdışı mod: veritabanına bağlanmadan DDL üretiyor. Sözdizimi
+        # hatalarını ve `alembic.ini` kodlama sorunlarını, gerçek migration
+        # çalışmadan önce yakalıyor.
+        run: .venv/bin/alembic upgrade head --sql > /dev/null
+
       - name: Migration'lar uygulanıyor
         working-directory: apps/api
         run: .venv/bin/alembic upgrade head

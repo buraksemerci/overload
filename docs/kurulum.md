@@ -240,6 +240,16 @@ istek event loop'u bloklar.
 **`permission denied for table ...`**
 Migration `0002` çalışmamış. `alembic upgrade head` ile uygula.
 
+**`alembic` komutu `UnicodeDecodeError: 'charmap' codec can't decode byte ...` veriyor**
+
+Alembic `alembic.ini` dosyasını işletim sisteminin **yerel kodlamasıyla** okuyor
+(Türkçe Windows'ta cp1254). Dosyada UTF-8 kodlanmış bir Türkçe karakter varsa
+migration hiç çalışmıyor. Bu yüzden `alembic.ini` bilerek **saf ASCII** tutuluyor
+— dosyanın başında da uyarı var. Oraya Türkçe yorum ekleme.
+
+Projedeki diğer tüm dosyalar UTF-8 ve Türkçe içerebilir; istisna yalnızca bu
+dosya.
+
 **`python` komutu Microsoft Store açıyor**
 Windows'un Store yer tutucusu PATH'te önde. Ayarlar → Uygulamalar → Uygulama
 Takma Adları → `python.exe` ve `python3.exe` kapatılmalı. (Bu makinede gerçek

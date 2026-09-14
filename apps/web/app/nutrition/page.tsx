@@ -5,9 +5,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
+import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { ErrorBox, Empty, Loading, fmt } from "@/components/States";
 import { api } from "@/lib/api";
-import { keys, useNutritionDay } from "@/lib/queries";
+import { keys, useMealSuggestions, useNutritionDay } from "@/lib/queries";
 
 const MEAL_LABEL: Record<string, string> = {
   breakfast: "Kahvaltı",
@@ -35,6 +36,7 @@ interface FoodResult {
 export default function NutritionPage() {
   const [goal, setGoal] = useState<string>("maintain");
   const day = useNutritionDay(null, goal);
+  const suggestions = useMealSuggestions(goal);
   const client = useQueryClient();
 
   const [query, setQuery] = useState("");
@@ -43,10 +45,23 @@ export default function NutritionPage() {
   const [grams, setGrams] = useState("100");
   const [meal, setMeal] = useState("snack");
 
+  const [scanning, setScanning] = useState(false);
+
   const search = useMutation({
     mutationFn: (q: string) =>
       api.get<FoodResult[]>(`/foods/search?q=${encodeURIComponent(q)}`),
     onSuccess: setResults,
+  });
+
+  const barcode = useMutation({
+    mutationFn: (code: string) =>
+      api.get<FoodResult>(`/foods/barcode/${encodeURIComponent(code)}`),
+    // Barkod tek bir ürüne çözülüyor; arama listesi yerine doğrudan
+    // miktar girişine geçmek bir adım kısaltıyor.
+    onSuccess: (food) => {
+      setResults(null);
+      setSelected(food);
+    },
   });
 
   const addItem = useMutation({
@@ -176,13 +191,38 @@ export default function NutritionPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="chicken breast"
-            className="h-11 flex-1 rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-3 text-sm outline-none"
+            aria-label="Besin ara"
+            className="h-11 min-w-0 flex-1 rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-3 text-sm outline-none"
           />
-          <button type="submit" className="btn btn-ghost" disabled={search.isPending}>
+          <button type="submit" className="btn btn-ghost shrink-0" disabled={search.isPending}>
             {search.isPending ? "…" : "Ara"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setScanning(true)}
+            aria-label="Barkod oku"
+            className="grid size-11 shrink-0 place-items-center rounded-[3px] border border-[var(--color-border-strong)] text-[var(--color-ink-muted)]"
+          >
+            ▥
           </button>
         </form>
 
+        {scanning && (
+          <div className="mt-3">
+            <BarcodeScanner
+              onClose={() => setScanning(false)}
+              onDetected={(code) => {
+                setScanning(false);
+                barcode.mutate(code);
+              }}
+            />
+          </div>
+        )}
+
+        {barcode.isPending && (
+          <p className="mt-3 text-xs text-[var(--color-ink-faint)]">Barkod aranıyor…</p>
+        )}
+        {barcode.isError && <ErrorBox error={barcode.error} />}
         {search.isError && <ErrorBox error={search.error} />}
 
         {results !== null && results.length === 0 && (
@@ -271,6 +311,55 @@ export default function NutritionPage() {
             </div>
             {addItem.isError && <ErrorBox error={addItem.error} />}
           </div>
+        )}
+      </section>
+
+      {/* --- Öğün önerisi --- */}
+      <section className="card p-4">
+        <h2 className="text-base font-medium">Kalan makrolara göre öneri</h2>
+        <p className="mt-0.5 text-xs text-[var(--color-ink-muted)]">
+          Porsiyonlar kalan makro açığını dolduracak şekilde hesaplanıyor —
+          tahmin değil, aritmetik.
+        </p>
+
+        {suggestions.isLoading ? (
+          <Loading />
+        ) : suggestions.isError ? (
+          <ErrorBox error={suggestions.error} />
+        ) : suggestions.data?.reason ? (
+          <p className="mt-3 text-sm text-[var(--color-ink-muted)]">
+            {suggestions.data.reason}
+          </p>
+        ) : (
+          <ul className="mt-3 space-y-3">
+            {(suggestions.data?.suggestions ?? []).map((suggestion, index) => (
+              <li
+                key={index}
+                className="rounded-[3px] border border-[var(--color-border)] p-3"
+              >
+                <ul className="space-y-1">
+                  {suggestion.items.map((item) => (
+                    <li
+                      key={item.food_id}
+                      className="flex items-baseline justify-between gap-3 text-sm"
+                    >
+                      <span className="min-w-0 truncate">{item.name}</span>
+                      <span className="tnum shrink-0 text-[var(--color-ink-muted)]">
+                        {item.quantity_g} g
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="tnum mt-2 border-t border-[var(--color-border)] pt-2 text-xs text-[var(--color-ink-faint)]">
+                  {suggestion.total_calories} kcal · P{suggestion.total_protein_g} K
+                  {suggestion.total_carbs_g} Y{suggestion.total_fat_g}
+                  <span className="ml-2">
+                    uyum %{Math.round(suggestion.fit_score * 100)}
+                  </span>
+                </p>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 

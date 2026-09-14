@@ -27,6 +27,7 @@ from overload_api.db.models.nutrition import (
     MealType,
     NutritionLog,
 )
+from overload_api.services.nutrition import meal_suggestion as ms
 from overload_api.services.nutrition import sources
 from overload_api.services.nutrition.tdee import MacroTarget, NutritionGoal, age_from, macro_target
 
@@ -303,6 +304,124 @@ async def nutrition_target(
             "kaydı gerekli. Hesap Ayarları'ndan tamamlayabilirsin.",
         )
     return target
+
+
+class SuggestedItemOut(BaseModel):
+    food_id: str
+    name: str
+    quantity_g: int
+    calories: int
+    protein_g: int
+    carbs_g: int
+    fat_g: int
+
+
+class MealSuggestionOut(BaseModel):
+    items: list[SuggestedItemOut]
+    total_calories: int
+    total_protein_g: int
+    total_carbs_g: int
+    total_fat_g: int
+    fit_score: float
+
+
+class MealSuggestionsOut(BaseModel):
+    suggestions: list[MealSuggestionOut]
+    #: Öneri üretilemediyse sebebi. Boş liste tek başına belirsiz.
+    reason: str | None
+
+
+@router.get("/nutrition/meal-suggestions", response_model=MealSuggestionsOut)
+async def meal_suggestions(
+    db: DbSession,
+    user: CurrentUser,
+    goal: NutritionGoal = NutritionGoal.maintain,
+) -> MealSuggestionsOut:
+    """Kalan makrolara göre öğün önerisi (Bölüm 4.2).
+
+    Hesap deterministik — bkz. `services/nutrition/meal_suggestion.py`. Bir dil
+    modeline sormak hem maliyetli hem de daha kötü sonuç verirdi; porsiyon
+    aritmetiğini tam yapabiliyoruz.
+    """
+    target = await _current_target(db, user, goal)
+    if target is None:
+        return MealSuggestionsOut(
+            suggestions=[],
+            reason=(
+                "Önce kalori hedefi gerekiyor: boy, doğum tarihi, cinsiyet ve en az bir kilo kaydı."
+            ),
+        )
+
+    today = today_in(user.timezone)
+    logs = (
+        (
+            await db.execute(
+                select(NutritionLog)
+                .where(NutritionLog.user_id == user.id, NutritionLog.date == today)
+                .options(selectinload(NutritionLog.food_entry))
+            )
+        )
+        .scalars()
+        .unique()
+        .all()
+    )
+
+    remaining = ms.Remaining(
+        calories=Decimal(target.calories) - sum((r.calories for r in logs), Decimal(0)),
+        protein_g=Decimal(target.protein_g) - sum((r.protein_g for r in logs), Decimal(0)),
+        carbs_g=Decimal(target.carbs_g) - sum((r.carbs_g for r in logs), Decimal(0)),
+        fat_g=Decimal(target.fat_g) - sum((r.fat_g for r in logs), Decimal(0)),
+    )
+
+    if remaining.calories <= 0:
+        return MealSuggestionsOut(
+            suggestions=[],
+            reason="Günlük kalori hedefini doldurdun — bugünlük eklemeye gerek yok.",
+        )
+
+    # Önbellekteki besinlerden öneri kuruluyor. Dış API'ye gidilmiyor: öneri
+    # anlık bir etkileşim, ağ gecikmesi burada kabul edilemez.
+    cached = (await db.execute(select(FoodDatabaseEntry).limit(200))).scalars().unique().all()
+    if not cached:
+        return MealSuggestionsOut(
+            suggestions=[],
+            reason=(
+                "Besin önbelleği boş. Birkaç öğün kaydettikten sonra öneriler "
+                "senin yediklerinden üretilmeye başlar."
+            ),
+        )
+
+    options = [
+        ms.FoodOption(
+            id=str(entry.id),
+            name=entry.name,
+            calories_per_100g=entry.calories_per_100g,
+            protein_g=entry.protein_g,
+            carbs_g=entry.carbs_g,
+            fat_g=entry.fat_g,
+        )
+        for entry in cached
+    ]
+
+    results = ms.suggest_meals(options, remaining)
+    return MealSuggestionsOut(
+        suggestions=[
+            MealSuggestionOut(
+                items=[SuggestedItemOut(**item.__dict__) for item in suggestion.items],
+                total_calories=suggestion.total_calories,
+                total_protein_g=suggestion.total_protein_g,
+                total_carbs_g=suggestion.total_carbs_g,
+                total_fat_g=suggestion.total_fat_g,
+                fit_score=suggestion.fit_score,
+            )
+            for suggestion in results
+        ],
+        reason=(
+            None
+            if results
+            else "Önbellekteki besinlerle bu makro açığını dolduracak bir kombinasyon çıkmadı."
+        ),
+    )
 
 
 # --- Kilo takibi -------------------------------------------------------------

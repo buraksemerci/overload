@@ -2,9 +2,16 @@
 
 /** İlerleme (Bölüm 8, ekran 8): güç standartları, tutarlılık ızgarası, rekorlar. */
 
-import { ErrorBox, Empty, Loading, fmt } from "@/components/States";
+import { useState } from "react";
 import { ConsistencyGrid } from "@/components/ConsistencyGrid";
-import { useConsistency, useRecords, useStrengthStandards } from "@/lib/queries";
+import { ExerciseChart } from "@/components/ExerciseChart";
+import { ErrorBox, Empty, Loading, fmt } from "@/components/States";
+import {
+  useConsistency,
+  useExercises,
+  useRecords,
+  useStrengthStandards,
+} from "@/lib/queries";
 
 const PR_LABEL: Record<string, string> = {
   max_weight: "En ağır set",
@@ -25,6 +32,8 @@ export default function ProgressPage() {
   const standards = useStrengthStandards();
   const consistency = useConsistency(365);
   const records = useRecords();
+  const exercises = useExercises("");
+  const [selectedExercise, setSelectedExercise] = useState<string | null>(null);
 
   return (
     <div className="space-y-6">
@@ -104,6 +113,45 @@ export default function ProgressPage() {
               </li>
             ))}
           </ul>
+        )}
+      </section>
+
+      {/* --- Hareket bazında ilerleme --- */}
+      <section className="card p-4">
+        <h2 className="text-base font-medium">Hareket grafiği</h2>
+        <p className="mt-0.5 text-xs text-[var(--color-ink-muted)]">
+          Bir hareket seç — ağırlık, hacim ve tahmini 1RM&apos;in zaman içindeki
+          değişimi.
+        </p>
+
+        {exercises.isLoading ? (
+          <Loading />
+        ) : (exercises.data ?? []).length === 0 ? (
+          <p className="mt-3 text-xs text-[var(--color-ink-faint)]">
+            Hareket kütüphanesi yüklenemedi.
+          </p>
+        ) : (
+          <>
+            <select
+              value={selectedExercise ?? ""}
+              onChange={(e) => setSelectedExercise(e.target.value || null)}
+              aria-label="Hareket seç"
+              className="mt-3 h-11 w-full rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-2 text-sm outline-none"
+            >
+              <option value="">Hareket seç…</option>
+              {(exercises.data ?? []).map((exercise) => (
+                <option key={exercise.id} value={exercise.id}>
+                  {exercise.name}
+                </option>
+              ))}
+            </select>
+
+            {selectedExercise && (
+              <div className="mt-4">
+                <ExerciseChart exerciseId={selectedExercise} />
+              </div>
+            )}
+          </>
         )}
       </section>
 

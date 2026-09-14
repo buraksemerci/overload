@@ -47,7 +47,7 @@ Ayrıntılı kararlar ve gerekçeleri: **[docs/mimari.md](docs/mimari.md)**
 
 ## Durum
 
-### Backend — 70 endpoint
+### Backend — 73 endpoint
 
 | Alan | Endpoint | Öne çıkan |
 |---|---|---|
@@ -72,10 +72,10 @@ PWA olarak kurulabilir (Serwist servis worker + manifest + ikonlar).
 ### Testler
 
 ```
-Backend   357  (pytest)     progresif overload, TDEE, güç standartları,
+Backend   374  (pytest)     progresif overload, TDEE, güç standartları, öğün önerisi,
                              AI tool sınırları, seed tutarlılığı
 Frontend    6  (Vitest)     SSE çerçeve ayrıştırıcısı
-E2E        ~12 (Playwright) oturum, gezinme, set kaydı — backend taklitli
+E2E         34 (Playwright) oturum, gezinme, set kaydı, program gözden geçirme
 ```
 
 ---

@@ -942,6 +942,75 @@
         "title": "MacroTargetOut",
         "type": "object"
       },
+      "MealSuggestionOut": {
+        "properties": {
+          "fit_score": {
+            "title": "Fit Score",
+            "type": "number"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SuggestedItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total_calories": {
+            "title": "Total Calories",
+            "type": "integer"
+          },
+          "total_carbs_g": {
+            "title": "Total Carbs G",
+            "type": "integer"
+          },
+          "total_fat_g": {
+            "title": "Total Fat G",
+            "type": "integer"
+          },
+          "total_protein_g": {
+            "title": "Total Protein G",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_calories",
+          "total_protein_g",
+          "total_carbs_g",
+          "total_fat_g",
+          "fit_score"
+        ],
+        "title": "MealSuggestionOut",
+        "type": "object"
+      },
+      "MealSuggestionsOut": {
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/MealSuggestionOut"
+            },
+            "title": "Suggestions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "suggestions",
+          "reason"
+        ],
+        "title": "MealSuggestionsOut",
+        "type": "object"
+      },
       "MealType": {
         "enum": [
           "breakfast",
@@ -2434,6 +2503,49 @@
         ],
         "title": "StrengthLevel",
         "type": "string"
+      },
+      "SuggestedItemOut": {
+        "properties": {
+          "calories": {
+            "title": "Calories",
+            "type": "integer"
+          },
+          "carbs_g": {
+            "title": "Carbs G",
+            "type": "integer"
+          },
+          "fat_g": {
+            "title": "Fat G",
+            "type": "integer"
+          },
+          "food_id": {
+            "title": "Food Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "protein_g": {
+            "title": "Protein G",
+            "type": "integer"
+          },
+          "quantity_g": {
+            "title": "Quantity G",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "food_id",
+          "name",
+          "quantity_g",
+          "calories",
+          "protein_g",
+          "carbs_g",
+          "fat_g"
+        ],
+        "title": "SuggestedItemOut",
+        "type": "object"
       },
       "SupplementIn": {
         "properties": {
@@ -4719,6 +4831,54 @@
           }
         ],
         "summary": "Delete Nutrition Log",
+        "tags": [
+          "nutrition"
+        ]
+      }
+    },
+    "/nutrition/meal-suggestions": {
+      "get": {
+        "description": "Kalan makrolara göre öğün önerisi (Bölüm 4.2).\n\nHesap deterministik — bkz. `services/nutrition/meal_suggestion.py`. Bir dil\nmodeline sormak hem maliyetli hem de daha kötü sonuç verirdi; porsiyon\naritmetiğini tam yapabiliyoruz.",
+        "operationId": "meal_suggestions_nutrition_meal_suggestions_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "goal",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/NutritionGoal",
+              "default": "maintain"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealSuggestionsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Meal Suggestions",
         "tags": [
           "nutrition"
         ]

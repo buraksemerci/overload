@@ -339,6 +339,53 @@ export function useNutritionDay(
   });
 }
 
+export interface MealSuggestion {
+  items: Array<{
+    food_id: string;
+    name: string;
+    quantity_g: number;
+    calories: number;
+    protein_g: number;
+    carbs_g: number;
+    fat_g: number;
+  }>;
+  total_calories: number;
+  total_protein_g: number;
+  total_carbs_g: number;
+  total_fat_g: number;
+  fit_score: number;
+}
+
+export interface MealSuggestions {
+  suggestions: MealSuggestion[];
+  reason: string | null;
+}
+
+export function useMealSuggestions(goal = "maintain"): UseQueryResult<MealSuggestions> {
+  return useQuery({
+    queryKey: [...keys.nutrition, "meal-suggestions", goal],
+    queryFn: () => api.get<MealSuggestions>(`/nutrition/meal-suggestions?goal=${goal}`),
+  });
+}
+
+export interface ExercisePoint {
+  date: string;
+  top_weight_kg: string;
+  top_reps: number;
+  total_volume_kg: string;
+  estimated_1rm: string;
+}
+
+export function useExerciseHistory(
+  exerciseId: string | null,
+): UseQueryResult<ExercisePoint[]> {
+  return useQuery({
+    queryKey: keys.exerciseHistory(exerciseId ?? ""),
+    queryFn: () => api.get<ExercisePoint[]>(`/progress/exercise/${exerciseId}`),
+    enabled: exerciseId !== null,
+  });
+}
+
 export function useWeightTrend(limit = 90): UseQueryResult<WeightPoint[]> {
   return useQuery({
     queryKey: [...keys.weightTrend, limit],

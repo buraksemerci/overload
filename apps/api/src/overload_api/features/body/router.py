@@ -184,7 +184,7 @@ async def create_supplement(payload: SupplementIn, db: DbSession, user: CurrentU
 
     row = Supplement(user_id=user.id, **payload.model_dump())
     db.add(row)
-    await db.commit()
+    await db.flush()
     return row
 
 
@@ -197,7 +197,7 @@ async def update_supplement(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Supplement bulunamadı.")
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(row, field, value)
-    await db.commit()
+    await db.flush()
     return row
 
 
@@ -209,7 +209,7 @@ async def delete_supplement(supplement_id: uuid.UUID, db: DbSession, user: Curre
     if row is None or row.user_id != user.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Supplement bulunamadı.")
     await db.delete(row)
-    await db.commit()
+    await db.flush()
 
 
 @router.get("/supplements/today", response_model=list[SupplementTodayOut])
@@ -295,7 +295,7 @@ async def mark_intake(
                 user_id=user.id, supplement_id=supp.id, date=target, taken=payload.taken
             )
         )
-    await db.commit()
+    await db.flush()
 
 
 # --- Kas ağrısı (soreness) ---------------------------------------------------
@@ -358,7 +358,7 @@ async def log_soreness(payload: SorenessIn, db: DbSession, user: CurrentUser) ->
             user_id=user.id, date=target, muscle_group_id=mg.id, level=payload.level
         )
         db.add(row)
-    await db.commit()
+    await db.flush()
 
     return SorenessOut(
         id=row.id,
@@ -409,7 +409,7 @@ async def create_injury(payload: InjuryIn, db: DbSession, user: CurrentUser) -> 
         started_on=payload.started_on or today_in(user.timezone),
     )
     db.add(row)
-    await db.commit()
+    await db.flush()
     return InjuryOut(
         id=row.id,
         muscle_group_slug=mg.slug,
@@ -431,7 +431,7 @@ async def resolve_injury(
     if row is None or row.user_id != user.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Sakatlık notu bulunamadı.")
     row.resolved_on = on or today_in(user.timezone)
-    await db.commit()
+    await db.flush()
 
 
 @router.get("/injuries/affected-exercises", response_model=list[AffectedExerciseOut])

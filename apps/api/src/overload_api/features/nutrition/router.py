@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from dataclasses import asdict
 
 # `date` takma adla import ediliyor: bu modüldeki şemalarda `date` adında bir
 # ALAN var ve `date: date | None = None` yazıldığında Pydantic açıklamayı
@@ -191,7 +192,7 @@ async def search_foods(
         return list(cached)
 
     entry = await sources.resolve_food(db, q)
-    await db.commit()
+    await db.flush()
     return [entry] if entry else []
 
 
@@ -204,7 +205,7 @@ async def lookup_barcode(barcode: str, db: DbSession, user: CurrentUser) -> Food
             status.HTTP_404_NOT_FOUND,
             "Bu barkod Open Food Facts'te bulunamadı. Ürünü elle ekleyebilirsin.",
         )
-    await db.commit()
+    await db.flush()
     return entry
 
 
@@ -279,7 +280,7 @@ async def add_nutrition_log(
     )
     log.food_entry = food
     db.add(log)
-    await db.commit()
+    await db.flush()
     return _log_out(log)
 
 
@@ -289,7 +290,7 @@ async def delete_nutrition_log(log_id: uuid.UUID, db: DbSession, user: CurrentUs
     if log is None or log.user_id != user.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Kayıt bulunamadı.")
     await db.delete(log)
-    await db.commit()
+    await db.flush()
 
 
 @router.get("/nutrition/target", response_model=MacroTargetOut)
@@ -407,7 +408,8 @@ async def meal_suggestions(
     return MealSuggestionsOut(
         suggestions=[
             MealSuggestionOut(
-                items=[SuggestedItemOut(**item.__dict__) for item in suggestion.items],
+                # `asdict()`: kaynak dataclass `slots=True`, `__dict__`'i yok.
+                items=[SuggestedItemOut(**asdict(item)) for item in suggestion.items],
                 total_calories=suggestion.total_calories,
                 total_protein_g=suggestion.total_protein_g,
                 total_carbs_g=suggestion.total_carbs_g,
@@ -444,7 +446,7 @@ async def log_bodyweight(payload: BodyWeightIn, db: DbSession, user: CurrentUser
         existing.weight_kg = payload.weight_kg
         existing.body_fat_pct = payload.body_fat_pct
         existing.notes = payload.notes
-        await db.commit()
+        await db.flush()
         return existing
 
     row = BodyWeightLog(
@@ -455,7 +457,7 @@ async def log_bodyweight(payload: BodyWeightIn, db: DbSession, user: CurrentUser
         notes=payload.notes,
     )
     db.add(row)
-    await db.commit()
+    await db.flush()
     return row
 
 

@@ -150,7 +150,7 @@ Sonra referans veriyi yükle:
 cd apps/api && .venv/Scripts/python -m overload_api.seed.loader
 ```
 
-18 kas grubu, 52 hareket (kas eşlemeleriyle) ve **11 şablon program** yüklenir
+18 kas grubu, 51 hareket (133 kas eşlemesiyle) ve **11 şablon program** yüklenir
 (Bölüm 9'un tamamı: StrongLifts 5x5, Starting Strength, Greg Nuckols, 5/3/1 BBB,
 GZCLP, Candito 6 Hafta, PHUL, PHAT, Reddit PPL, Alberto Nuñez U/L, nSuns 5/3/1).
 

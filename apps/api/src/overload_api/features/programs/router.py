@@ -325,7 +325,7 @@ async def create_program(payload: ProgramIn, db: DbSession, user: CurrentUser) -
                 )
             )
 
-    await db.commit()
+    await db.flush()
     return _detail_out(await _load_program(db, program.id))
 
 
@@ -380,7 +380,7 @@ async def clone_program(
                 )
             )
 
-    await db.commit()
+    await db.flush()
     return _detail_out(await _load_program(db, clone.id))
 
 
@@ -403,7 +403,7 @@ async def activate_program(program_id: uuid.UUID, db: DbSession, user: CurrentUs
     )
     await db.flush()
     program.is_active = True
-    await db.commit()
+    await db.flush()
     return program
 
 
@@ -415,7 +415,7 @@ async def update_program(
     _require_own(program, user)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(program, field, value)
-    await db.commit()
+    await db.flush()
     return program
 
 
@@ -424,7 +424,7 @@ async def delete_program(program_id: uuid.UUID, db: DbSession, user: CurrentUser
     program = await _load_program(db, program_id)
     _require_own(program, user)
     await db.delete(program)
-    await db.commit()
+    await db.flush()
 
 
 # --- Gün ve hareket düzenleme ------------------------------------------------
@@ -465,5 +465,5 @@ async def replace_days(
             )
 
     program.days_per_week = len(payload)
-    await db.commit()
+    await db.flush()
     return _detail_out(await _load_program(db, program.id))

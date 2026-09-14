@@ -25,6 +25,7 @@ from overload_api.db.models.ai import (
     PendingAction,
     PendingActionStatus,
 )
+from overload_api.db.session import session_scope
 from overload_api.features.chat.context import build_history
 from overload_api.services.ai import executors, runtime
 from overload_api.services.media import r2
@@ -89,25 +90,32 @@ async def stream_chat(payload: ChatRequest, db: DbSession, user: CurrentUser) ->
         except r2.MediaError as exc:
             raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
 
+    # Geçmiş HANDLER içinde okunuyor — burada istek oturumu hâlâ açık.
     history = await build_history(db, user, payload.message, image_url)
-    assistant_blocks: list[dict[str, Any]] = []
 
     async def event_source() -> Any:
-        nonlocal assistant_blocks
-        async for event in runtime.run_turn(db, user, history=history):
-            if event.type in {"done", "error"}:
-                assistant_blocks = event.data.get("content_blocks", [])
-            yield event.to_sse()
+        """Tool çalıştırma ve kalıcılaştırma KENDİ oturumunda.
 
-        runtime.persist_messages(
-            db,
-            user,
-            user_text=payload.message,
-            # Süreli URL değil, anahtar saklanıyor.
-            image_url=payload.image_key,
-            assistant_blocks=assistant_blocks,
-        )
-        await db.commit()
+        Bu üreteç handler döndükten SONRA çalışıyor; o noktada `get_scoped_db`
+        bağımlılığı kapanmış ve `db` kullanılamaz durumda. Kendi kapsamımızı
+        açmak hem bunu çözüyor hem de uzun süren bir tool döngüsünün istek
+        oturumunu dakikalarca açık tutmasını engelliyor.
+        """
+        assistant_blocks: list[dict[str, Any]] = []
+        async with session_scope(user.id) as chat_db:
+            async for event in runtime.run_turn(chat_db, user, history=history):
+                if event.type in {"done", "error"}:
+                    assistant_blocks = event.data.get("content_blocks", [])
+                yield event.to_sse()
+
+            runtime.persist_messages(
+                chat_db,
+                user,
+                user_text=payload.message,
+                # Süreli URL değil, anahtar saklanıyor.
+                image_url=payload.image_key,
+                assistant_blocks=assistant_blocks,
+            )
 
     return StreamingResponse(
         event_source(),
@@ -184,7 +192,7 @@ async def update_pending_action(
     # Özet payload'ın yapısından yeniden üretiliyor; kullanıcı düzenledikten
     # sonra kartın "5 gün, 28 hareket" yazısı da güncel kalmalı.
     pending.summary = runtime.summarize_for_card(pending.action_type, body.payload)
-    await db.commit()
+    await db.flush()
     return pending
 
 
@@ -216,7 +224,7 @@ async def approve_action(action_id: uuid.UUID, db: DbSession, user: CurrentUser)
                 created_at=now,
             )
         )
-        await db.commit()
+        await db.flush()
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
 
     pending.status = PendingActionStatus.approved
@@ -233,7 +241,7 @@ async def approve_action(action_id: uuid.UUID, db: DbSession, user: CurrentUser)
             created_at=now,
         )
     )
-    await db.commit()
+    await db.flush()
     return pending
 
 
@@ -255,5 +263,5 @@ async def reject_action(action_id: uuid.UUID, db: DbSession, user: CurrentUser) 
             created_at=now,
         )
     )
-    await db.commit()
+    await db.flush()
     return pending

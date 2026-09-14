@@ -103,4 +103,4 @@ async def mark_read(report_id: uuid.UUID, db: DbSession, user: CurrentUser) -> N
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Rapor bulunamadı.")
     if row.read_at is None:
         row.read_at = now_utc()
-        await db.commit()
+        await db.flush()

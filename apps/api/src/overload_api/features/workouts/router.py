@@ -12,6 +12,7 @@ dönünce kaldığı yerden devam edebiliyor.
 from __future__ import annotations
 
 import uuid
+from dataclasses import asdict
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated
@@ -286,7 +287,7 @@ async def start_session(payload: SessionStart, db: DbSession, user: CurrentUser)
     )
     db.add(session_row)
     await db.flush()
-    await db.commit()
+    await db.flush()
     return session_row
 
 
@@ -318,7 +319,7 @@ async def log_set(
         existing.is_warmup = payload.is_warmup
         existing.technique = payload.technique
         existing.completed_at = now_utc()
-        await db.commit()
+        await db.flush()
         return existing
 
     set_log = SetLog(
@@ -334,7 +335,7 @@ async def log_set(
         completed_at=now_utc(),
     )
     db.add(set_log)
-    await db.commit()
+    await db.flush()
     return set_log
 
 
@@ -344,7 +345,7 @@ async def delete_set(set_id: uuid.UUID, db: DbSession, user: CurrentUser) -> Non
     if set_log is None or set_log.user_id != user.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Set kaydı bulunamadı.")
     await db.delete(set_log)
-    await db.commit()
+    await db.flush()
 
 
 @router.post("/sessions/{session_id}/complete", response_model=CompleteOut)
@@ -365,7 +366,7 @@ async def complete_session(session_id: uuid.UUID, db: DbSession, user: CurrentUs
 
     workout.completed_at = now_utc()
     records = await service.detect_new_records(db, workout)
-    await db.commit()
+    await db.flush()
 
     return CompleteOut(
         session=SessionOut.model_validate(workout),
@@ -377,7 +378,7 @@ async def complete_session(session_id: uuid.UUID, db: DbSession, user: CurrentUs
 async def delete_session(session_id: uuid.UUID, db: DbSession, user: CurrentUser) -> None:
     workout = await _owned_session(db, user, session_id)
     await db.delete(workout)
-    await db.commit()
+    await db.flush()
 
 
 @router.get("/sessions", response_model=list[SessionOut])
@@ -422,7 +423,9 @@ async def muscle_volume(
     days: Annotated[int, Query(ge=1, le=90)] = 7,
 ) -> list[MuscleVolumeOut]:
     rows = await service.weekly_muscle_volume(db, user.id, today_in(user.timezone), days=days)
-    return [MuscleVolumeOut(**row.__dict__) for row in rows]
+    # `asdict()` kullanılıyor, `__dict__` değil: kaynak dataclass'lar
+    # `slots=True` ile tanımlı ve slots'lu sınıfların `__dict__`'i YOKTUR.
+    return [MuscleVolumeOut(**asdict(row)) for row in rows]
 
 
 @router.get("/streak", response_model=StreakOut)

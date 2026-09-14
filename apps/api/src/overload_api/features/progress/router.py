@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import uuid
 from collections import defaultdict
+from dataclasses import asdict
 from datetime import date as date_t
 from datetime import timedelta
 from decimal import Decimal
@@ -141,7 +142,8 @@ async def strength_standards(db: DbSession, user: CurrentUser) -> StandardsOut:
             sex=user.sex,
         )
         if result is not None:
-            results.append(StandardOut(**result.__dict__))
+            # `asdict()`: kaynak dataclass `slots=True`, `__dict__`'i yok.
+            results.append(StandardOut(**asdict(result)))
 
     results.sort(key=lambda r: list(std.TRACKED_LIFTS).index(r.lift_key))
     return StandardsOut(

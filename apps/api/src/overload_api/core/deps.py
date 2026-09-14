@@ -35,9 +35,31 @@ async def get_scoped_db(
 ) -> AsyncIterator[AsyncSession]:
     """Kullanıcıya bağlanmış, RLS kapsamlı oturum.
 
-    Transaction burada açılır ve istek sonunda commit/rollback edilir. `SET LOCAL`
-    ile ayarlanan rol ve kullanıcı kimliği transaction bitince düşer; havuzdan
-    aynı bağlantıyı alan sonraki istek temiz başlar.
+    **İstek başına TEK transaction.** `SET LOCAL ROLE` ve `SET LOCAL app.user_id`
+    yalnızca açık bir transaction içinde yaşıyor; transaction bitince ikisi de
+    düşüyor. Havuzdan aynı bağlantıyı alan sonraki istek bu sayede temiz başlıyor.
+
+    ------------------------------------------------------------------------
+    HANDLER'LAR `commit()` ÇAĞIRMAZ — `flush()` ÇAĞIRIR
+    ------------------------------------------------------------------------
+    `session.begin()` bağlam yöneticisi transaction'ın sahibi. Bir handler
+    içinde `await db.commit()` çağırmak o transaction'ı KAPATIYOR; sonrasındaki
+    her sorgu şununla patlıyor:
+
+        InvalidRequestError: Can't operate on closed transaction inside
+        context manager.
+
+    Bu hata yalnızca "commit'ten sonra tekrar okuyan" endpoint'lerde ortaya
+    çıkıyor (ör. klonla-sonra-detayı-döndür), bu yüzden fark edilmesi kolay
+    değil. Kural basit: handler'lar `await db.flush()` çağırır, commit'i bu
+    bağlam yöneticisi istek sonunda yapar.
+
+    `flush()` ayrıca kısıt ihlallerini handler'ın içinde yüzeye çıkarıyor —
+    orada temiz bir 409/422 dönebiliyoruz; commit anında patlasa 500 olurdu.
+
+    **Akış (StreamingResponse) endpoint'leri bu oturumu KULLANAMAZ:** üreteç
+    gövdesi handler döndükten sonra çalışıyor ve bağımlılık o ana kadar
+    kapanmış oluyor. Onlar `session_scope()` ile kendi oturumlarını açar.
     """
     async with SessionFactory() as session:
         async with session.begin():

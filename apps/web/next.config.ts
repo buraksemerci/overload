@@ -6,6 +6,17 @@ const nextConfig: NextConfig = {
   // Backend'in OpenAPI şeması TS tiplerine çevriliyor (bölüm 6.1). Şema
   // değiştiğinde `pnpm gen:types` çalıştırmak gerekir; CI bunu doğrular.
   typedRoutes: true,
+  // Boş `turbopack` bloğu ZORUNLU, süs değil.
+  //
+  // Serwist yapılandırmaya bir `webpack` fonksiyonu ekliyor. Next 16'da
+  // Turbopack varsayılan ve "webpack config var ama turbopack config yok"
+  // durumunu HATA sayıp `next dev`'i tamamen durduruyor. Geliştirmede servis
+  // worker zaten `disable` ile kapalı, yani o webpack config hiçbir şey
+  // yapmıyor — ama varlığı yeterli.
+  //
+  // Bu blok "Turbopack'i bilerek kullanıyorum" demek. Üretim derlemesi
+  // `--webpack` bayrağıyla koşuyor (Serwist'in gerçekten çalışması için).
+  turbopack: {},
   experimental: {
     // Salonda telefon üzerinden kullanılacak: ilk yükleme ne kadar küçükse o kadar iyi.
     optimizePackageImports: ["recharts"],

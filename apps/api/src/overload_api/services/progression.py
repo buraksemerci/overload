@@ -201,8 +201,14 @@ def _q(value: Decimal) -> Decimal:
     return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
-def _fmt_weight(value: Decimal) -> str:
-    """40.00 -> '40', 42.50 -> '42.5' — salonda kimse '42.50 kg' demez."""
+def fmt_weight(value: Decimal) -> str:
+    """40.00 -> '40', 42.50 -> '42.5' — salonda kimse '42.50 kg' demez.
+
+    Ortak (public) çünkü koç raporu da aynı sorunu yaşıyor. Decimal'i doğrudan
+    biçimlendirmek iki tuzak barındırıyor: `:g` float'un aksine sondaki sıfırları
+    KORUYOR ('500.00' -> '500.00'), `normalize()` ise yuvarlak sayıları bilimsel
+    gösterime çeviriyor ('500.00' -> '5E+2'). Doğrusu normalize + 'f' + kırpma.
+    """
     normalized = _q(value).normalize()
     text = format(normalized, "f")
     return text.rstrip("0").rstrip(".") if "." in text else text
@@ -218,7 +224,7 @@ def _fmt_effort(weight: Decimal, reps: int) -> str:
     """
     if weight == 0:
         return f"{reps} tekrar"
-    return f"{_fmt_weight(weight)}kg x {reps}"
+    return f"{fmt_weight(weight)}kg x {reps}"
 
 
 def next_weight(current: Decimal, equipment: Equipment) -> Decimal:
@@ -374,11 +380,11 @@ def suggest_next_target(
                 kind=SuggestionKind.deload,
                 weight_kg=deload_weight,
                 reps=target.rep_max,
-                label=f"{_fmt_weight(deload_weight)}kg x {target.rep_max}",
+                label=f"{fmt_weight(deload_weight)}kg x {target.rep_max}",
             )
             message = (
                 f"{plateau.stalled_sessions} seanstır {plateau.metric} artmıyor. "
-                f"Bu hafta {_fmt_weight(deload_weight)}kg'a in (%10 deload), "
+                f"Bu hafta {fmt_weight(deload_weight)}kg'a in (%10 deload), "
                 f"tekrarları temiz ve kontrollü yap. Alternatif: hareketi 2-3 hafta "
                 f"benzer bir varyasyonla değiştir, sonra eski ağırlığa taze dön."
             )
@@ -547,7 +553,7 @@ def _suggest_by_volume(
         )
         message = (
             f"Geçen sefer {_describe_set(top)} ile failure'a gittin ve hedef aralığı aştın. "
-            f"Bugün {_fmt_weight(heavier)}kg ile başla, yine failure'a kadar götür."
+            f"Bugün {fmt_weight(heavier)}kg ile başla, yine failure'a kadar götür."
         )
     elif top.reps >= target.rep_max:
         # Ağırlık artamıyor (vücut ağırlığı) ama hedef aralık zaten aşılmış.
@@ -572,7 +578,7 @@ def _suggest_by_volume(
         same_load = "aynı ağırlıkta" if has_load else "aynı hareketten"
         message = (
             f"Geçen sefer {_describe_set(top)} ile failure'a gittin "
-            f"(toplam {metric_label} {_fmt_weight(last_volume)} {metric_unit}). "
+            f"(toplam {metric_label} {fmt_weight(last_volume)} {metric_unit}). "
             f"Bugün {same_load} en az bir tekrar fazla çıkarmayı hedefle."
         )
 
@@ -581,7 +587,7 @@ def _suggest_by_volume(
         drop_pct = (previous_volume - last_volume) / previous_volume * 100
         warnings.append(
             f"Geçen seansta {metric_label} %{drop_pct.quantize(Decimal('1'))} düştü "
-            f"({_fmt_weight(previous_volume)} → {_fmt_weight(last_volume)} {metric_unit}). "
+            f"({fmt_weight(previous_volume)} → {fmt_weight(last_volume)} {metric_unit}). "
             f"Uyku/beslenme ya da birikmiş yorgunluk olabilir."
         )
 

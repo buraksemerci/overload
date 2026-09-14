@@ -70,9 +70,35 @@ class Settings(BaseSettings):
             )
         return v
 
+    @field_validator(
+        "anthropic_api_key",
+        "usda_api_key",
+        "r2_access_key_id",
+        "r2_secret_access_key",
+        mode="before",
+    )
+    @classmethod
+    def _blank_secret_is_absent(cls, v: object) -> object:
+        """Boş `.env` satırı "anahtar yok" demektir, "anahtar boş dize" değil.
+
+        `.env.example`'daki alanlar `ANTHROPIC_API_KEY=` biçiminde boş duruyor.
+        Pydantic bunu `SecretStr("")` olarak okuyordu — `None` değil. Sonuç:
+        `require_anthropic_key()` içindeki açıklayıcı Türkçe uyarı HİÇ
+        tetiklenmiyor, istemci boş anahtarla kuruluyor ve kullanıcı sohbet
+        ekranında SDK'nın ham İngilizce mesajını görüyordu:
+        "Could not resolve authentication method...".
+        """
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
+
     @property
     def is_production(self) -> bool:
         return self.environment == "production"
+
+    @property
+    def ai_enabled(self) -> bool:
+        return self.anthropic_api_key is not None
 
     @property
     def cors_origins(self) -> list[str]:

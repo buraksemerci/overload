@@ -42,6 +42,36 @@ class PRType(StrEnum):
     session_volume = "session_volume"
     estimated_1rm = "estimated_1rm"
 
+    @property
+    def label_tr(self) -> str:
+        """Kullanıcıya gösterilecek ad.
+
+        Enum'un yanında duruyor çünkü tür eklendiğinde etiketi de eklemek
+        zorunda kalınsın. Koç raporu ekranı bu etiket olmadığı için ham
+        `estimated_1rm` yazıyordu — hem kullanıcıya hem de raporu yazan
+        modele giden metin buydu.
+        """
+        return _PR_LABEL_TR[self]
+
+    @property
+    def unit_tr(self) -> str:
+        return _PR_UNIT_TR[self]
+
+
+_PR_LABEL_TR: dict[PRType, str] = {
+    PRType.max_weight: "en ağır set",
+    PRType.max_reps: "en çok tekrar",
+    PRType.session_volume: "seans hacmi",
+    PRType.estimated_1rm: "tahmini 1RM",
+}
+
+_PR_UNIT_TR: dict[PRType, str] = {
+    PRType.max_weight: "kg",
+    PRType.max_reps: "tekrar",
+    PRType.session_volume: "kg",
+    PRType.estimated_1rm: "kg",
+}
+
 
 class WorkoutSession(TimestampMixin, Base):
     __tablename__ = "workout_session"

@@ -37,6 +37,7 @@ from overload_api.db.models.user import User
 from overload_api.db.models.workout import PersonalRecord, SetLog, WorkoutSession
 from overload_api.features.workouts.service import compute_streak, weekly_muscle_volume
 from overload_api.services.ai.client import collect_batch_results, submit_weekly_report_batch
+from overload_api.services.progression import fmt_weight
 
 logger = logging.getLogger(__name__)
 
@@ -228,7 +229,10 @@ async def gather_metrics(session: AsyncSession, user: User, week_start: date) ->
             )
         )
     ).all()
-    new_records = [f"{name}: {pr_type.value} {value:g}" for pr_type, value, name in record_rows]
+    new_records = [
+        f"{name} — {pr_type.label_tr}: {fmt_weight(value)} {pr_type.unit_tr}"
+        for pr_type, value, name in record_rows
+    ]
 
     volumes = await weekly_muscle_volume(session, user.id, week_end, days=7)
     undertrained = [v.name_tr for v in volumes if v.sets < v.target * 0.5]

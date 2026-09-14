@@ -30,6 +30,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from overload_api.config import get_settings
 from overload_api.db.models.ai import (
     ActionLog,
     ActionResult,
@@ -198,6 +199,24 @@ async def run_turn(
     `history` Anthropic mesaj biçiminde; son eleman kullanıcının (bağlam bloğu
     eklenmiş) mesajı olmalı.
     """
+    # Yapılandırma eksikliğini çağrı hatasından AYIR. İkisi de aşağıdaki
+    # `except Exception` dalına düşüyordu ve kullanıcı "Model çağrısı
+    # başarısız: <SDK'nın ham İngilizce mesajı>" görüyordu — oysa hiçbir model
+    # çağrısı yapılmamıştı ve yapılacak şey bir anahtar eklemekti.
+    if not get_settings().ai_enabled:
+        yield TurnEvent(
+            "error",
+            {
+                "message": (
+                    "Asistan henüz yapılandırılmadı: ANTHROPIC_API_KEY tanımlı değil. "
+                    "console.anthropic.com'dan bir anahtar alıp apps/api/.env dosyasına "
+                    "ekle ve sunucuyu yeniden başlat. Uygulamanın geri kalanı bu "
+                    "anahtar olmadan da çalışır."
+                )
+            },
+        )
+        return
+
     messages = list(history)
     assistant_blocks: list[dict[str, Any]] = []
 

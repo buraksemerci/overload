@@ -13,7 +13,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ErrorBox, Empty, Loading } from "@/components/States";
+import { ErrorBox, Empty, Loading, fmt } from "@/components/States";
+import { prLabel, prUnit } from "@/lib/labels";
 import {
   useCompleteSession,
   useLogSet,
@@ -35,13 +36,6 @@ interface Draft {
 const weightText = (value: string) => {
   const n = Number.parseFloat(value);
   return Number.isNaN(n) ? value : String(n).replace(".", ",");
-};
-
-const PR_LABEL: Record<string, string> = {
-  max_weight: "en ağır set",
-  max_reps: "en çok tekrar",
-  session_volume: "seans hacmi",
-  estimated_1rm: "tahmini 1RM",
 };
 
 export default function WorkoutPage() {
@@ -160,7 +154,7 @@ export default function WorkoutPage() {
               {newRecords.map((record, i) => (
                 <li key={i} className="tnum text-sm">
                   <span className="animate-check inline-block">🏆</span>{" "}
-                  {PR_LABEL[record.type] ?? record.type}: {record.value}
+                  {prLabel(record.type)}: {fmt(record.value, 1)} {prUnit(record.type)}
                   {record.reps !== null && ` x ${record.reps}`}
                 </li>
               ))}

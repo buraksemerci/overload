@@ -6,19 +6,13 @@ import { useState } from "react";
 import { ConsistencyGrid } from "@/components/ConsistencyGrid";
 import { ExerciseChart } from "@/components/ExerciseChart";
 import { ErrorBox, Empty, Loading, fmt } from "@/components/States";
+import { prLabel, prUnit } from "@/lib/labels";
 import {
   useConsistency,
   useExercises,
   useRecords,
   useStrengthStandards,
 } from "@/lib/queries";
-
-const PR_LABEL: Record<string, string> = {
-  max_weight: "En ağır set",
-  max_reps: "En çok tekrar",
-  session_volume: "Seans hacmi",
-  estimated_1rm: "Tahmini 1RM",
-};
 
 const LEVEL_COLOR: Record<string, string> = {
   untrained: "var(--color-ink-faint)",
@@ -167,10 +161,10 @@ export default function ProgressPage() {
             {records.data.slice(0, 20).map((record, i) => (
               <li key={i} className="flex items-center justify-between gap-3 py-2 text-sm">
                 <span className="text-[var(--color-ink-muted)]">
-                  {PR_LABEL[record.type] ?? record.type}
+                  {prLabel(record.type)}
                 </span>
                 <span className="tnum">
-                  {fmt(record.value, 1)}
+                  {fmt(record.value, 1)} {prUnit(record.type)}
                   {record.reps !== null && ` x ${record.reps}`}
                 </span>
               </li>

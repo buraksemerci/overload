@@ -9,6 +9,7 @@
  * kararını backend'e iletir.
  */
 
+import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
 import { api, streamChat } from "@/lib/api";
 import { uploadPhoto } from "@/lib/upload";
@@ -168,13 +169,26 @@ export default function ChatPage() {
                     <p className="mt-1.5 text-sm">{action.summary}</p>
 
                     {state === undefined ? (
-                      <div className="mt-3 flex gap-2">
-                        <button
-                          className="btn btn-primary"
-                          onClick={() => resolve(action.id, "approve")}
-                        >
-                          Onayla
-                        </button>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {/* Program önerileri doğrudan onaylanmıyor: Bölüm 4.1
+                            tam ekran bir "gözden geçir" adımı şart koşuyor.
+                            28 hareketlik bir programı tek satırlık özete bakıp
+                            onaylamak zaten kör onay olurdu. */}
+                        {action.action_type === "propose_program" ? (
+                          <Link
+                            href={`/programs/review/${action.id}`}
+                            className="btn btn-primary"
+                          >
+                            Gözden geçir ve onayla
+                          </Link>
+                        ) : (
+                          <button
+                            className="btn btn-primary"
+                            onClick={() => resolve(action.id, "approve")}
+                          >
+                            Onayla
+                          </button>
+                        )}
                         <button
                           className="btn btn-ghost"
                           onClick={() => resolve(action.id, "reject")}

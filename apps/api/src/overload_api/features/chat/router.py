@@ -148,6 +148,46 @@ async def _load_open_action(
     return pending
 
 
+@router.get("/pending-actions/{action_id}", response_model=PendingActionOut)
+async def get_pending_action(
+    action_id: uuid.UUID, db: DbSession, user: CurrentUser
+) -> PendingAction:
+    """Tek bir öneriyi getirir — gözden geçirme ekranı bunu okuyor."""
+    pending = await db.get(PendingAction, action_id)
+    if pending is None or pending.user_id != user.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Onay kaydı bulunamadı.")
+    return pending
+
+
+class PendingActionPatch(BaseModel):
+    """Onaydan önce öneriyi düzenlemek için.
+
+    Bölüm 4.1'in şartı: AI'nın önerdiği program tam ekran bir "gözden geçir"
+    ekranında satır satır düzenlenebilmeli, sonra onaylanmalı.
+
+    Payload'ı istemcinin yeniden yazması güvenlik açığı DEĞİL: istemci zaten
+    kullanıcının kendisi ve payload onay anında Pydantic ile yeniden doğrulanıyor.
+    Asıl güvence orada — burada ne yazılırsa yazılsın, şemaya uymayan hiçbir şey
+    veritabanına geçemez.
+    """
+
+    payload: dict[str, Any]
+
+
+@router.patch("/pending-actions/{action_id}", response_model=PendingActionOut)
+async def update_pending_action(
+    action_id: uuid.UUID, body: PendingActionPatch, db: DbSession, user: CurrentUser
+) -> PendingAction:
+    """Onay bekleyen öneriyi düzenler. Yalnızca `pending` durumdayken."""
+    pending = await _load_open_action(db, user, action_id)
+    pending.payload = body.payload
+    # Özet payload'ın yapısından yeniden üretiliyor; kullanıcı düzenledikten
+    # sonra kartın "5 gün, 28 hareket" yazısı da güncel kalmalı.
+    pending.summary = runtime.summarize_for_card(pending.action_type, body.payload)
+    await db.commit()
+    return pending
+
+
 @router.post("/pending-actions/{action_id}/approve", response_model=PendingActionOut)
 async def approve_action(action_id: uuid.UUID, db: DbSession, user: CurrentUser) -> PendingAction:
     """Onaylanan aksiyonu uygular.

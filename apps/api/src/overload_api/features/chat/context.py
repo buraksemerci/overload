@@ -130,7 +130,9 @@ async def build_history(
     context_text = build_context_block(
         today=today,
         display_name=user.display_name,
-        bodyweight_trend=list(reversed(weights.all())),
+        # `.all()` Row nesneleri döndürüyor; tuple'a çevirip ters çeviriyoruz
+        # (sorgu yeniden eskiye sıralı, grafik eskiden yeniye bekliyor).
+        bodyweight_trend=[(row[0], row[1]) for row in reversed(list(weights.all()))],
         recent_sessions=await _recent_sessions(db, user),
         todays_nutrition=await _todays_nutrition(db, user, today),
         active_program_name=active_program,

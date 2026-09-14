@@ -421,7 +421,9 @@ def _suggest_by_rep_range(
         SuggestionKind.hold, weight, target.rep_min, f"{_fmt_weight(weight)}kg x {target.rep_min}"
     )
     lighter = _q(weight - PLATE_INCREMENT.get(target.equipment, Decimal("2.5")))
-    alternative = (
+    # Ayrı bir ad kullanılıyor: `alternative` bu fonksiyonun üst dallarında
+    # `TargetOption` olarak çıkarsanıyor, burada ise None olabilir.
+    lighter_option = (
         TargetOption(
             SuggestionKind.hold,
             lighter,
@@ -433,12 +435,13 @@ def _suggest_by_rep_range(
     )
     return ProgressionSuggestion(
         primary=primary,
-        alternative=alternative,
+        alternative=lighter_option,
         previous_summary=previous_summary,
         message=(
             f"Geçen sefer {_describe_set(top)} yaptın — hedef aralığın "
             f"({target.rep_min}-{target.rep_max}) altında kaldın. Ağırlığı sabit tut ve "
-            f"{target.rep_min} tekrara çık; zorlanırsan {alternative.label if alternative else 'biraz daha hafif'} ile başla."
+            f"{target.rep_min} tekrara çık; zorlanırsan "
+            f"{lighter_option.label if lighter_option else 'biraz daha hafif'} ile başla."
         ),
     )
 

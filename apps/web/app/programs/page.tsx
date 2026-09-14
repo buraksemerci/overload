@@ -190,13 +190,25 @@ function ProgramCard({
         <p className="mt-2 text-xs text-[var(--color-ink-muted)]">{program.description}</p>
       )}
 
-      <button
-        onClick={onToggle}
-        className="mt-3 text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
-        aria-expanded={expanded}
-      >
-        {expanded ? "Günleri gizle" : "Günleri göster"}
-      </button>
+      <div className="mt-3 flex items-center gap-3">
+        <button
+          onClick={onToggle}
+          className="text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
+          aria-expanded={expanded}
+        >
+          {expanded ? "Günleri gizle" : "Günleri göster"}
+        </button>
+        {/* Şablonlar salt-okunur; düzenleme bağlantısı yalnızca kendi
+            programlarında görünüyor. */}
+        {!program.is_template && (
+          <Link
+            href={`/programs/${program.id}/edit`}
+            className="text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
+          >
+            Düzenle →
+          </Link>
+        )}
+      </div>
 
       {expanded && <ProgramDays programId={program.id} />}
     </div>

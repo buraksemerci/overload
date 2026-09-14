@@ -188,8 +188,11 @@ async def run(user_email: str | None = None) -> None:
             await _build_program(session, template, exercises)
 
         if user_email:
+            # `filter_by` kullanılıyor, `.where(User.email == ...)` değil:
+            # fastapi-users'ın taban sınıfındaki `email` sütunu mypy'ye düz `str`
+            # görünüyor ve karşılaştırma `bool` üretiyor, SQL ifadesi değil.
             user = (
-                await session.execute(select(User).where(User.email == user_email))
+                await session.execute(select(User).filter_by(email=user_email))
             ).scalar_one_or_none()
             if user is None:
                 raise SystemExit(

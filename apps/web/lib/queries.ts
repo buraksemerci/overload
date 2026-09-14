@@ -424,6 +424,41 @@ export function useActivateProgram(): UseMutationResult<ProgramSummary, Error, s
   });
 }
 
+export interface ProgramDayInput {
+  label: string;
+  exercises: Array<{
+    exercise_id: string;
+    target_sets: number;
+    target_rep_min: number;
+    target_rep_max: number;
+    technique: string;
+    superset_group: number | null;
+    rest_seconds: number | null;
+    notes: string | null;
+    target_percent_1rm: number | null;
+  }>;
+}
+
+export function useReplaceProgramDays(): UseMutationResult<
+  ProgramDetail,
+  Error,
+  { programId: string; days: ProgramDayInput[] }
+> {
+  const client = useQueryClient();
+  return useMutation({
+    // Tüm ağaç tek istekte değişiyor: sürükle-bırak sonrası sıra numaralarının
+    // yarısı değişiyor ve tek tek PATCH hem çok istek hem de yarı-uygulanmış
+    // sıralama riski demek.
+    mutationFn: ({ programId, days }) =>
+      api.put<ProgramDetail>(`/programs/${programId}/days`, days),
+    onSuccess: (_data, variables) => {
+      void client.invalidateQueries({ queryKey: keys.program(variables.programId) });
+      void client.invalidateQueries({ queryKey: keys.programs });
+      void client.invalidateQueries({ queryKey: keys.workouts });
+    },
+  });
+}
+
 export function useCloneProgram(): UseMutationResult<ProgramDetail, Error, string> {
   const client = useQueryClient();
   return useMutation({
@@ -580,6 +615,82 @@ export function useLogSoreness(): UseMutationResult<
     mutationFn: (body) => api.post<SorenessRow>("/soreness", body),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: keys.soreness });
+    },
+  });
+}
+
+// --- Onay bekleyen aksiyonlar (gözden geçirme ekranı) -----------------------
+
+export interface PendingActionRow {
+  id: string;
+  action_type: string;
+  summary: string;
+  payload: Record<string, unknown>;
+  status: string;
+  created_at: string;
+}
+
+/** AI'nın önerdiği program yapısı — `propose_program` payload'ı. */
+export interface ProposedProgram {
+  name: string;
+  description: string | null;
+  goal: string;
+  level: string;
+  rationale: string;
+  days: Array<{
+    label: string;
+    exercises: Array<{
+      exercise_id: string;
+      target_sets: number;
+      target_rep_min: number;
+      target_rep_max: number;
+      technique: string;
+      superset_group: number | null;
+      rest_seconds: number | null;
+      notes: string | null;
+      target_percent_1rm: number | null;
+    }>;
+  }>;
+}
+
+export function usePendingAction(id: string | null): UseQueryResult<PendingActionRow> {
+  return useQuery({
+    queryKey: [...keys.pendingActions, id],
+    queryFn: () => api.get<PendingActionRow>(`/chat/pending-actions/${id}`),
+    enabled: id !== null,
+    retry: false,
+  });
+}
+
+export function useUpdatePendingAction(): UseMutationResult<
+  PendingActionRow,
+  Error,
+  { id: string; payload: Record<string, unknown> }
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }) =>
+      api.patch<PendingActionRow>(`/chat/pending-actions/${id}`, { payload }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: keys.pendingActions });
+    },
+  });
+}
+
+export function useResolvePendingAction(): UseMutationResult<
+  PendingActionRow,
+  Error,
+  { id: string; decision: "approve" | "reject" }
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, decision }) =>
+      api.post<PendingActionRow>(`/chat/pending-actions/${id}/${decision}`),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: keys.pendingActions });
+      // Program onaylandıysa program listesi ve bugünkü antrenman değişti.
+      void client.invalidateQueries({ queryKey: keys.programs });
+      void client.invalidateQueries({ queryKey: keys.workouts });
     },
   });
 }

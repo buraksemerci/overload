@@ -8,7 +8,7 @@ from __future__ import annotations
 import uuid
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy import func, select
@@ -240,7 +240,7 @@ async def load_history(
     )
     rows = (await session.execute(stmt)).all()
 
-    grouped: dict[uuid.UUID, list[tuple[SetLog, object]]] = defaultdict(list)
+    grouped: dict[uuid.UUID, list[tuple[SetLog, datetime]]] = defaultdict(list)
     for set_log, started_at in rows:
         grouped[set_log.workout_session_id].append((set_log, started_at))
 

@@ -27,6 +27,7 @@ from overload_api.db.models.exercise import Exercise
 from overload_api.db.models.program import IntensityTechnique, Program, ProgramDay
 from overload_api.db.models.workout import PersonalRecord, PRType, SetLog, WorkoutSession
 from overload_api.features.workouts import service
+from overload_api.services.progression import ProgressionSuggestion
 
 router = APIRouter(prefix="/workouts", tags=["workouts"])
 
@@ -152,19 +153,19 @@ async def _owned_session(db: DbSession, user: CurrentUser, session_id: uuid.UUID
     return row
 
 
-def _to_progression_out(suggestion: object) -> ProgressionOut | None:
+def _to_progression_out(suggestion: ProgressionSuggestion | None) -> ProgressionOut | None:
+    """Motorun dataclass çıktısını API şemasına çevirir."""
     if suggestion is None:
         return None
-    s = suggestion  # type: ignore[assignment]
     return ProgressionOut(
-        kind=s.primary.kind.value,  # type: ignore[attr-defined]
-        weight_kg=s.primary.weight_kg,  # type: ignore[attr-defined]
-        reps=s.primary.reps,  # type: ignore[attr-defined]
-        label=s.primary.label,  # type: ignore[attr-defined]
-        message=s.message,  # type: ignore[attr-defined]
-        alternative_label=s.alternative.label if s.alternative else None,  # type: ignore[attr-defined]
-        plateau_sessions=s.plateau.stalled_sessions if s.plateau else None,  # type: ignore[attr-defined]
-        warnings=list(s.warnings),  # type: ignore[attr-defined]
+        kind=suggestion.primary.kind.value,
+        weight_kg=suggestion.primary.weight_kg,
+        reps=suggestion.primary.reps,
+        label=suggestion.primary.label,
+        message=suggestion.message,
+        alternative_label=(suggestion.alternative.label if suggestion.alternative else None),
+        plateau_sessions=(suggestion.plateau.stalled_sessions if suggestion.plateau else None),
+        warnings=list(suggestion.warnings),
     )
 
 

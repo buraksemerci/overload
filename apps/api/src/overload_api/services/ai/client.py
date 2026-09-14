@@ -28,10 +28,17 @@ BU SÜRÜMDE DEĞİŞEN API DETAYLARI (eski örneklerden kopyalarken dikkat)
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from typing import Any
+from typing import Any, cast
 
 import anthropic
 from anthropic import AsyncAnthropic
+from anthropic.types import (
+    MessageParam,
+    OutputConfigParam,
+    TextBlockParam,
+    ToolUnionParam,
+)
+from anthropic.types.messages.batch_create_params import Request
 
 from overload_api.config import get_settings
 from overload_api.services.ai.prompts import COACH_SYSTEM_PROMPT
@@ -57,7 +64,7 @@ def get_client() -> AsyncAnthropic:
     return _client
 
 
-def _cached_system() -> list[dict[str, Any]]:
+def _cached_system() -> list[TextBlockParam]:
     """Sistem promptu + (render sırası gereği) tool tanımları tek önbellek bloğunda.
 
     Anthropic render sırası `tools -> system -> messages`. Önbellek kesme noktasını
@@ -74,15 +81,18 @@ def _cached_system() -> list[dict[str, Any]]:
     ]
 
 
-def _with_history_breakpoint(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _with_history_breakpoint(messages: list[dict[str, Any]]) -> list[MessageParam]:
     """Sohbet geçmişinin sonuna ikinci bir önbellek kesme noktası koyar.
 
     Geçmiş turlar artık değişmeyeceği için önbelleklenebilir; sadece en son
     kullanıcı mesajı (taze bağlam bloğunu içeren) her seferinde yeniden işlenir.
     Uzun sohbetlerde asıl tasarruf buradan gelir.
     """
+    # `cast`: mesajlar veritabanından geliyor ve şekilleri çalışma zamanında
+    # doğru, ama dinamik kurulan bir sözlüğün `MessageParam` TypedDict'ine
+    # uyduğunu tip denetleyicisi doğrulayamıyor. Sınırda bir kez dönüştürüyoruz.
     if len(messages) < 2:
-        return messages
+        return cast(list[MessageParam], messages)
 
     out = [dict(m) for m in messages]
     prev = out[-2]
@@ -97,7 +107,7 @@ def _with_history_breakpoint(messages: list[dict[str, Any]]) -> list[dict[str, A
         if isinstance(last, dict):
             last["cache_control"] = {"type": "ephemeral"}
         prev["content"] = blocks
-    return out
+    return cast(list[MessageParam], out)
 
 
 async def stream_chat(
@@ -118,10 +128,12 @@ async def stream_chat(
         model=settings.anthropic_model_smart,
         max_tokens=CHAT_MAX_TOKENS,
         system=_cached_system(),
-        tools=list(ALL_TOOLS),
+        # Tool tanımları `tools.py`'de sözlük olarak kuruluyor (prompt caching
+        # için sıraları sabit); SDK'nın birleşik TypedDict'ine sınırda dönüşüyor.
+        tools=cast(list[ToolUnionParam], list(ALL_TOOLS)),
         messages=_with_history_breakpoint(messages),
         thinking={"type": "adaptive"},
-        output_config={"effort": effort},
+        output_config=cast(OutputConfigParam, {"effort": effort}),
     ) as stream:
         async for event in stream:
             yield event
@@ -138,15 +150,18 @@ async def complete_chat(
     """Akışsız tek tur — tool döngüsünün ara adımlarında kullanılır."""
     client = get_client()
     settings = get_settings()
-    return await client.messages.create(
+    response: anthropic.types.Message = await client.messages.create(
         model=settings.anthropic_model_smart,
         max_tokens=CHAT_MAX_TOKENS,
         system=_cached_system(),
-        tools=list(ALL_TOOLS),
+        # Tool tanımları `tools.py`'de sözlük olarak kuruluyor (prompt caching
+        # için sıraları sabit); SDK'nın birleşik TypedDict'ine sınırda dönüşüyor.
+        tools=cast(list[ToolUnionParam], list(ALL_TOOLS)),
         messages=_with_history_breakpoint(messages),
         thinking={"type": "adaptive"},
-        output_config={"effort": effort},
+        output_config=cast(OutputConfigParam, {"effort": effort}),
     )
+    return response
 
 
 async def parse_structured(
@@ -168,11 +183,12 @@ async def parse_structured(
         model=settings.anthropic_model_fast,
         max_tokens=PARSE_MAX_TOKENS,
         system=system,
-        messages=[{"role": "user", "content": content}],
+        messages=cast(list[MessageParam], [{"role": "user", "content": content}]),
         output_config={"format": {"type": "json_schema", "schema": schema}},
     )
     # output_config.format garantisi: ilk text bloğu geçerli JSON.
-    return next(b.text for b in response.content if b.type == "text")
+    text: str = next(b.text for b in response.content if b.type == "text")
+    return text
 
 
 async def submit_weekly_report_batch(
@@ -185,7 +201,9 @@ async def submit_weekly_report_batch(
     ile toplanır.
     """
     client = get_client()
-    batch = await client.messages.batches.create(requests=requests)
+    # İstekler `features/coach/service.py` içinde sözlük olarak kuruluyor;
+    # SDK'nın `Request` TypedDict'ine sınırda dönüşüyor.
+    batch = await client.messages.batches.create(requests=cast(list[Request], requests))
     return batch.id
 
 

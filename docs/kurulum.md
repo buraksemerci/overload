@@ -138,9 +138,11 @@ python -c "import secrets; print(secrets.token_urlsafe(64))"
 cd apps/api && .venv/Scripts/alembic upgrade head
 ```
 
-Bu iki migration'ı uygular:
+Üç migration uygulanır:
 - `0001` — 23 tablo, 35 yabancı anahtar, 34 CHECK kısıtı, 22 indeks
 - `0002` — Row-Level Security politikaları ve `overload_app` rolü
+- `0003` — `program_exercise.target_percent_1rm` (5/3/1, nSuns gibi yüzde
+  tabanlı programlar için)
 
 Sonra referans veriyi yükle:
 
@@ -148,7 +150,9 @@ Sonra referans veriyi yükle:
 cd apps/api && .venv/Scripts/python -m overload_api.seed.loader
 ```
 
-18 kas grubu, 39 hareket (kas eşlemeleriyle) ve 4 şablon program yüklenir.
+18 kas grubu, 52 hareket (kas eşlemeleriyle) ve **11 şablon program** yüklenir
+(Bölüm 9'un tamamı: StrongLifts 5x5, Starting Strength, Greg Nuckols, 5/3/1 BBB,
+GZCLP, Candito 6 Hafta, PHUL, PHAT, Reddit PPL, Alberto Nuñez U/L, nSuns 5/3/1).
 
 ---
 
@@ -176,7 +180,40 @@ cd apps/api && .venv/Scripts/python -m overload_api.seed.loader --user SENIN@EPO
 
 ---
 
-## 9. GitHub ve dağıtım (sonraya bırakılabilir)
+---
+
+## 9. Haftalık koç raporu (zamanlanmış iş)
+
+Raporlar otomatik üretilmiyor — bir cron girdisi kurman gerekiyor.
+
+```bash
+# Tek komutta gönder, bekle, topla (küçük kullanıcı sayısı için en basiti)
+cd apps/api && .venv/Scripts/python -m overload_api.scripts.weekly_reports run
+
+# Ne gönderileceğini gör, hiçbir şey gönderme
+cd apps/api && .venv/Scripts/python -m overload_api.scripts.weekly_reports submit --dry-run
+```
+
+Railway/Render'da "Cron Job" olarak Pazartesi 03:00'e kur. Batch API sonuçları
+24 saate kadar sürebildiği için iki aşamalı kullanım da mümkün
+(`submit` → sonra `collect --batch-id ...`).
+
+---
+
+## 10. Uçtan uca testler (isteğe bağlı)
+
+Playwright tarayıcı indirmesi gerektiriyor (~150 MB, tek seferlik):
+
+```bash
+cd apps/web && pnpm exec playwright install chromium
+cd apps/web && pnpm e2e
+```
+
+Testler backend'i taklit ediyor; veritabanı gerekmiyor.
+
+---
+
+## 11. GitHub ve dağıtım (sonraya bırakılabilir)
 
 Yerelde çalıştığını doğruladıktan sonra:
 

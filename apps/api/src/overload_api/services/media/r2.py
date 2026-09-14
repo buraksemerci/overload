@@ -123,7 +123,9 @@ def presigned_put(key: str, content_type: str) -> str:
     """
     settings = get_settings()
     try:
-        return _client().generate_presigned_url(
+        # boto3 tip belirteçleri `Any` döndürüyor; açık bir değişken, dönüş
+        # tipinin sessizce Any'ye kaymasını engelliyor.
+        url: str = _client().generate_presigned_url(
             "put_object",
             Params={
                 "Bucket": settings.r2_bucket_name,
@@ -132,6 +134,7 @@ def presigned_put(key: str, content_type: str) -> str:
             },
             ExpiresIn=UPLOAD_URL_TTL_SECONDS,
         )
+        return url
     except (BotoCoreError, ClientError) as exc:
         logger.error("Ön-imzalı PUT üretilemedi (%s): %s", key, exc)
         raise MediaError("Yükleme adresi üretilemedi.") from exc
@@ -142,11 +145,12 @@ def presigned_get(key: str, *, ttl: int = DOWNLOAD_URL_TTL_SECONDS) -> str:
     herkese açık olmasına gerek yok."""
     settings = get_settings()
     try:
-        return _client().generate_presigned_url(
+        url: str = _client().generate_presigned_url(
             "get_object",
             Params={"Bucket": settings.r2_bucket_name, "Key": key},
             ExpiresIn=ttl,
         )
+        return url
     except (BotoCoreError, ClientError) as exc:
         logger.error("Ön-imzalı GET üretilemedi (%s): %s", key, exc)
         raise MediaError("Görsel adresi üretilemedi.") from exc

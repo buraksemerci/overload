@@ -30,7 +30,7 @@ import argparse
 import asyncio
 import logging
 import sys
-from datetime import timedelta
+from datetime import date, timedelta
 
 from overload_api.core.time import now_utc
 from overload_api.db.session import session_scope
@@ -44,7 +44,7 @@ MAX_WAIT_SECONDS = 30 * 60
 POLL_INTERVAL_SECONDS = 30
 
 
-def _last_week_start() -> object:
+def _last_week_start() -> date:
     """Geçen haftanın Pazartesi'si. Rapor tamamlanmış bir hafta için üretilir;
     içinde bulunulan hafta için üretmek yarım veriyle yorum yapmak olurdu."""
     today = now_utc().date()
@@ -56,11 +56,7 @@ async def _submit(dry_run: bool) -> str | None:
     # Seed ve rapor işleri sahip rolüyle koşar: tüm kullanıcıların verisine
     # erişmeleri gerekiyor, RLS kapsamı tek kullanıcıya bağlı.
     async with session_scope(assume_app_role=False) as session:
-        batch_id, count = await service.submit_weekly_batch(
-            session,
-            week_start,
-            dry_run=dry_run,  # type: ignore[arg-type]
-        )
+        batch_id, count = await service.submit_weekly_batch(session, week_start, dry_run=dry_run)
     if count == 0:
         logger.info("Gonderilecek rapor yok (%s haftasi).", week_start)
         return None

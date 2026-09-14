@@ -79,10 +79,12 @@ async def _fetch_from_usda(query: str) -> FoodDatabaseEntry | None:
         logger.warning("USDA_API_KEY yok — besin araması yapılamıyor (%s)", query)
         return None
 
-    params = {
+    # Hepsi string: httpx karışık tipli sözlükleri kabul ediyor ama tip
+    # denetleyicisi için tek tip daha net ve URL'de zaten string'e çevrilecekler.
+    params: dict[str, str] = {
         "api_key": settings.usda_api_key.get_secret_value(),
         "query": query,
-        "pageSize": 1,
+        "pageSize": "1",
         # Foundation/SR Legacy en güvenilir temel gıda verisi; Branded gürültülü.
         "dataType": "Foundation,SR Legacy",
     }

@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field, ValidationError, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from overload_api.db.base import Base
 from overload_api.db.models.ai import ActionType, PendingAction, PendingActionStatus
 from overload_api.db.models.body import (
     BodyWeightLog,
@@ -503,7 +504,10 @@ async def _apply_add_exercise(
 
 #: `propose_update` ile dokunulabilen tablolar ve o tablolarda değiştirilebilen
 #: alanlar. Beyaz liste — listede olmayan alan sessizce atlanmaz, hata verir.
-_UPDATABLE: dict[str, tuple[type, frozenset[str]]] = {
+#: `type[Base]` kullanılıyor, çıplak `type` değil: çıplak `type` ile
+#: `session.get(model_cls, ...)` aşırı yükleme çözümlemesi başarısız oluyor ve
+#: dönüş tipi sessizce `None` sanılıyor.
+_UPDATABLE: dict[str, tuple[type[Base], frozenset[str]]] = {
     "nutrition_log": (NutritionLog, frozenset({"quantity_g", "meal_type", "date"})),
     "activity_log": (ActivityLog, frozenset({"duration_min", "activity_type", "date", "notes"})),
     "body_weight_log": (BodyWeightLog, frozenset({"weight_kg", "date", "notes"})),

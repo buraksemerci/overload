@@ -314,7 +314,9 @@ async def submit_weekly_batch(
     """
     settings = get_settings()
 
-    users = (await session.execute(select(User).where(User.is_active))).scalars().all()
+    # `filter_by` kullanılıyor, `.where(User.is_active)` değil: fastapi-users'ın
+    # taban sınıfındaki `is_active` mypy'ye düz `bool` görünüyor, SQL sütunu değil.
+    users = (await session.execute(select(User).filter_by(is_active=True))).scalars().all()
 
     existing = set(
         (

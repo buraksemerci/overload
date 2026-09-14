@@ -1228,6 +1228,21 @@
         "title": "PendingActionOut",
         "type": "object"
       },
+      "PendingActionPatch": {
+        "description": "Onaydan önce öneriyi düzenlemek için.\n\nBölüm 4.1'in şartı: AI'nın önerdiği program tam ekran bir \"gözden geçir\"\nekranında satır satır düzenlenebilmeli, sonra onaylanmalı.\n\nPayload'ı istemcinin yeniden yazması güvenlik açığı DEĞİL: istemci zaten\nkullanıcının kendisi ve payload onay anında Pydantic ile yeniden doğrulanıyor.\nAsıl güvence orada — burada ne yazılırsa yazılsın, şemaya uymayan hiçbir şey\nveritabanına geçemez.",
+        "properties": {
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "payload"
+        ],
+        "title": "PendingActionPatch",
+        "type": "object"
+      },
       "PlannedExerciseOut": {
         "properties": {
           "equipment": {
@@ -3545,6 +3560,112 @@
           }
         ],
         "summary": "List Pending",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/chat/pending-actions/{action_id}": {
+      "get": {
+        "description": "Tek bir öneriyi getirir — gözden geçirme ekranı bunu okuyor.",
+        "operationId": "get_pending_action_chat_pending_actions__action_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Action Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingActionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Pending Action",
+        "tags": [
+          "chat"
+        ]
+      },
+      "patch": {
+        "description": "Onay bekleyen öneriyi düzenler. Yalnızca `pending` durumdayken.",
+        "operationId": "update_pending_action_chat_pending_actions__action_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Action Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PendingActionPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingActionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Pending Action",
         "tags": [
           "chat"
         ]

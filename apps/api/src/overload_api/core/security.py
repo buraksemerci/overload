@@ -31,20 +31,30 @@ async def _auth_session() -> AsyncIterator[AsyncSession]:
         yield session
 
 
+#: fastapi-users'ın veritabanı adaptörü jenerik; tip argümanları olmadan
+#: `Any` sızdırıyor ve kullanıcı tipiyle uyumsuzluklar yakalanamıyor.
+UserDatabase = SQLAlchemyUserDatabase[User, uuid.UUID]
+
+
 async def get_user_db(
     session: Annotated[AsyncSession, Depends(_auth_session)],
-) -> AsyncIterator[SQLAlchemyUserDatabase]:
+) -> AsyncIterator[UserDatabase]:
     yield SQLAlchemyUserDatabase(session, User)
 
 
 class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
-    @property
-    def reset_password_token_secret(self) -> str:
-        return get_settings().jwt_secret.get_secret_value()
+    """Şifre sıfırlama ve doğrulama token'ları JWT sırrından türetiliyor.
 
-    @property
-    def verification_token_secret(self) -> str:
-        return get_settings().jwt_secret.get_secret_value()
+    Değerler `__init__` içinde atanıyor, property olarak DEĞİL: taban sınıf
+    bunları yazılabilir sınıf niteliği olarak tanımlıyor ve salt-okunur
+    property ile geçersiz kılmak tip uyumsuzluğu (Liskov ihlali) yaratıyor.
+    """
+
+    def __init__(self, user_db: UserDatabase) -> None:
+        super().__init__(user_db)
+        secret = get_settings().jwt_secret.get_secret_value()
+        self.reset_password_token_secret = secret
+        self.verification_token_secret = secret
 
     async def on_after_register(self, user: User, request: Request | None = None) -> None:
         # Yeni kullanıcıya başlangıç verisi (hareket kütüphanesi zaten paylaşımlı;
@@ -54,12 +64,12 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
 
 
 async def get_user_manager(
-    user_db: Annotated[SQLAlchemyUserDatabase, Depends(get_user_db)],
+    user_db: Annotated[UserDatabase, Depends(get_user_db)],
 ) -> AsyncIterator[UserManager]:
     yield UserManager(user_db)
 
 
-def get_jwt_strategy() -> JWTStrategy:
+def get_jwt_strategy() -> JWTStrategy[User, uuid.UUID]:
     settings = get_settings()
     return JWTStrategy(
         secret=settings.jwt_secret.get_secret_value(),

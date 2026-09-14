@@ -57,10 +57,13 @@ class TurnEvent:
         return f"event: {self.type}\ndata: {json.dumps(self.data, ensure_ascii=False)}\n\n"
 
 
-def _summarize_for_card(action: ActionType, payload: dict[str, Any]) -> str:
+def summarize_for_card(action: ActionType, payload: dict[str, Any]) -> str:
     """Onay kartında görünecek tek satırlık insan-okur özet.
 
     Modelin ürettiği metne güvenmiyoruz; özeti payload'ın *yapısından* üretiyoruz.
+
+    Dışa açık: kullanıcı öneriyi gözden geçirme ekranında düzenlediğinde
+    (`PATCH /chat/pending-actions/{id}`) özetin de yeniden üretilmesi gerekiyor.
     """
     match action:
         case ActionType.propose_program:
@@ -109,7 +112,7 @@ async def _handle_tool_call(
             user_id=user.id,
             action_type=action,
             payload=tool_input,
-            summary=_summarize_for_card(action, tool_input),
+            summary=summarize_for_card(action, tool_input),
             chat_message_id=chat_message_id,
             tool_use_id=tool_use_id,
         )

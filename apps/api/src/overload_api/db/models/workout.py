@@ -24,6 +24,7 @@ from sqlalchemy import (
     SmallInteger,
     String,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -72,6 +73,19 @@ class WorkoutSession(TimestampMixin, Base):
         ),
         # Takvim/streak sorguları hep kullanıcı + tarih ile filtreler.
         Index("ix_workout_session_user_id_started_at", "user_id", "started_at"),
+        # Kullanıcı başına EN FAZLA BİR açık seans. `start_session` bunu zaten
+        # 409 ile engelliyor, ama yalnızca uygulama katmanında: eşzamanlı iki
+        # POST yarışırsa iki açık seans oluşabiliyordu. Sonuç ağır — hem
+        # `/workouts/today` hem `start_session` açık seansı `scalar_one_or_none()`
+        # ile okuyor, yani o kullanıcı için uygulamanın ANA endpoint'i kalıcı
+        # olarak 500 dönmeye başlıyor. `program.is_active` için zaten aynı
+        # desen (kısmi tekil indeks) kullanılıyor; burada da o geçerli.
+        Index(
+            "uq_workout_session_one_open_per_user",
+            "user_id",
+            unique=True,
+            postgresql_where=text("completed_at IS NULL"),
+        ),
     )
 
     @property

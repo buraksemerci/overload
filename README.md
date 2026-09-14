@@ -90,12 +90,10 @@ modellemek yerine açıkça belirtiliyorlar:
   `ANTHROPIC_API_KEY`, `USDA_API_KEY` ve Cloudflare R2 kimlik bilgisi gerekiyor;
   üçü de `.env`'de boş. Kod yazıldı ve birim testleri geçiyor, ama gerçek bir
   API çağrısı hiç yapılmadı.
-- **Router'ların otomatik testi yok.** Testler saf servis/motor katmanını
-  kapsıyor; endpoint'ler elle ve tarayıcıdan doğrulandı. Bu boşluk gerçek bir
-  hatayı gizlemişti: `SessionOut.sets` ORM'deki `set_logs` ilişkisiyle
-  eşleşmediği için kaydedilmiş setler cevaba hiç girmiyordu (bkz.
-  `tests/test_api_schemas.py`). Şema düzeyinde test eklendi, HTTP düzeyinde
-  hâlâ yok.
+- **HTTP testleri yalnızca antrenman akışını kapsıyor.** Beslenme, ilerleme,
+  program ve sohbet endpoint'lerinin uçtan uca testi henüz yok; onlar elle ve
+  tarayıcıdan doğrulandı. Altyapı hazır (`tests/conftest.py`), eksik olan
+  testlerin kendisi.
 - **Periyodizasyon (hafta dalgaları) modellenmedi.** 5/3/1, nSuns ve Candito
   4-6 haftalık dalgalar hâlinde çalışıyor; veri modelinde "hafta" kavramı yok.
   Şablonlar 1. hafta yüzdeleriyle kaydediliyor, sonraki haftalar açıklamada
@@ -113,7 +111,8 @@ modellemek yerine açıkça belirtiliyorlar:
 ```bash
 # Backend
 cd apps/api
-.venv/Scripts/python -m pytest -q
+.venv/Scripts/python -m pytest -q      # HTTP testleri için: docker compose up -d db-test
+                                       # (kapalıysa o testler atlanır, koşu yeşil kalır)
 .venv/Scripts/ruff check . && .venv/Scripts/ruff format --check .
 .venv/Scripts/alembic upgrade head
 .venv/Scripts/python -m overload_api.seed.loader --user EPOSTA

@@ -14,10 +14,11 @@ from __future__ import annotations
 
 import datetime
 import uuid
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from overload_api.db.models.program import IntensityTechnique
 from overload_api.features.workouts.router import SessionOut
+from overload_api.services.progression import PerformedSet
 
 
 class _FakeSetLog:
@@ -76,3 +77,34 @@ class TestSessionOut:
             sets=[],
         )
         assert built.sets == []
+
+
+class TestRecordValuePrecision:
+    """Rekor değerleri saklandıkları hassasiyette karşılaştırılmalı.
+
+    `personal_record.value` sütunu `Numeric(10,2)`. Epley tahmini 1RM ise çoğu
+    zaman sonsuz ondalık veriyor. Ham değeri saklanmış (yuvarlanmış) değerle
+    karşılaştırmak, AYNI setin her tekrarında sahte rekor üretiyordu.
+    """
+
+    @staticmethod
+    def _q2(value: Decimal) -> Decimal:
+        return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+    def test_epley_overflows_two_decimals(self) -> None:
+        """Hatanın ön koşulu: ham değer 2 basamağa sığmıyor."""
+        raw = PerformedSet(Decimal("100"), 4).estimated_1rm
+        assert raw != self._q2(raw)
+
+    def test_repeating_a_set_is_not_a_new_record(self) -> None:
+        """Yuvarlanmış değer, kendi saklanmış hâlini geçmemeli."""
+        for weight, reps in [("100", 4), ("60", 11), ("100", 5), ("82.5", 6)]:
+            raw = PerformedSet(Decimal(weight), reps).estimated_1rm
+            stored = self._q2(raw)  # bir önceki seansta veritabanına yazılan
+            assert self._q2(raw) <= stored, f"{weight}kg x {reps} sahte rekor üretiyor"
+
+    def test_a_genuine_improvement_still_counts(self) -> None:
+        """Yuvarlama gerçek ilerlemeyi yutmamalı."""
+        before = self._q2(PerformedSet(Decimal("100"), 4).estimated_1rm)
+        after = self._q2(PerformedSet(Decimal("100"), 5).estimated_1rm)
+        assert after > before

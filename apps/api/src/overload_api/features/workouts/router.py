@@ -20,6 +20,7 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from overload_api.core.deps import CurrentUser, DbSession
@@ -196,11 +197,15 @@ async def todays_workout(db: DbSession, user: CurrentUser) -> TodayOut:
         )
     ).scalar_one_or_none()
 
+    # `scalar_one_or_none()` DEĞİL: iki açık seans bu endpoint'i — uygulamanın
+    # ana endpoint'ini — 500'e düşürürdü. 0004'teki kısmi tekil indeks artık
+    # bunu engelliyor, ama okuma tarafı yine de tek satıra bağlı kalmamalı.
     active_session = (
         await db.execute(
-            select(WorkoutSession.id).where(
-                WorkoutSession.user_id == user.id, WorkoutSession.completed_at.is_(None)
-            )
+            select(WorkoutSession.id)
+            .where(WorkoutSession.user_id == user.id, WorkoutSession.completed_at.is_(None))
+            .order_by(WorkoutSession.started_at.desc())
+            .limit(1)
         )
     ).scalar_one_or_none()
 
@@ -279,9 +284,10 @@ async def start_session(payload: SessionStart, db: DbSession, user: CurrentUser)
     """
     open_session = (
         await db.execute(
-            select(WorkoutSession).where(
-                WorkoutSession.user_id == user.id, WorkoutSession.completed_at.is_(None)
-            )
+            select(WorkoutSession)
+            .where(WorkoutSession.user_id == user.id, WorkoutSession.completed_at.is_(None))
+            .order_by(WorkoutSession.started_at.desc())
+            .limit(1)
         )
     ).scalar_one_or_none()
     if open_session is not None:
@@ -295,10 +301,24 @@ async def start_session(payload: SessionStart, db: DbSession, user: CurrentUser)
         program_day_id=payload.program_day_id,
         started_at=now_utc(),
         notes=payload.notes,
+        # `set_logs=[]` ŞART, süs değil. FastAPI cevabı handler döndükten SONRA
+        # serileştiriyor; o noktada `get_scoped_db` oturumu çoktan kapanmış
+        # oluyor. Koleksiyon burada doldurulmazsa `SessionOut.sets` okunurken
+        # tembel yükleme tetikleniyor ve MissingGreenlet ile 500 dönüyor.
+        # Yeni seansın seti zaten yok — doğru değer boş liste.
+        set_logs=[],
     )
     db.add(session_row)
-    await db.flush()
-    await db.flush()
+    try:
+        await db.flush()
+    except IntegrityError as exc:
+        # Yukarıdaki kontrol ile bu INSERT arasına eşzamanlı bir istek girdiyse
+        # `uq_workout_session_one_open_per_user` devreye girer (bkz. 0004).
+        # Kullanıcıya 500 yerine aynı anlamlı 409 dönmeli.
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Devam eden bir antrenman var. Önce onu bitir ya da sil.",
+        ) from exc
     return session_row
 
 

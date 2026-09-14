@@ -9,7 +9,7 @@ import uuid
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -343,15 +343,26 @@ async def detect_new_records(
         if not sets:
             continue
 
+        # Değerler SAKLANACAKLARI hassasiyete (Numeric(10,2)) yuvarlanıyor.
+        #
+        # Yuvarlamadan karşılaştırmak sahte rekor üretiyordu: Epley tahmini
+        # 1RM çoğu zaman sonsuz ondalık veriyor (100kg x 4 -> 113.3333...),
+        # sütun 113.33 saklıyor, sonraki seansta AYNI set yine 113.3333...
+        # hesaplanıp 113.33'ten büyük çıkıyor ve her seferinde "yeni rekor"
+        # kutlaması tetikleniyordu. Aynı sebeple `complete` cevabı da
+        # veritabanındakinden farklı bir sayı döndürüyordu.
+        def _q2(value: Decimal) -> Decimal:
+            return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
         candidates: dict[PRType, tuple[Decimal, int | None]] = {
-            PRType.max_weight: (max(s.weight_kg for s in sets), None),
+            PRType.max_weight: (_q2(max(s.weight_kg for s in sets)), None),
             PRType.max_reps: (Decimal(max(s.reps for s in sets)), None),
-            PRType.session_volume: (sum((s.volume for s in sets), Decimal(0)), None),
-            PRType.estimated_1rm: (max(s.estimated_1rm for s in sets), None),
+            PRType.session_volume: (_q2(sum((s.volume for s in sets), Decimal(0))), None),
+            PRType.estimated_1rm: (_q2(max(s.estimated_1rm for s in sets)), None),
         }
         # max_weight rekorunda kaç tekrarla yapıldığı bağlamı da saklanır.
         heaviest = max(sets, key=lambda s: (s.weight_kg, s.reps))
-        candidates[PRType.max_weight] = (heaviest.weight_kg, heaviest.reps)
+        candidates[PRType.max_weight] = (_q2(heaviest.weight_kg), heaviest.reps)
 
         for pr_type, (value, reps) in candidates.items():
             previous_best = (

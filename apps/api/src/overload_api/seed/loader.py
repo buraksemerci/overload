@@ -200,6 +200,29 @@ async def run(user_email: str | None = None) -> None:
                 )
             program = await _build_program(session, USER_PROGRAM, exercises, owner_id=user.id)
             if program is not None:
+                # Önce varsa eski aktif programı pasifleştir. `is_active` üzerinde
+                # `uq_program_one_active_per_owner` kısmi tekil indeksi var; bu
+                # adım olmadan, kullanıcının zaten aktif bir programı varsa
+                # (şablon başlatmış herkes) yükleyici UniqueViolationError ile
+                # çöküyor ve TÜM seed işlemi geri alınıyordu.
+                previous = (
+                    (
+                        await session.execute(
+                            select(Program).where(
+                                Program.owner_id == user.id,
+                                Program.is_active.is_(True),
+                            )
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+                for old in previous:
+                    old.is_active = False
+                    logger.info("aktiflik kaldırıldı: %s", old.name)
+                # Indeksi ihlal etmeden sıraya girmesi için önce UPDATE'ler insin.
+                await session.flush()
+
                 program.is_active = True
                 logger.info("aktif program atandı: %s -> %s", user_email, program.name)
 

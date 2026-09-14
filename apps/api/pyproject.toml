@@ -86,6 +86,12 @@ ignore = [
 # --- pytest ------------------------------------------------------------------
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+# Tek bir event loop, tüm oturum boyunca. SQLAlchemy motoru modül seviyesinde
+# kuruluyor ve havuzdaki bağlantılar kurulduklari loop'a bağlı; her teste yeni
+# loop verilirse ikinci test kapanmış bir loop'un soketini kullanmaya çalışıyor
+# (Windows'ta "'NoneType' object has no attribute 'send'").
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
 pythonpath = ["src"]
 filterwarnings = ["error::DeprecationWarning:overload_api.*"]

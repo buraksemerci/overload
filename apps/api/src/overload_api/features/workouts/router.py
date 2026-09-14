@@ -107,9 +107,16 @@ class SessionOut(BaseModel):
     completed_at: datetime | None
     notes: str | None
     is_deload: bool
-    sets: list[SetOut] = Field(default_factory=list)
+    #: ORM'de ilişkinin adı `set_logs`; dışarıya `sets` olarak çıkıyor.
+    #: `validation_alias` OLMAZSA Pydantic `sets` özniteliğini arar, bulamaz ve
+    #: SESSİZCE `default_factory`'ye düşer — yani kaydedilmiş setleri olan bir
+    #: seans API'den `"sets": []` olarak döner. Hata vermediği için fark edilmesi
+    #: zor: POST 201 dönüyor, satır veritabanında duruyor, ekran boş görünüyor.
+    sets: list[SetOut] = Field(default_factory=list, validation_alias="set_logs")
 
-    model_config = {"from_attributes": True}
+    # `populate_by_name`: alias eklendiği için `SessionOut(sets=[...])` biçiminde
+    # alan adıyla kurmak da geçerli kalsın.
+    model_config = {"from_attributes": True, "populate_by_name": True}
 
 
 class RecordOut(BaseModel):
@@ -228,7 +235,11 @@ async def todays_workout(db: DbSession, user: CurrentUser) -> TodayOut:
     planned: list[PlannedExerciseOut] = []
     for px in day.exercises:
         exercise = px.exercise
-        suggestion = await service.progression_for_exercise(db, user.id, px.exercise_id)
+        # Satır kimliği ZORUNLU olarak geçiliyor: 5/3/1 gibi programlarda aynı
+        # hareket bir günde birden çok kez, farklı hedeflerle geçiyor.
+        suggestion = await service.progression_for_exercise(
+            db, user.id, px.exercise_id, program_exercise_id=px.id
+        )
         planned.append(
             PlannedExerciseOut(
                 program_exercise_id=px.id,

@@ -263,27 +263,52 @@ async def load_history(
 
 
 async def progression_for_exercise(
-    session: AsyncSession, user_id: uuid.UUID, exercise_id: uuid.UUID
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    exercise_id: uuid.UUID,
+    *,
+    program_exercise_id: uuid.UUID | None = None,
 ) -> ProgressionSuggestion | None:
     """Hareketin bir sonraki hedefini hesaplar.
 
-    Hedef aralığı kullanıcının aktif programından okunur; program satırı yoksa
-    makul bir varsayılan (3x8-12 hipertrofi aralığı) kullanılır — kullanıcı
-    programsız serbest antrenman da yapabilir.
+    `program_exercise_id` VERİLMELİ — çağıran hangi program satırını gösterdiğini
+    biliyorsa. Sebebi 5/3/1 gibi programlarda net görünüyor: aynı hareket bir
+    günde dört kez, dört farklı hedefle geçiyor (1x5 @%65, 1x5 @%75, 1x5+ @%85,
+    5x10 @%50). Satır belirtilmezse hepsi aynı öneriyi alır ve üçü yanlış olur.
+
+    Satır verilmediğinde (ör. serbest antrenmanda tek bir hareket sorgulanırken)
+    kullanıcının KENDİ programlarından biri seçilir — aktif program öncelikli.
+    Bu filtre olmadan sorgu bir ŞABLON satırını seçebiliyordu: şablonlar herkese
+    görünür olduğu için kullanıcının hiç kullanmadığı bir programın hedefi
+    sızıyordu.
     """
     exercise = await session.get(Exercise, exercise_id)
     if exercise is None:
         return None
 
-    program_exercise = (
-        await session.execute(
-            select(ProgramExercise)
-            .join(ProgramDay, ProgramExercise.program_day_id == ProgramDay.id)
-            .where(ProgramExercise.exercise_id == exercise_id)
-            .options(selectinload(ProgramExercise.day))
-            .limit(1)
-        )
-    ).scalar_one_or_none()
+    if program_exercise_id is not None:
+        program_exercise = await session.get(ProgramExercise, program_exercise_id)
+    else:
+        program_exercise = (
+            await session.execute(
+                select(ProgramExercise)
+                .join(ProgramDay, ProgramExercise.program_day_id == ProgramDay.id)
+                .join(Program, ProgramDay.program_id == Program.id)
+                .where(
+                    ProgramExercise.exercise_id == exercise_id,
+                    # Sadece kullanıcının kendi programları; şablonlar hariç.
+                    Program.owner_id == user_id,
+                )
+                # Aktif program önce, sonra gün/satır sırası — deterministik olsun.
+                .order_by(
+                    Program.is_active.desc(),
+                    ProgramDay.order_index,
+                    ProgramExercise.order_index,
+                )
+                .options(selectinload(ProgramExercise.day))
+                .limit(1)
+            )
+        ).scalar_one_or_none()
 
     if program_exercise is not None:
         target = ExerciseTarget(

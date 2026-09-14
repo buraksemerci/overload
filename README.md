@@ -3,10 +3,11 @@
 Progresif overload'u merkeze alan kişisel antrenman, beslenme ve sağlık takip
 sistemi. Spor, beslenme, vücut takibi ve AI destekli koçluk tek çatı altında.
 
-> **Durum:** Backend ve frontend uçtan uca kurulu. Bölüm 8'deki 15 ekranın
-> tamamı yazıldı ve gerçek endpoint'lere bağlandı.
-> **Eksik olan tek şey: canlı veritabanına karşı doğrulama** — bkz. aşağıdaki
-> "Bilinen sınırlar".
+> **Durum:** Backend ve frontend uçtan uca kurulu, canlı Postgres'e karşı
+> doğrulandı: migration'lar koştu, RLS izolasyonu gerçek veriyle sınandı,
+> antrenman kaydetme akışı tarayıcıdan uçtan uca çalıştırıldı.
+> **Doğrulanmamış tek alan: Anthropic/USDA/R2 anahtarı gerektiren özellikler**
+> — bkz. aşağıdaki "Bilinen sınırlar".
 
 ---
 
@@ -85,10 +86,16 @@ E2E         34 (Playwright) oturum, gezinme, set kaydı, program gözden geçirm
 Bunlar eksiklik değil, **bilinçli olarak çizilmiş sınırlar** — sessizce yanlış
 modellemek yerine açıkça belirtiliyorlar:
 
-- **Canlı veritabanına karşı doğrulama yapılmadı.** Migration'lar derleniyor ve
-  RLS politikaları yazıldı, ama gerçek Postgres'te henüz koşmadılar. Özellikle
-  `SET LOCAL ROLE` + RLS kombinasyonu ve kısmi tekil indeks ancak orada
-  doğrulanabilir. Docker lisans onayı ya da Neon hesabı bekliyor.
+- **AI, besin arama ve fotoğraf yükleme canlıda denenmedi.** Sırasıyla
+  `ANTHROPIC_API_KEY`, `USDA_API_KEY` ve Cloudflare R2 kimlik bilgisi gerekiyor;
+  üçü de `.env`'de boş. Kod yazıldı ve birim testleri geçiyor, ama gerçek bir
+  API çağrısı hiç yapılmadı.
+- **Router'ların otomatik testi yok.** Testler saf servis/motor katmanını
+  kapsıyor; endpoint'ler elle ve tarayıcıdan doğrulandı. Bu boşluk gerçek bir
+  hatayı gizlemişti: `SessionOut.sets` ORM'deki `set_logs` ilişkisiyle
+  eşleşmediği için kaydedilmiş setler cevaba hiç girmiyordu (bkz.
+  `tests/test_api_schemas.py`). Şema düzeyinde test eklendi, HTTP düzeyinde
+  hâlâ yok.
 - **Periyodizasyon (hafta dalgaları) modellenmedi.** 5/3/1, nSuns ve Candito
   4-6 haftalık dalgalar hâlinde çalışıyor; veri modelinde "hafta" kavramı yok.
   Şablonlar 1. hafta yüzdeleriyle kaydediliyor, sonraki haftalar açıklamada

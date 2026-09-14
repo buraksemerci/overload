@@ -210,6 +210,96 @@ class TestFailureTechniques:
         assert info.metric == "toplam hacim"
 
 
+# --- Vücut ağırlığı ----------------------------------------------------------
+
+
+class TestBodyweightHasNoLoad:
+    """Motorun metin ve ölçüt katmanı dış yük varsaymamalı.
+
+    Hepsi aynı kökten çıkan hatalar: ağırlık 0 olduğunda "0kg x 12" yazmak,
+    "bir ağırlık seç" demek ve hacmi 0 ölçüp platoyu hiç görmemek.
+    """
+
+    def bw(
+        self,
+        rep_min: int = 8,
+        rep_max: int = 12,
+        technique: IntensityTechnique = IntensityTechnique.rir1,
+    ) -> ExerciseTarget:
+        return target(
+            rep_min=rep_min,
+            rep_max=rep_max,
+            technique=technique,
+            equipment=Equipment.bodyweight,
+        )
+
+    def test_baseline_asks_for_reps_not_a_weight(self) -> None:
+        result = suggest_next_target(self.bw(), history=[])
+        assert "ağırlık seç" not in result.message
+        assert "tekrar" in result.message
+
+    def test_labels_never_say_zero_kilos(self) -> None:
+        history = [session(PerformedSet(D("0"), 12, rir=1))]
+        result = suggest_next_target(self.bw(), history)
+        assert "0kg" not in result.primary.label
+        assert result.primary.label == "13 tekrar"
+        assert "0kg" not in result.message
+
+    def test_weighted_variant_still_reports_kilos(self) -> None:
+        """Ek ağırlıklı barfikste gerçek bir yük var — eski davranış korunmalı."""
+        history = [session(PerformedSet(D("10"), 12, rir=1))]
+        result = suggest_next_target(self.bw(), history)
+        assert "10kg x 13" == result.primary.label
+
+    def test_plateau_is_detectable_without_load(self) -> None:
+        """Yük yoksa ölçüt tekrar; yoksa plato ASLA tetiklenmiyordu."""
+        history = [
+            session(PerformedSet(D("0"), 12), day_offset=0),  # zirve
+            session(PerformedSet(D("0"), 11), day_offset=7),
+            session(PerformedSet(D("0"), 11), day_offset=14),
+            session(PerformedSet(D("0"), 10), day_offset=21),
+        ]
+        info = detect_plateau(history, IntensityTechnique.rir1)
+        assert info is not None
+        assert info.metric == "toplam tekrar"
+        assert info.stalled_sessions == 3
+
+    def test_deload_without_load_cuts_reps_not_kilos(self) -> None:
+        history = [
+            session(PerformedSet(D("0"), 20), day_offset=0),
+            session(PerformedSet(D("0"), 18), day_offset=7),
+            session(PerformedSet(D("0"), 18), day_offset=14),
+            session(PerformedSet(D("0"), 17), day_offset=21),
+        ]
+        result = suggest_next_target(self.bw(rep_min=15, rep_max=20), history)
+        assert result.primary.kind is SuggestionKind.deload
+        assert result.primary.weight_kg == D("0")
+        assert result.primary.reps == 15  # 17 * 0.90 -> 15
+        assert "kg" not in result.message
+
+    def test_failure_sets_measure_reps_when_there_is_no_load(self) -> None:
+        history = [
+            session(PerformedSet(D("0"), 10), PerformedSet(D("0"), 8)),
+            session(PerformedSet(D("0"), 9), PerformedSet(D("0"), 6)),  # tekrar düştü
+        ]
+        result = suggest_next_target(
+            self.bw(rep_min=8, rep_max=12, technique=IntensityTechnique.failure), history
+        )
+        assert result.warnings
+        assert "tekrar" in result.warnings[0]
+        assert "kg" not in result.warnings[0]
+
+    def test_failure_above_range_without_load_adds_reps(self) -> None:
+        """Ağırlık artamadığında add_weight önerip 0kg yazamaz."""
+        history = [session(PerformedSet(D("0"), 14))]
+        result = suggest_next_target(
+            self.bw(rep_min=8, rep_max=12, technique=IntensityTechnique.failure), history
+        )
+        assert result.primary.kind is SuggestionKind.add_reps
+        assert result.primary.reps == 15
+        assert "0kg" not in result.primary.label
+
+
 # --- Deload haftası ----------------------------------------------------------
 
 

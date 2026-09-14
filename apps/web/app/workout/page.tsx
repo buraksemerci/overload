@@ -30,6 +30,13 @@ interface Draft {
   rir: string;
 }
 
+/** "100.00" -> "100", "42.50" -> "42,5". Alana geri yazılabilir biçim;
+ *  gönderimde virgül zaten noktaya çevriliyor. */
+const weightText = (value: string) => {
+  const n = Number.parseFloat(value);
+  return Number.isNaN(n) ? value : String(n).replace(".", ",");
+};
+
 const PR_LABEL: Record<string, string> = {
   max_weight: "en ağır set",
   max_reps: "en çok tekrar",
@@ -133,8 +140,8 @@ export default function WorkoutPage() {
   }
 
   const loggedSets = session.data?.sets ?? [];
-  const isLogged = (exerciseId: string, setNumber: number) =>
-    loggedSets.some((s) => s.exercise_id === exerciseId && s.set_number === setNumber);
+  const loggedSet = (exerciseId: string, setNumber: number) =>
+    loggedSets.find((s) => s.exercise_id === exerciseId && s.set_number === setNumber);
 
   const totalPlanned = workout.exercises.reduce((sum, e) => sum + e.target_sets, 0);
   const doneCount = loggedSets.filter((s) => !s.is_warmup).length;
@@ -255,8 +262,20 @@ export default function WorkoutPage() {
             {Array.from({ length: exercise.target_sets }, (_, index) => {
               const setNumber = index + 1;
               const key = draftKey(exercise.exercise_id, setNumber);
-              const draft = drafts[key] ?? { weight: "", reps: "", rir: "" };
-              const done = isLogged(exercise.exercise_id, setNumber);
+              const logged = loggedSet(exercise.exercise_id, setNumber);
+              const done = logged !== undefined;
+              // Tamamlanmış setin değerleri SUNUCUDAN okunur, taslaktan değil.
+              // `drafts` yalnızca bellekte: sayfa yenilenince ya da yarım kalan
+              // antrenmana "Devam et" ile dönünce boşalıyor ve girilmiş setler
+              // boş kutu görünüyordu. Setin kendisi kaydediliyordu, sadece
+              // ekranda kaybolmuştu.
+              const draft = logged
+                ? {
+                    weight: weightText(logged.weight_kg),
+                    reps: String(logged.reps),
+                    rir: logged.rir === null ? "" : String(logged.rir),
+                  }
+                : (drafts[key] ?? { weight: "", reps: "", rir: "" });
 
               return (
                 <div key={setNumber} className="flex items-center gap-2">

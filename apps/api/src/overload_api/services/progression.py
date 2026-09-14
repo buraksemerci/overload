@@ -123,6 +123,15 @@ class SessionPerformance:
         return sum((s.volume for s in self.working_sets), Decimal(0))
 
     @property
+    def total_reps(self) -> int:
+        """Ek ağırlıksız hareketlerde ilerlemenin tek ölçülebilir ekseni.
+
+        Hacim de tahmini 1RM de ağırlıkla çarpıldığı için vücut ağırlığı
+        hareketlerinde her seans 0 çıkıyor; bu metrik oraya devreye giriyor.
+        """
+        return sum(s.reps for s in self.working_sets)
+
+    @property
     def best_estimated_1rm(self) -> Decimal:
         working = self.working_sets
         if not working:
@@ -199,6 +208,19 @@ def _fmt_weight(value: Decimal) -> str:
     return text.rstrip("0").rstrip(".") if "." in text else text
 
 
+def _fmt_effort(weight: Decimal, reps: int) -> str:
+    """'82.5kg x 8', vücut ağırlığında ise sadece '8 tekrar'.
+
+    Vücut ağırlığı hareketlerinde kayıtlı ağırlık 0'dır (ek ağırlık takılırsa
+    pozitif olur). Bu iki metni tek yerden üretmezsek "0kg x 12" gibi çıktılar
+    kaçıyor — bar asılı bacak kaldırmada kimse "0 kg" demez, üstelik ek
+    ağırlıklı varyantla karışıyor.
+    """
+    if weight == 0:
+        return f"{reps} tekrar"
+    return f"{_fmt_weight(weight)}kg x {reps}"
+
+
 def next_weight(current: Decimal, equipment: Equipment) -> Decimal:
     """Bir sonraki gerçekçi ağırlık.
 
@@ -227,7 +249,7 @@ def next_weight(current: Decimal, equipment: Equipment) -> Decimal:
 
 def _describe_set(s: PerformedSet) -> str:
     rir_text = f" RIR{s.rir}" if s.rir is not None else ""
-    return f"{_fmt_weight(s.weight_kg)}kg x {s.reps}{rir_text}"
+    return f"{_fmt_effort(s.weight_kg, s.reps)}{rir_text}"
 
 
 def detect_plateau(
@@ -249,6 +271,16 @@ def detect_plateau(
         return s.total_volume if uses_volume else s.best_estimated_1rm
 
     values = [value_of(s) for s in sessions]
+    if not any(values):
+        # Ek ağırlıksız vücut ağırlığı hareketi: hem toplam hacim hem tahmini
+        # 1RM ağırlıkla çarpıldığı için her seans 0. Hepsi eşit olunca "en iyi"
+        # daima EN SON seans sayılıyor (aşağıdaki `last_best_index` son eşleşmeyi
+        # alır), yani `stalled` hep 0 kalıyor ve plato ASLA tetiklenmiyordu —
+        # barfikste 10 seanstır 8 tekrarda duran biri hiç deload önerisi almazdı.
+        # Yük yoksa ölçüt tekrardır.
+        metric_name = "toplam tekrar"
+        values = [Decimal(s.total_reps) for s in sessions]
+
     best = max(values)
     # En son hangi seansta zirveye ulaşıldı? Sonrasında kaç seans geçti?
     last_best_index = len(values) - 1 - values[::-1].index(best)
@@ -274,19 +306,32 @@ def suggest_next_target(
 
     # --- 1. Geçmiş yok: başlangıç noktası belirle ---
     if not sessions:
+        # "5-5 tekrar" yerine "5 tekrar": aralık tek bir sayıya çöktüğünde
+        # tire göstermek okunmayı zorlaştırıyor.
+        rep_text = (
+            str(target.rep_min)
+            if target.rep_min == target.rep_max
+            else f"{target.rep_min}-{target.rep_max}"
+        )
         option = TargetOption(
             kind=SuggestionKind.establish_baseline,
             weight_kg=Decimal(0),
             reps=target.rep_max,
-            label=f"{target.sets} set x {target.rep_min}-{target.rep_max} tekrar",
+            label=f"{target.sets} set x {rep_text} tekrar",
         )
-        return ProgressionSuggestion(
-            primary=option,
-            message=(
+        # Vücut ağırlığı hareketinde seçilecek bir ağırlık yok; referans,
+        # temiz formla çıkarılan tekrar sayısının kendisi.
+        if target.equipment is Equipment.bodyweight:
+            message = (
+                f"İlk kez yapıyorsun. Formu bozmadan kaç tekrar çıkarabildiğini gör "
+                f"(hedef {target.rep_max}) — bu senin başlangıç referansın olacak."
+            )
+        else:
+            message = (
                 f"İlk kez yapıyorsun. {target.rep_max} tekrarı formu bozmadan "
                 f"tamamlayabileceğin bir ağırlık seç — bu senin başlangıç referansın olacak."
-            ),
-        )
+            )
+        return ProgressionSuggestion(primary=option, message=message)
 
     last = sessions[-1]
     top = last.top_set
@@ -307,23 +352,42 @@ def suggest_next_target(
         step = PLATE_INCREMENT.get(target.equipment, Decimal("2.5"))
         if step > 0:  # gerçekçi bir ağırlığa yuvarla
             deload_weight = _q((deload_weight / step).quantize(Decimal("1"), ROUND_HALF_UP) * step)
-        primary = TargetOption(
-            kind=SuggestionKind.deload,
-            weight_kg=deload_weight,
-            reps=target.rep_max,
-            label=f"{_fmt_weight(deload_weight)}kg x {target.rep_max}",
-        )
+        # İndirilecek yük yoksa (ek ağırlıksız vücut ağırlığı hareketi) deload
+        # tekrardan gelir. Koşul ekipmana değil ağırlığa bakıyor: ek ağırlıklı
+        # barfikste azaltılacak gerçek bir yük VAR, o normal daldan geçmeli.
+        if deload_weight == 0:
+            eased_reps = max(1, int(Decimal(top.reps) * DELOAD_WEIGHT_FACTOR))
+            primary = TargetOption(
+                kind=SuggestionKind.deload,
+                weight_kg=Decimal(0),
+                reps=eased_reps,
+                label=f"{target.sets} set x {eased_reps} tekrar",
+            )
+            message = (
+                f"{plateau.stalled_sessions} seanstır {plateau.metric} artmıyor. "
+                f"Ağırlık ekleyemediğin bir harekette deload tekrardan gelir: bu hafta "
+                f"set başına {eased_reps} tekrarda kal ve tempoyu yavaşlat. Alternatif: "
+                f"hareketi 2-3 hafta daha zor bir varyasyonla değiştir, sonra taze dön."
+            )
+        else:
+            primary = TargetOption(
+                kind=SuggestionKind.deload,
+                weight_kg=deload_weight,
+                reps=target.rep_max,
+                label=f"{_fmt_weight(deload_weight)}kg x {target.rep_max}",
+            )
+            message = (
+                f"{plateau.stalled_sessions} seanstır {plateau.metric} artmıyor. "
+                f"Bu hafta {_fmt_weight(deload_weight)}kg'a in (%10 deload), "
+                f"tekrarları temiz ve kontrollü yap. Alternatif: hareketi 2-3 hafta "
+                f"benzer bir varyasyonla değiştir, sonra eski ağırlığa taze dön."
+            )
         return ProgressionSuggestion(
             primary=primary,
             alternative=None,
             plateau=plateau,
             previous_summary=previous_summary,
-            message=(
-                f"{plateau.stalled_sessions} seanstır {plateau.metric} artmıyor. "
-                f"Bu hafta {_fmt_weight(deload_weight)}kg'a in (%10 deload), "
-                f"tekrarları temiz ve kontrollü yap. Alternatif: hareketi 2-3 hafta "
-                f"benzer bir varyasyonla değiştir, sonra eski ağırlığa taze dön."
-            ),
+            message=message,
             warnings=tuple(warnings),
         )
 
@@ -352,7 +416,7 @@ def _suggest_by_rep_range(
         heavier = next_weight(weight, target.equipment)
         if heavier == weight:  # vücut ağırlığı — ağırlık artamaz
             primary = TargetOption(
-                SuggestionKind.add_reps, weight, reps + 1, f"{_fmt_weight(weight)}kg x {reps + 1}"
+                SuggestionKind.add_reps, weight, reps + 1, _fmt_effort(weight, reps + 1)
             )
             return ProgressionSuggestion(
                 primary=primary,
@@ -366,10 +430,10 @@ def _suggest_by_rep_range(
             SuggestionKind.add_weight,
             heavier,
             target.rep_min,
-            f"{_fmt_weight(heavier)}kg x {target.rep_min}",
+            _fmt_effort(heavier, target.rep_min),
         )
         alternative = TargetOption(
-            SuggestionKind.add_reps, weight, reps + 1, f"{_fmt_weight(weight)}kg x {reps + 1}"
+            SuggestionKind.add_reps, weight, reps + 1, _fmt_effort(weight, reps + 1)
         )
         return ProgressionSuggestion(
             primary=primary,
@@ -384,7 +448,7 @@ def _suggest_by_rep_range(
     # 4b. Aralığın üstünde ama RIR yüksek: set kolaydı, yine de ağırlık erken.
     if reps >= target.rep_max and not rir_low_enough:
         primary = TargetOption(
-            SuggestionKind.add_reps, weight, reps + 1, f"{_fmt_weight(weight)}kg x {reps + 1}"
+            SuggestionKind.add_reps, weight, reps + 1, _fmt_effort(weight, reps + 1)
         )
         warnings.append(
             f"RIR{top.rir} bildirdin — set hâlâ kolay. Ağırlığı artırmadan önce "
@@ -403,7 +467,7 @@ def _suggest_by_rep_range(
     # 4c. Aralık İÇİNDE: bir tekrar ekle (klasik double progression).
     if target.rep_min <= reps < target.rep_max:
         primary = TargetOption(
-            SuggestionKind.add_reps, weight, reps + 1, f"{_fmt_weight(weight)}kg x {reps + 1}"
+            SuggestionKind.add_reps, weight, reps + 1, _fmt_effort(weight, reps + 1)
         )
         remaining = target.rep_max - reps
         return ProgressionSuggestion(
@@ -418,7 +482,7 @@ def _suggest_by_rep_range(
 
     # 4d. Aralığın ALTINDA: ağırlık fazla gelmiş, aynı ağırlıkta aralığa tırman.
     primary = TargetOption(
-        SuggestionKind.hold, weight, target.rep_min, f"{_fmt_weight(weight)}kg x {target.rep_min}"
+        SuggestionKind.hold, weight, target.rep_min, _fmt_effort(weight, target.rep_min)
     )
     lighter = _q(weight - PLATE_INCREMENT.get(target.equipment, Decimal("2.5")))
     # Ayrı bir ad kullanılıyor: `alternative` bu fonksiyonun üst dallarında
@@ -428,7 +492,7 @@ def _suggest_by_rep_range(
             SuggestionKind.hold,
             lighter,
             target.rep_min,
-            f"{_fmt_weight(lighter)}kg x {target.rep_min}",
+            _fmt_effort(lighter, target.rep_min),
         )
         if lighter > 0
         else None
@@ -458,43 +522,66 @@ def _suggest_by_volume(
         # `assert` kullanılmıyor: python -O ile assert'ler tamamen atılır ve
         # kontrol üretimde sessizce kaybolur.
         raise ValueError("Çalışma seti olmayan seans motora ulaşmamalıydı.")
-    last_volume = last.total_volume
-
-    previous_volume = sessions[-2].total_volume if len(sessions) >= 2 else None
     weight = top.weight_kg
 
+    # Ek ağırlık yoksa hacim (ağırlık x tekrar) her seans 0 çıkar ve "hacim 0 kg"
+    # gibi mesajlar üretirdi. Yük olmayan harekette ölçüt toplam tekrar.
+    has_load = any(s.total_volume > 0 for s in sessions)
+
+    def metric_of(s: SessionPerformance) -> Decimal:
+        return s.total_volume if has_load else Decimal(s.total_reps)
+
+    metric_label = "hacim" if has_load else "tekrar"
+    metric_unit = "kg" if has_load else "tekrar"
+    last_volume = metric_of(last)
+    previous_volume = metric_of(sessions[-2]) if len(sessions) >= 2 else None
+
     # Hacim arttıysa aynı ağırlıkta devam; ayrıca tekrar hedefi aralığın üstündeyse ağırlık artır.
-    if top.reps >= target.rep_max:
-        heavier = next_weight(weight, target.equipment)
+    heavier = next_weight(weight, target.equipment) if top.reps >= target.rep_max else weight
+    if top.reps >= target.rep_max and heavier != weight:
         primary = TargetOption(
             SuggestionKind.add_weight,
             heavier,
             target.rep_min,
-            f"{_fmt_weight(heavier)}kg x {target.rep_min}+ (failure)",
+            f"{_fmt_effort(heavier, target.rep_min)}+ (failure)",
         )
         message = (
             f"Geçen sefer {_describe_set(top)} ile failure'a gittin ve hedef aralığı aştın. "
             f"Bugün {_fmt_weight(heavier)}kg ile başla, yine failure'a kadar götür."
+        )
+    elif top.reps >= target.rep_max:
+        # Ağırlık artamıyor (vücut ağırlığı) ama hedef aralık zaten aşılmış.
+        primary = TargetOption(
+            SuggestionKind.add_reps,
+            weight,
+            top.reps + 1,
+            f"{_fmt_effort(weight, top.reps + 1)}+ (failure)",
+        )
+        message = (
+            f"Geçen sefer {_describe_set(top)} ile failure'a gittin ve hedef aralığı aştın. "
+            f"Ağırlık ekleyemediğin için ilerleme tekrardan gelir: bugün "
+            f"{top.reps + 1} tekrarı geçmeyi hedefle."
         )
     else:
         primary = TargetOption(
             SuggestionKind.add_reps,
             weight,
             top.reps + 1,
-            f"{_fmt_weight(weight)}kg x {top.reps + 1}+ (failure)",
+            f"{_fmt_effort(weight, top.reps + 1)}+ (failure)",
         )
+        same_load = "aynı ağırlıkta" if has_load else "aynı hareketten"
         message = (
             f"Geçen sefer {_describe_set(top)} ile failure'a gittin "
-            f"(toplam hacim {_fmt_weight(last_volume)} kg). "
-            f"Bugün aynı ağırlıkta en az bir tekrar fazla çıkarmayı hedefle."
+            f"(toplam {metric_label} {_fmt_weight(last_volume)} {metric_unit}). "
+            f"Bugün {same_load} en az bir tekrar fazla çıkarmayı hedefle."
         )
 
     warnings: list[str] = []
     if previous_volume is not None and last_volume < previous_volume:
         drop_pct = (previous_volume - last_volume) / previous_volume * 100
         warnings.append(
-            f"Geçen seansta hacim %{drop_pct.quantize(Decimal('1'))} düştü "
-            f"({_fmt_weight(previous_volume)} → {_fmt_weight(last_volume)} kg). "
+            f"Geçen seansta {metric_label} %{drop_pct.quantize(Decimal('1'))} düştü "
+            f"({_fmt_weight(previous_volume)} → {_fmt_weight(last_volume)} {metric_unit}). "
             f"Uyku/beslenme ya da birikmiş yorgunluk olabilir."
         )
 

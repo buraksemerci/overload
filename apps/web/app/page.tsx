@@ -91,11 +91,14 @@ export default function DashboardPage() {
                         `-${exercise.target_rep_max}`}
                     </p>
                   </div>
-                  {exercise.progression && (
-                    <p className="tnum shrink-0 text-xs text-[var(--color-ink-muted)]">
-                      {exercise.progression.label}
-                    </p>
-                  )}
+                  {/* Baseline önerisi hedefin kendisini tekrar ediyor (solda
+                      zaten "1x5" yazıyor); sadece somut bir öneri varken göster. */}
+                  {exercise.progression &&
+                    exercise.progression.kind !== "establish_baseline" && (
+                      <p className="tnum shrink-0 text-xs text-[var(--color-ink-muted)]">
+                        {exercise.progression.label}
+                      </p>
+                    )}
                 </li>
               ))}
             </ul>

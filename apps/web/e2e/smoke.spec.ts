@@ -255,6 +255,22 @@ test.describe("oturum açıkken", () => {
     await expect(page).toHaveURL(/\/workout$/);
   });
 
+  test("kaydırmak paneli kapatıyor", async ({ page }) => {
+    test.skip((page.viewportSize()?.width ?? 1280) < 768, "masaüstü gezinmesi");
+    await page.goto("/");
+
+    const nav = page.getByRole("navigation", { name: "Ana gezinme" });
+    await nav.getByRole("link", { name: "Antrenman", exact: true }).hover();
+    await expect(page.getByRole("link", { name: /^Programlar/ })).toBeVisible();
+
+    // Çubuk yapışkan değil, sayfayla birlikte akıp gidiyor. Panel DURUMU da
+    // kapanmalı: açık kalsaydı arkadaki içerik bulanık ve `inert` kalırdı ve
+    // kullanıcı hiçbir şeye tıklayamazdı.
+    await page.mouse.wheel(0, 400);
+    await expect(page.getByRole("link", { name: /^Programlar/ })).toBeHidden();
+    await expect(page.locator("main")).not.toHaveAttribute("inert", /.*/);
+  });
+
   test("Escape paneli kapatıyor", async ({ page }) => {
     test.skip((page.viewportSize()?.width ?? 1280) < 768, "masaüstü gezinmesi");
     await page.goto("/");

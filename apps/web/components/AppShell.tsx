@@ -108,16 +108,6 @@ const PANEL: NavItem = {
   Icon: IconPanel,
 };
 
-/**
- * Açılan panelin SABİT yüksekliği.
- *
- * Gruplar arasında gezinirken panelin boyu değişmemeli. Önce fotoğrafın
- * oranı madde sayısına göre seçiliyordu ve imleç başlıklar arasında
- * kayarken panel her seferinde zıplıyordu — okunamayan, huzursuz bir
- * hareket. Yükseklik artık gruptan bağımsız.
- */
-const PANEL_HEIGHT = "clamp(20rem, 42vh, 27rem)";
-
 const GROUPS: readonly NavGroup[] = [
   {
     title: "Antrenman",
@@ -159,6 +149,9 @@ const GROUPS: readonly NavGroup[] = [
 
 const CHROMELESS = new Set(["/login"]);
 
+/** Üst çubuğun yüksekliği. Fotoğraf örtüsü bu kadar yukarıdan başlıyor. */
+const BAR_HEIGHT = "4.5rem";
+
 /** Başlıktan panele inerken imlecin boşluktan geçmesine tanınan süre. */
 const CLOSE_DELAY = 140;
 
@@ -177,6 +170,9 @@ const OPEN_DELAY = 180;
 /** Kapanış animasyonunun süresi. `--dur-short` ile aynı olmak ZORUNDA. */
 const EXIT_MS = 220;
 
+/** Panelin kendi yüksekliği (çubuk hariç). */
+const PANEL_HEIGHT = "clamp(19rem, 40vh, 25rem)";
+
 /**
  * Panelin durumu.
  *
@@ -192,13 +188,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [drawer, setDrawer] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  /** Görünür durumdaki grup. Kapanırken `null` — bulanıklık hemen kalkıyor. */
-  const open = panel?.phase === "in" ? panel.group : null;
   // Açılış gecikmesini kapanıştan AYRI tutuyor: ikisi aynı zamanlayıcıyı
   // paylaşsaydı, bir gruptan çıkıp diğerine girmek kapanışı iptal ederken
   // açılışı da iptal ederdi.
   const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** Görünür durumdaki grup. Kapanırken `null` — bulanıklık hemen çözülüyor. */
+  const open = panel?.phase === "in" ? panel.group : null;
 
   const cancelClose = useCallback(() => {
     if (timer.current !== null) {
@@ -214,7 +210,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  /** Kapanış: önce yukarı kayma animasyonu, sonra DOM'dan çıkış. */
   const close = useCallback(() => {
     cancelOpen();
     if (exitTimer.current !== null) clearTimeout(exitTimer.current);
@@ -222,13 +217,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     exitTimer.current = setTimeout(() => setPanel(null), EXIT_MS);
   }, [cancelOpen]);
 
-  const show = useCallback(
-    (title: string) => {
-      if (exitTimer.current !== null) clearTimeout(exitTimer.current);
-      setPanel({ group: title, phase: "in" });
-    },
-    [],
-  );
+  const show = useCallback((title: string) => {
+    if (exitTimer.current !== null) clearTimeout(exitTimer.current);
+    setPanel({ group: title, phase: "in" });
+  }, []);
 
   const closeSoon = useCallback(() => {
     cancelOpen();
@@ -306,6 +298,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener("keydown", onKey);
   }, [open, close]);
 
+  /**
+   * Kaydırma paneli kapatır.
+   *
+   * Çubuk sayfayla birlikte akıp gidiyor (yapışkan değil), yani panel de
+   * ekrandan çıkıyor. Ama DURUM açık kalıyordu: arkadaki içerik bulanık ve
+   * `inert` kalıyor, kullanıcı hiçbir şeye tıklayamıyordu. Görünürlükle
+   * durumu aynı yerde tutmak şart.
+   */
+  useEffect(() => {
+    if (open === null) return;
+    const onScroll = () => close();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [open, close]);
+
   if (CHROMELESS.has(pathname)) {
     return <main className="px-6 py-10">{children}</main>;
   }
@@ -317,83 +324,146 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const groupActive = (group: NavGroup) => group.items.some((item) => isActive(item.href));
 
+  /** Çubuk fotoğrafın üstünde mi? Metin ve zemin renkleri buna bağlı. */
+  const overPhoto = open !== null;
+
   return (
     <div className="flex min-h-dvh flex-col">
+      {/* YAPIŞKAN DEĞİL: çubuk sayfayla birlikte yukarı kayıp gidiyor.
+          Yapışkan bir çubuk her ekranda 4.5rem yer tutuyor ve kaydırırken
+          fotoğraflı panelin altından geçen içerik onun yarı saydam zeminine
+          çarpıyordu. Sekmeleri görmek için sayfanın başına dönmek, gezinmeyi
+          bilinçli bir hareket yapıyor.
+
+          `relative`: fotoğraf örtüsü buna göre konumlanıyor. */}
       <header
-        className="sticky top-0 border-b border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-ground)_88%,transparent)] backdrop-blur-md"
+        className="relative"
         style={{ zIndex: "var(--z-sticky)" }}
         onMouseLeave={closeSoon}
       >
-        <div className="mx-auto flex h-16 max-w-[80rem] items-center gap-2 px-5 sm:px-8">
-          <button
-            type="button"
-            onClick={() => setDrawer(true)}
-            aria-label="Menüyü aç"
-            className="btn-quiet -ml-2 grid size-9 place-items-center md:hidden"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden>
-              <path d="M4 7h16M4 12h16M4 17h16" />
-            </svg>
-          </button>
-
-          {/* Marka yazısı hem kimlik hem ana sayfa bağlantısı. Sekmelerden
-              belirgin biçimde büyük: ikisi aynı boyda olunca "overload" beşinci
-              bir sekme gibi okunuyordu. */}
-          <Link href="/" className="display mr-8 text-lg leading-none tracking-tight">
-            overload
-          </Link>
-
-          <nav className="hidden items-center gap-1 md:flex" aria-label="Ana gezinme">
-            {GROUPS.map((group) => (
-              <div key={group.title} onMouseEnter={() => hoverOpen(group.title)}>
-                {/* Başlık bir BAĞLANTI, düğme değil: tıklayınca grubun ilk
-                    ekranına gidiyor. "Antrenman"a tıklayan kişi zaten büyük
-                    olasılıkla bugünkü antrenmanı istiyor; onu bir menü açıp
-                    ikinci bir tıklamaya zorlamak gereksiz bir adımdı.
-
-                    Panel yine imleçle açılıyor. Bedeli: dokunmatik bir
-                    masaüstü ekranında (>=768px, hover yok) alt ekranlara
-                    üstten ulaşılamıyor — orada ilk ekran açılıyor ve
-                    gezinme onun içinden sürüyor. */}
-                <Link
-                  href={group.items[0]!.href}
-                  aria-haspopup="true"
-                  aria-expanded={open === group.title}
-                  onFocus={() => hoverOpen(group.title)}
-                  /* Display fontu: marka yazısıyla aynı aile. Sekmeler gövde
-                     ailesindeyken "overload" tek başına farklı bir dil
-                     konuşuyordu; aynı yüz üst çubuğu tek bir imza hâline
-                     getiriyor. Sıkışık yüz bu puntoda hak ettiği ağırlıkta. */
-                  className={`display relative block px-3.5 py-2 text-base tracking-tight transition-colors ${
-                    open === group.title || groupActive(group)
-                      ? "text-[var(--color-ink)]"
-                      : "text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
-                  }`}
-                  style={{ transitionDuration: "var(--dur-micro)" }}
-                >
-                  {group.title}
-                  <ActiveMark shown={groupActive(group)} />
-                </Link>
-              </div>
-            ))}
-          </nav>
-
-          <div className="ml-auto">
-            <ProfileMenu />
-          </div>
-        </div>
-
-        {/* Panel başlığın DIŞINDA değil içinde: `onMouseLeave` başlığa bağlı
-            olduğu için panele inen imleç hâlâ "içeride" sayılıyor ve
-            kapanma tetiklenmiyor. */}
+        {/* --- Fotoğraf örtüsü --------------------------------------------
+            Çubuğun ARKASINDAN başlıyor, yani üst bar fotoğrafın devamı.
+            Önce panel çubuğun altından başlıyordu ve açık renkli bar, koyu
+            fotoğrafın üstünde ayrı bir şerit gibi duruyordu — ekranın en çok
+            sırıtan yeri orasıydı. Tek bir görsel iki bölgeyi de kaplayınca
+            panel "açılan bir kutu" olmaktan çıkıp bölüm kapağına dönüyor. */}
         {panel !== null && (
-          <MegaPanel
+          <PhotoBackdrop
             group={GROUPS.find((g) => g.title === panel.group)!}
             phase={panel.phase}
             isActive={isActive}
             onNavigate={close}
           />
         )}
+
+        {/* --- Çubuk ------------------------------------------------------- */}
+        <div
+          className="relative border-b transition-colors"
+          style={{
+            height: BAR_HEIGHT,
+            zIndex: 1,
+            // Fotoğraf açıkken zemin ŞEFFAF: altındaki görsel görünsün.
+            background: overPhoto
+              ? "transparent"
+              : "color-mix(in oklab, var(--color-ground) 88%, transparent)",
+            borderColor: overPhoto ? "transparent" : "var(--color-border)",
+            backdropFilter: overPhoto ? "none" : "blur(12px)",
+            // Kısa: metin rengiyle fotoğrafın gelişi aynı anda olmalı, yoksa
+            // bir an koyu yazı koyu fotoğrafın üstünde kalıyor.
+            transitionDuration: "var(--dur-micro)",
+          }}
+        >
+          <div className="mx-auto flex h-full max-w-[84rem] items-center px-5 sm:px-8">
+            <button
+              type="button"
+              onClick={() => setDrawer(true)}
+              aria-label="Menüyü aç"
+              className="btn-quiet -ml-2 grid size-9 place-items-center md:hidden"
+              style={{ color: overPhoto ? "oklch(97% 0 0)" : undefined }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden>
+                <path d="M4 7h16M4 12h16M4 17h16" />
+              </svg>
+            </button>
+
+            {/* Marka SOLA dayalı ve sekmelerden belirgin büyük: ikisi aynı
+                boydayken "overload" beşinci bir sekme gibi okunuyordu. */}
+            <Link
+              href="/"
+              className="display text-xl leading-none tracking-tight transition-colors"
+              style={{
+                color: overPhoto ? "oklch(99% 0 0)" : "var(--color-ink)",
+                transitionDuration: "var(--dur-micro)",
+              }}
+            >
+              overload
+            </Link>
+
+            {/* Sekmeler EKRANIN ORTASINDA. `left-1/2` ile mutlak ortalama:
+                akış içinde ortalamak logo ve avatarın genişliğine bağlı
+                kalıyor ve ikisi değişince menü kayıyordu. */}
+            <nav
+              className="absolute left-1/2 hidden -translate-x-1/2 items-center md:flex"
+              aria-label="Ana gezinme"
+            >
+              {GROUPS.map((group, index) => (
+                <div
+                  key={group.title}
+                  className="flex items-center"
+                  onMouseEnter={() => hoverOpen(group.title)}
+                >
+                  {/* Dikey ayraç: sekmeler arasındaki sınır boşlukla değil
+                      çizgiyle çiziliyor. Boşluk tek başına dört sekmeyi tek
+                      bir kelime öbeği gibi okutuyordu. */}
+                  {index > 0 && (
+                    <span
+                      aria-hidden
+                      className="h-4 w-px shrink-0 transition-colors"
+                      style={{
+                        background: overPhoto
+                          ? "oklch(99% 0 0 / 0.28)"
+                          : "var(--color-border-strong)",
+                        transitionDuration: "var(--dur-micro)",
+                      }}
+                    />
+                  )}
+
+                  {/* Başlık bir BAĞLANTI, düğme değil: tıklayınca grubun ilk
+                      ekranına gidiyor. "Antrenman"a tıklayan kişi zaten büyük
+                      olasılıkla bugünkü antrenmanı istiyor.
+
+                      Bedeli: dokunmatik bir masaüstü ekranında (>=768px,
+                      hover yok) alt ekranlara üstten ulaşılamıyor — orada ilk
+                      ekran açılıyor ve gezinme onun içinden sürüyor. */}
+                  <Link
+                    href={group.items[0]!.href}
+                    aria-haspopup="true"
+                    aria-expanded={open === group.title}
+                    onFocus={() => hoverOpen(group.title)}
+                    className="display relative block px-5 py-2 text-base tracking-tight transition-colors"
+                    style={{
+                      color: overPhoto
+                        ? open === group.title
+                          ? "oklch(99% 0 0)"
+                          : "oklch(99% 0 0 / 0.62)"
+                        : open === group.title || groupActive(group)
+                          ? "var(--color-ink)"
+                          : "var(--color-ink-muted)",
+                      transitionDuration: "var(--dur-micro)",
+                    }}
+                  >
+                    {group.title}
+                    <ActiveMark shown={groupActive(group)} onPhoto={overPhoto} />
+                  </Link>
+                </div>
+              ))}
+            </nav>
+
+            <div className="ml-auto">
+              <ProfileMenu onPhoto={overPhoto} />
+            </div>
+          </div>
+        </div>
       </header>
 
       {/* Telefonda aynı gezinme çekmece olarak.
@@ -416,13 +486,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 /** Aktif konum işareti: alt kenarda ince bir çizgi. */
-function ActiveMark({ shown }: { shown: boolean }) {
+function ActiveMark({ shown, onPhoto }: { shown: boolean; onPhoto: boolean }) {
   return (
     <span
       aria-hidden
-      className="absolute inset-x-3 -bottom-[7px] h-[2px] transition-opacity"
+      className="absolute inset-x-5 bottom-0 h-[2px] transition-opacity"
       style={{
-        background: "var(--color-accent-deep)",
+        background: onPhoto ? "var(--color-accent)" : "var(--color-accent-deep)",
         opacity: shown ? 1 : 0,
         transitionDuration: "var(--dur-micro)",
       }}
@@ -430,9 +500,9 @@ function ActiveMark({ shown }: { shown: boolean }) {
   );
 }
 
-/* --- Açılan geniş panel --------------------------------------------------- */
+/* --- Fotoğraf örtüsü ve panel --------------------------------------------- */
 
-function MegaPanel({
+function PhotoBackdrop({
   group,
   phase,
   isActive,
@@ -445,69 +515,82 @@ function MegaPanel({
 }) {
   return (
     <div
-      // Dış kap `overflow-hidden`: içerideki yüzey tam boyundan yukarıda
-      // başlayıp aşağı kayıyor ve taşan kısım kırpılıyor. Perde etkisi bu.
-      className="absolute inset-x-0 top-full hidden overflow-hidden border-b border-[var(--color-border)] md:block"
+      className="absolute inset-x-0 top-0 hidden overflow-hidden md:block"
       style={{
-        zIndex: "var(--z-dropdown)",
-        boxShadow: "0 18px 40px -24px oklch(21% 0.014 115 / 0.3)",
-        // Sabit yükseklik: gruplar arasında gezinirken panel zıplamıyor.
-        height: PANEL_HEIGHT,
+        // Çubuğun üstünden başlayıp panelin altında bitiyor: tek görsel,
+        // iki bölge.
+        height: `calc(${BAR_HEIGHT} + ${PANEL_HEIGHT})`,
+        zIndex: 0,
+        boxShadow: "0 18px 40px -24px oklch(21% 0.014 115 / 0.35)",
+        /* Giriş perde gibi: görsel yerinde durur, açığa çıkan bölge yukarıdan
+           aşağı büyür. `translateY` denendi ve çubuğun arkasındaki fotoğraf
+           kayarken kenarda bir boşluk bırakıyordu.
+
+           Çıkış SÖNEREK: kırpma ile geri sarınca çubuğun arkasındaki fotoğraf
+           en son kayboluyor ve o ana kadar açık renkli yazı zeminini
+           kaybediyordu. Sönme, yazı renginin dönüşüyle aynı eğride gidiyor. */
+        animation:
+          phase === "in"
+            ? "curtain-down var(--dur-long) var(--ease-out)"
+            : "panel-fade var(--dur-short) var(--ease-out) forwards",
       }}
     >
-      <div
-        className="size-full"
-        style={{
-          animation:
-            phase === "in"
-              ? "panel-down var(--dur-long) var(--ease-out)"
-              : // `forwards`: animasyon bittiğinde yukarıda KALIYOR. Olmadan
-                // son karede geri düşüp bir an görünüyordu.
-                "panel-up var(--dur-short) var(--ease-in) forwards",
-        }}
-      >
-        {/* Fotoğraf paneli TAMAMEN kaplıyor — kenardan kenara, kartsız.
-            Önce 22rem'lik bir sütundaydı ve panelin geri kalanı boş beyazdı;
-            fotoğraf bir öğeydi, zemin değil. Zemin olunca panel bir bölüm
-            kapağı gibi okunuyor. */}
-        <Photo slug={group.photo} fill scrim className="size-full">
-          <div className="mx-auto flex size-full max-w-[80rem] flex-col justify-end gap-1 px-5 pb-8 sm:px-8">
-            <p className="label" style={{ color: "oklch(84% 0.01 115)" }}>
-              {group.title}
-            </p>
+      <Photo slug={group.photo} fill className="size-full">
+        {/* Üstte koyu, ortada berrak, altta yine koyu.
+            Üst koyuluk çubuğun yazısını taşıyor ama tam opak değil — istenen
+            "fotoğrafın devamı silik de olsa görünsün" tam olarak bu. */}
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{
+            background: `linear-gradient(to bottom,
+              oklch(16% 0.01 115 / 0.86) 0,
+              oklch(16% 0.01 115 / 0.58) ${BAR_HEIGHT},
+              oklch(16% 0.01 115 / 0.12) 48%,
+              oklch(16% 0.01 115 / 0.52) 82%,
+              oklch(16% 0.01 115 / 0.78) 100%)`,
+          }}
+        />
 
-            {/* Çerçevesiz: kutu, kenarlık, zemin yok — yalnızca tıklanabilir
-                yazı. Kutulu bir liste fotoğrafın üstünde ikinci bir yüzey
-                kuruyor ve "fotoğraf baskın" fikrini bozuyordu.
+        <div
+          className="mx-auto flex size-full max-w-[84rem] flex-col justify-end px-5 pb-9 sm:px-8"
+          style={{ paddingTop: BAR_HEIGHT }}
+        >
+          <p className="label" style={{ color: "oklch(86% 0.01 115 / 0.85)" }}>
+            {group.title}
+          </p>
 
-                Dokunma hedefi yine de büyük: satırlar `py-1.5` ve display
-                yüzü bu puntoda yüksek. */}
-            <ul className="flex flex-wrap items-baseline gap-x-8 gap-y-1">
-              {group.items.map((item, index) => {
-                const active = isActive(item.href);
-                return (
-                  <li
-                    key={String(item.href)}
-                    className="reveal"
-                    style={{ ["--i" as string]: index }}
+          {/* Çerçevesiz: kutu, kenarlık, zemin yok — yalnızca tıklanabilir
+              yazı. Kutulu bir liste fotoğrafın üstünde ikinci bir yüzey
+              kuruyor ve "fotoğraf baskın" fikrini bozuyordu.
+
+              Dokunma hedefi yine de büyük: satırlar `py-1.5` ve display
+              yüzü bu puntoda yüksek. */}
+          <ul className="mt-1 flex flex-wrap items-baseline gap-x-9 gap-y-1">
+            {group.items.map((item, index) => {
+              const active = isActive(item.href);
+              return (
+                <li
+                  key={String(item.href)}
+                  className="reveal"
+                  style={{ ["--i" as string]: index }}
+                >
+                  <Link
+                    href={item.href}
+                    onClick={onNavigate}
+                    aria-current={active ? "page" : undefined}
+                    className="photo-link display block py-1.5 text-2xl leading-none tracking-tight"
+                    style={{ color: "oklch(99% 0 0)" }}
                   >
-                    <Link
-                      href={item.href}
-                      onClick={onNavigate}
-                      aria-current={active ? "page" : undefined}
-                      className="photo-link display block py-1.5 text-2xl leading-none tracking-tight"
-                      style={{ color: "oklch(99% 0 0)" }}
-                    >
-                      {item.label}
-                      <span aria-hidden className="rule" />
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </Photo>
-      </div>
+                    {item.label}
+                    <span aria-hidden className="rule" />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </Photo>
     </div>
   );
 }
@@ -612,7 +695,7 @@ function DrawerLink({
 
 /* --- Profil --------------------------------------------------------------- */
 
-function ProfileMenu() {
+function ProfileMenu({ onPhoto = false }: { onPhoto?: boolean }) {
   const me = useMe();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -647,8 +730,15 @@ function ProfileMenu() {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Hesap menüsü"
-        className="grid size-9 place-items-center rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface)] text-sm font-semibold transition-colors hover:bg-[var(--color-surface-raised)]"
-        style={{ transitionDuration: "var(--dur-micro)" }}
+        className="grid size-9 place-items-center rounded-full border text-sm font-semibold transition-colors"
+        style={{
+          // Fotoğraf üstündeyken cam gibi: dolu bir daire koyu görselin
+          // üzerinde yapıştırılmış duruyordu.
+          borderColor: onPhoto ? "oklch(99% 0 0 / 0.45)" : "var(--color-border-strong)",
+          background: onPhoto ? "oklch(99% 0 0 / 0.10)" : "var(--color-surface)",
+          color: onPhoto ? "oklch(99% 0 0)" : "var(--color-ink)",
+          transitionDuration: "var(--dur-micro)",
+        }}
       >
         {initial}
       </button>

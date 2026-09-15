@@ -508,28 +508,28 @@
   }
 }
 
-/* Gezinme paneli AŞAĞI İNİYOR.
-   Opaklıkla belirmek "beliren bir katman" hissi veriyordu; perde gibi inmek
-   panelin üst çubuktan geldiğini anlatıyor. Dış kap `overflow: hidden`,
-   içerideki yüzey tam boyundan yukarıda başlayıp yerine kayıyor. */
-@keyframes panel-down {
+/* Perde: görsel yerinde durur, açığa çıkan bölge yukarıdan aşağı büyür.
+   `translateY` denendi ve çubuğun arkasındaki fotoğraf kayarken kenarda bir
+   boşluk bırakıyordu — görsel örtü artık çubuğu da kapsadığı için kayma
+   üst kenarda görünür oluyor. Kırpma ile görsel hiç hareket etmiyor. */
+@keyframes curtain-down {
   from {
-    transform: translateY(-100%);
+    clip-path: inset(0 0 100% 0);
   }
   to {
-    transform: translateY(0);
+    clip-path: inset(0 0 0 0);
   }
 }
 
-/* ...ve yukarı çekiliyor. Kapanışın da animasyonu var çünkü panel bir
-   "bölüm kapağı": aniden yok olması onu bir açılır kutuya indirgiyordu.
-   Çıkış girişten kısa — bekleyen bir kullanıcı yok. */
-@keyframes panel-up {
+/* Çıkış sönerek. Kırpmayı geri sarmak denendi: çubuğun arkasındaki fotoğraf
+   en son kayboluyor ve o ana kadar açık renkli çubuk yazısı zeminini
+   kaybetmiş oluyordu. Sönme, yazı renginin dönüşüyle aynı anda bitiyor. */
+@keyframes panel-fade {
   from {
-    transform: translateY(0);
+    opacity: 1;
   }
   to {
-    transform: translateY(-100%);
+    opacity: 0;
   }
 }
 

@@ -113,9 +113,9 @@ export default function ProgressPage() {
                   </div>
 
                   <div className="mt-2 flex items-center gap-2.5">
-                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--color-surface-raised)]">
+                    <div className="h-1.5 flex-1 overflow-hidden bg-[var(--color-surface-raised)]">
                       <div
-                        className="h-full rounded-full"
+                        className="h-full"
                         style={{
                           width: `${Math.round(row.progress_to_next * 100)}%`,
                           background: LEVEL_COLOR[row.level] ?? "var(--color-ink)",

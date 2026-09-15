@@ -204,7 +204,7 @@ function Answer({
         aria-label="Aldım"
         aria-pressed={taken === true}
         onClick={() => onTaken(true)}
-        className="grid size-10 place-items-center rounded-full border transition-colors"
+        className="grid size-10 place-items-center border transition-colors"
         style={{
           transitionDuration: "var(--dur-micro)",
           ...(taken === true
@@ -233,7 +233,7 @@ function Answer({
         aria-label="Atladım"
         aria-pressed={taken === false}
         onClick={() => onTaken(false)}
-        className="grid size-10 place-items-center rounded-full border transition-colors"
+        className="grid size-10 place-items-center border transition-colors"
         style={{
           transitionDuration: "var(--dur-micro)",
           ...(taken === false

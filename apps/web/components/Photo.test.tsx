@@ -59,6 +59,26 @@ describe("Photo", () => {
     expect(wrap.style.background).toContain("linear-gradient");
   });
 
+  it("perde varken yer tutucu KOYU", () => {
+    // Perde isteyen her yerde üstte açık renkli yazı var. Açık bir yer
+    // tutucuyla başlayınca panel ilk açılışta beyaz parlayıp koyu fotoğrafa
+    // atlıyordu; koyu başlayınca geçiş görünmüyor.
+    const light = render(<Photo slug="yok" />).container
+      .firstElementChild as HTMLElement;
+    document.body.innerHTML = "";
+    const dark = render(<Photo slug="yok" scrim />).container
+      .firstElementChild as HTMLElement;
+
+    expect(dark.style.background).not.toBe(light.style.background);
+    // Parlaklık 0.5'in ALTINDA olmalı. jsdom `28%` yazımını `0.28`e
+    // normalleştiriyor, o yüzden değer okunup karşılaştırılıyor.
+    const lightness = [...dark.style.background.matchAll(/oklch\(([\d.]+)/g)].map(
+      (match) => Number.parseFloat(match[1]!),
+    );
+    expect(lightness.length).toBeGreaterThan(0);
+    expect(Math.max(...lightness)).toBeLessThan(0.5);
+  });
+
   it("oran verilen değerde", () => {
     const { container } = render(<Photo slug="yok" ratio="3 / 2" />);
     const wrap = container.firstElementChild as HTMLElement;

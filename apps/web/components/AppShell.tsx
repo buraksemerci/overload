@@ -91,12 +91,32 @@ type NavGroup = {
   items: readonly NavItem[];
 };
 
+/**
+ * Panel AYRI BİR SEKME DEĞİL: marka yazısı oraya gidiyor.
+ *
+ * Neredeyse her sitede logo ana sayfaya gider ve kullanıcı bunu öğrenmek
+ * zorunda değil — zaten biliyor. Ayrıca sekme olarak dururken "Panel"
+ * diğer dördüyle aynı ağırlıktaydı, oysa o bir bölüm değil giriş noktası.
+ *
+ * Telefon çekmecesinde yine bir satır olarak duruyor: orada marka yazısı
+ * küçük ve dokunma hedefi olarak belirsiz.
+ */
 const PANEL: NavItem = {
   href: "/",
   label: "Panel",
   hint: "Bugünün özeti",
   Icon: IconPanel,
 };
+
+/**
+ * Açılan panelin SABİT yüksekliği.
+ *
+ * Gruplar arasında gezinirken panelin boyu değişmemeli. Önce fotoğrafın
+ * oranı madde sayısına göre seçiliyordu ve imleç başlıklar arasında
+ * kayarken panel her seferinde zıplıyordu — okunamayan, huzursuz bir
+ * hareket. Yükseklik artık gruptan bağımsız.
+ */
+const PANEL_HEIGHT = "clamp(20rem, 42vh, 27rem)";
 
 const GROUPS: readonly NavGroup[] = [
   {
@@ -142,11 +162,43 @@ const CHROMELESS = new Set(["/login"]);
 /** Başlıktan panele inerken imlecin boşluktan geçmesine tanınan süre. */
 const CLOSE_DELAY = 140;
 
+/**
+ * İlk açılıştan önceki bekleme.
+ *
+ * Gecikmesiz açılan bir panel, imleç üst çubuğun üzerinden geçerken bile
+ * açılıyor — kullanıcı sağ üstteki profil düğmesine giderken dört panel
+ * arka arkaya açılıp kapanıyordu. Kısa bir niyet eşiği bunu kesiyor.
+ *
+ * Gruplar ARASINDA geçerken beklenmiyor: menü zaten açıksa kullanıcı
+ * gezindiğini belli etmiş durumda ve orada gecikme tembellik gibi geliyor.
+ */
+const OPEN_DELAY = 180;
+
+/** Kapanış animasyonunun süresi. `--dur-short` ile aynı olmak ZORUNDA. */
+const EXIT_MS = 220;
+
+/**
+ * Panelin durumu.
+ *
+ * Tek bir `open: string | null` yetmiyordu: kapanış animasyonu için panelin
+ * DOM'da kalmaya devam etmesi gerekiyor. `phase` hangi animasyonun
+ * oynayacağını ve arkadaki bulanıklığın açık mı kapalı mı olduğunu söylüyor.
+ */
+type PanelState = { group: string; phase: "in" | "out" };
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [open, setOpen] = useState<string | null>(null);
+  const [panel, setPanel] = useState<PanelState | null>(null);
   const [drawer, setDrawer] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** Görünür durumdaki grup. Kapanırken `null` — bulanıklık hemen kalkıyor. */
+  const open = panel?.phase === "in" ? panel.group : null;
+  // Açılış gecikmesini kapanıştan AYRI tutuyor: ikisi aynı zamanlayıcıyı
+  // paylaşsaydı, bir gruptan çıkıp diğerine girmek kapanışı iptal ederken
+  // açılışı da iptal ederdi.
+  const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const cancelClose = useCallback(() => {
     if (timer.current !== null) {
@@ -155,29 +207,104 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const cancelOpen = useCallback(() => {
+    if (openTimer.current !== null) {
+      clearTimeout(openTimer.current);
+      openTimer.current = null;
+    }
+  }, []);
+
+  /** Kapanış: önce yukarı kayma animasyonu, sonra DOM'dan çıkış. */
+  const close = useCallback(() => {
+    cancelOpen();
+    if (exitTimer.current !== null) clearTimeout(exitTimer.current);
+    setPanel((current) => (current === null ? null : { ...current, phase: "out" }));
+    exitTimer.current = setTimeout(() => setPanel(null), EXIT_MS);
+  }, [cancelOpen]);
+
+  const show = useCallback(
+    (title: string) => {
+      if (exitTimer.current !== null) clearTimeout(exitTimer.current);
+      setPanel({ group: title, phase: "in" });
+    },
+    [],
+  );
+
   const closeSoon = useCallback(() => {
+    cancelOpen();
     cancelClose();
-    timer.current = setTimeout(() => setOpen(null), CLOSE_DELAY);
-  }, [cancelClose]);
+    timer.current = setTimeout(close, CLOSE_DELAY);
+  }, [cancelClose, cancelOpen, close]);
+
+  /** Hover ile açılış. Menü kapalıysa bekliyor, açıksa anında geçiyor. */
+  const hoverOpen = useCallback(
+    (title: string) => {
+      cancelClose();
+      cancelOpen();
+      if (panel?.phase === "in") {
+        show(title);
+        return;
+      }
+      openTimer.current = setTimeout(() => show(title), OPEN_DELAY);
+    },
+    [cancelClose, cancelOpen, panel, show],
+  );
 
   // Rota değişince menüler kapanır; aksi halde kullanıcı bir bağlantıya
   // dokunduktan sonra panel açık kalıyor ve gittiği sayfayı görmüyor.
   useEffect(() => {
     cancelClose();
-    setOpen(null);
+    cancelOpen();
+    if (exitTimer.current !== null) clearTimeout(exitTimer.current);
+    setPanel(null);
     setDrawer(false);
-  }, [pathname, cancelClose]);
+  }, [pathname, cancelClose, cancelOpen]);
 
-  useEffect(() => cancelClose, [cancelClose]);
+  useEffect(
+    () => () => {
+      cancelClose();
+      cancelOpen();
+      if (exitTimer.current !== null) clearTimeout(exitTimer.current);
+    },
+    [cancelClose, cancelOpen],
+  );
+
+  /**
+   * Gezinme fotoğraflarını önden yükle.
+   *
+   * Panel ancak açıldığında DOM'a giriyor, yani fotoğraf da o an isteniyor.
+   * İlk açılışta indirme bitene kadar yer tutucu görünüyordu — panel bir
+   * "yüklenen kutu" gibi iniyordu.
+   *
+   * Sayfa açılışını GECİKTİRMEDEN yapılıyor: `requestIdleCallback` ile
+   * tarayıcı boşa çıkınca. Dört dosya toplam ~360 KB ve kullanıcı gezinmeye
+   * dokunana kadar çoktan önbellekte oluyor.
+   */
+  useEffect(() => {
+    const warm = () => {
+      for (const group of GROUPS) {
+        const image = new Image();
+        image.src = `/photos/${group.photo}.jpg`;
+      }
+    };
+    const idle = window.requestIdleCallback;
+    if (typeof idle === "function") {
+      const handle = idle(warm, { timeout: 2500 });
+      return () => window.cancelIdleCallback?.(handle);
+    }
+    // Safari'de `requestIdleCallback` yok.
+    const handle = setTimeout(warm, 1200);
+    return () => clearTimeout(handle);
+  }, []);
 
   useEffect(() => {
     if (open === null) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(null);
+      if (event.key === "Escape") close();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open]);
+  }, [open, close]);
 
   if (CHROMELESS.has(pathname)) {
     return <main className="px-6 py-10">{children}</main>;
@@ -197,37 +324,47 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         style={{ zIndex: "var(--z-sticky)" }}
         onMouseLeave={closeSoon}
       >
-        <div className="mx-auto flex h-14 max-w-[80rem] items-center gap-2 px-5 sm:px-8">
+        <div className="mx-auto flex h-16 max-w-[80rem] items-center gap-2 px-5 sm:px-8">
           <button
             type="button"
             onClick={() => setDrawer(true)}
             aria-label="Menüyü aç"
-            className="btn-quiet -ml-2 grid size-9 place-items-center rounded-[var(--radius-md)] md:hidden"
+            className="btn-quiet -ml-2 grid size-9 place-items-center md:hidden"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden>
               <path d="M4 7h16M4 12h16M4 17h16" />
             </svg>
           </button>
 
-          <Link
-            href="/"
-            className="mr-4 text-base font-bold tracking-tight"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
+          {/* Marka yazısı hem kimlik hem ana sayfa bağlantısı. Sekmelerden
+              belirgin biçimde büyük: ikisi aynı boyda olunca "overload" beşinci
+              bir sekme gibi okunuyordu. */}
+          <Link href="/" className="display mr-8 text-lg leading-none tracking-tight">
             overload
           </Link>
 
           <nav className="hidden items-center gap-1 md:flex" aria-label="Ana gezinme">
-            <TopLink href={PANEL.href} label={PANEL.label} active={isActive(PANEL.href)} />
-
             {GROUPS.map((group) => (
-              <div key={group.title} onMouseEnter={() => { cancelClose(); setOpen(group.title); }}>
-                <button
-                  type="button"
-                  aria-expanded={open === group.title}
+              <div key={group.title} onMouseEnter={() => hoverOpen(group.title)}>
+                {/* Başlık bir BAĞLANTI, düğme değil: tıklayınca grubun ilk
+                    ekranına gidiyor. "Antrenman"a tıklayan kişi zaten büyük
+                    olasılıkla bugünkü antrenmanı istiyor; onu bir menü açıp
+                    ikinci bir tıklamaya zorlamak gereksiz bir adımdı.
+
+                    Panel yine imleçle açılıyor. Bedeli: dokunmatik bir
+                    masaüstü ekranında (>=768px, hover yok) alt ekranlara
+                    üstten ulaşılamıyor — orada ilk ekran açılıyor ve
+                    gezinme onun içinden sürüyor. */}
+                <Link
+                  href={group.items[0]!.href}
                   aria-haspopup="true"
-                  onClick={() => setOpen(open === group.title ? null : group.title)}
-                  className={`relative flex items-center gap-1 rounded-[var(--radius-md)] px-3 py-2 text-sm transition-colors ${
+                  aria-expanded={open === group.title}
+                  onFocus={() => hoverOpen(group.title)}
+                  /* Display fontu: marka yazısıyla aynı aile. Sekmeler gövde
+                     ailesindeyken "overload" tek başına farklı bir dil
+                     konuşuyordu; aynı yüz üst çubuğu tek bir imza hâline
+                     getiriyor. Sıkışık yüz bu puntoda hak ettiği ağırlıkta. */
+                  className={`display relative block px-3.5 py-2 text-base tracking-tight transition-colors ${
                     open === group.title || groupActive(group)
                       ? "text-[var(--color-ink)]"
                       : "text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
@@ -235,25 +372,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   style={{ transitionDuration: "var(--dur-micro)" }}
                 >
                   {group.title}
-                  <svg
-                    width="11"
-                    height="11"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    aria-hidden
-                    className="mt-px shrink-0 transition-transform"
-                    style={{
-                      transform: open === group.title ? "rotate(180deg)" : "none",
-                      transitionDuration: "var(--dur-micro)",
-                    }}
-                  >
-                    <path d="M6 9l6 6 6-6" />
-                  </svg>
                   <ActiveMark shown={groupActive(group)} />
-                </button>
+                </Link>
               </div>
             ))}
           </nav>
@@ -266,11 +386,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* Panel başlığın DIŞINDA değil içinde: `onMouseLeave` başlığa bağlı
             olduğu için panele inen imleç hâlâ "içeride" sayılıyor ve
             kapanma tetiklenmiyor. */}
-        {open !== null && (
+        {panel !== null && (
           <MegaPanel
-            group={GROUPS.find((g) => g.title === open)!}
+            group={GROUPS.find((g) => g.title === panel.group)!}
+            phase={panel.phase}
             isActive={isActive}
-            onNavigate={() => setOpen(null)}
+            onNavigate={close}
           />
         )}
       </header>
@@ -280,7 +401,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           tercihi değil, işlev kaybı. */}
       {drawer && <Drawer isActive={isActive} onClose={() => setDrawer(false)} />}
 
-      <main className="mx-auto w-full max-w-[80rem] flex-1 px-5 pt-8 pb-16 sm:px-8">
+      <main
+        className={`mx-auto w-full max-w-[80rem] flex-1 px-5 pt-8 pb-16 sm:px-8 ${
+          open !== null ? "behind-panel" : "behind-panel-idle"
+        }`}
+        // Panel açıkken arkadaki içerik tıklanamaz: bulanık bir yüzeye
+        // tıklamak beklenmedik bir gezinme yapıyordu.
+        inert={open !== null ? true : undefined}
+      >
         {children}
       </main>
     </div>
@@ -292,7 +420,7 @@ function ActiveMark({ shown }: { shown: boolean }) {
   return (
     <span
       aria-hidden
-      className="absolute inset-x-3 -bottom-[7px] h-[2px] rounded-full transition-opacity"
+      className="absolute inset-x-3 -bottom-[7px] h-[2px] transition-opacity"
       style={{
         background: "var(--color-accent-deep)",
         opacity: shown ? 1 : 0,
@@ -302,107 +430,83 @@ function ActiveMark({ shown }: { shown: boolean }) {
   );
 }
 
-function TopLink({
-  href,
-  label,
-  active,
-}: {
-  href: Href;
-  label: string;
-  active: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      aria-current={active ? "page" : undefined}
-      className={`relative rounded-[var(--radius-md)] px-3 py-2 text-sm transition-colors ${
-        active
-          ? "text-[var(--color-ink)]"
-          : "text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
-      }`}
-      style={{ transitionDuration: "var(--dur-micro)" }}
-    >
-      {label}
-      <ActiveMark shown={active} />
-    </Link>
-  );
-}
-
 /* --- Açılan geniş panel --------------------------------------------------- */
 
 function MegaPanel({
   group,
+  phase,
   isActive,
   onNavigate,
 }: {
   group: NavGroup;
+  phase: "in" | "out";
   isActive: (href: Href) => boolean;
   onNavigate: () => void;
 }) {
   return (
     <div
-      className="absolute inset-x-0 top-full hidden border-b border-[var(--color-border)] bg-[var(--color-surface)] md:block"
+      // Dış kap `overflow-hidden`: içerideki yüzey tam boyundan yukarıda
+      // başlayıp aşağı kayıyor ve taşan kısım kırpılıyor. Perde etkisi bu.
+      className="absolute inset-x-0 top-full hidden overflow-hidden border-b border-[var(--color-border)] md:block"
       style={{
         zIndex: "var(--z-dropdown)",
-        animation: "reveal var(--dur-short) var(--ease-out) forwards",
-        boxShadow: "0 18px 40px -24px oklch(21% 0.014 115 / 0.22)",
+        boxShadow: "0 18px 40px -24px oklch(21% 0.014 115 / 0.3)",
+        // Sabit yükseklik: gruplar arasında gezinirken panel zıplamıyor.
+        height: PANEL_HEIGHT,
       }}
     >
-      <div className="mx-auto grid max-w-[80rem] gap-8 px-5 py-8 sm:px-8 lg:grid-cols-[minmax(0,22rem)_1fr] lg:gap-12">
-        {/* Büyük fotoğraf, üzerinde grup adı. Panel açıldığında hangi bölgede
-            olduğun yazıyı okumadan önce anlaşılıyor.
-
-            Oran madde sayısına göre: dört maddeli grupta liste iki sütun ve
-            iki satır, yani dikey kart onunla aynı boyda. İki maddeli grupta
-            aynı dikey kartı kullanmak panelin yarısını boş bırakıyordu. */}
-        <Photo
-          slug={group.photo}
-          ratio={group.items.length > 2 ? "4 / 5" : "16 / 10"}
-          className="rounded-[var(--radius-lg)]"
-          scrim
-        >
-          <div className="flex size-full items-end p-6">
-            <p className="display text-2xl" style={{ color: "oklch(99% 0 0)" }}>
+      <div
+        className="size-full"
+        style={{
+          animation:
+            phase === "in"
+              ? "panel-down var(--dur-long) var(--ease-out)"
+              : // `forwards`: animasyon bittiğinde yukarıda KALIYOR. Olmadan
+                // son karede geri düşüp bir an görünüyordu.
+                "panel-up var(--dur-short) var(--ease-in) forwards",
+        }}
+      >
+        {/* Fotoğraf paneli TAMAMEN kaplıyor — kenardan kenara, kartsız.
+            Önce 22rem'lik bir sütundaydı ve panelin geri kalanı boş beyazdı;
+            fotoğraf bir öğeydi, zemin değil. Zemin olunca panel bir bölüm
+            kapağı gibi okunuyor. */}
+        <Photo slug={group.photo} fill scrim className="size-full">
+          <div className="mx-auto flex size-full max-w-[80rem] flex-col justify-end gap-1 px-5 pb-8 sm:px-8">
+            <p className="label" style={{ color: "oklch(84% 0.01 115)" }}>
               {group.title}
             </p>
+
+            {/* Çerçevesiz: kutu, kenarlık, zemin yok — yalnızca tıklanabilir
+                yazı. Kutulu bir liste fotoğrafın üstünde ikinci bir yüzey
+                kuruyor ve "fotoğraf baskın" fikrini bozuyordu.
+
+                Dokunma hedefi yine de büyük: satırlar `py-1.5` ve display
+                yüzü bu puntoda yüksek. */}
+            <ul className="flex flex-wrap items-baseline gap-x-8 gap-y-1">
+              {group.items.map((item, index) => {
+                const active = isActive(item.href);
+                return (
+                  <li
+                    key={String(item.href)}
+                    className="reveal"
+                    style={{ ["--i" as string]: index }}
+                  >
+                    <Link
+                      href={item.href}
+                      onClick={onNavigate}
+                      aria-current={active ? "page" : undefined}
+                      className="photo-link display block py-1.5 text-2xl leading-none tracking-tight"
+                      style={{ color: "oklch(99% 0 0)" }}
+                    >
+                      {item.label}
+                      <span aria-hidden className="rule" />
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         </Photo>
-
-        <ul
-          className={`grid content-start gap-2 ${
-            group.items.length > 2 ? "sm:grid-cols-2" : ""
-          }`}
-        >
-          {group.items.map((item, index) => {
-            const { Icon } = item;
-            const active = isActive(item.href);
-            return (
-              <li key={String(item.href)} className="reveal" style={{ ["--i" as string]: index }}>
-                <Link
-                  href={item.href}
-                  onClick={onNavigate}
-                  aria-current={active ? "page" : undefined}
-                  className="flex items-start gap-3 rounded-[var(--radius-md)] px-4 py-3.5 transition-colors hover:bg-[var(--color-surface-raised)]"
-                  style={{
-                    transitionDuration: "var(--dur-micro)",
-                    background: active ? "var(--color-surface-raised)" : undefined,
-                  }}
-                >
-                  <Icon className="mt-0.5 size-[19px] shrink-0 text-[var(--color-ink-faint)]" />
-                  <span className="min-w-0">
-                    {/* Orta-büyük: bu panelin asıl okunan yazısı. */}
-                    <span className="block text-md leading-tight font-medium">
-                      {item.label}
-                    </span>
-                    <span className="mt-0.5 block text-xs text-[var(--color-ink-faint)]">
-                      {item.hint}
-                    </span>
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
       </div>
     </div>
   );
@@ -447,12 +551,7 @@ function Drawer({
           animation: "reveal var(--dur-short) var(--ease-out) forwards",
         }}
       >
-        <Link
-          href="/"
-          onClick={onClose}
-          className="px-2 text-md font-bold tracking-tight"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
+        <Link href="/" onClick={onClose} className="display px-2 text-lg tracking-tight">
           overload
         </Link>
 
@@ -462,7 +561,7 @@ function Drawer({
           <div key={group.title}>
             {/* Telefonda fotoğraf grup başlığı olarak: kısa bir şerit, dikey
                 kart ekranın yarısını yiyordu. */}
-            <Photo slug={group.photo} ratio="21 / 9" className="rounded-[var(--radius-md)]" scrim>
+            <Photo slug={group.photo} ratio="21 / 9" scrim>
               <div className="flex size-full items-end p-3">
                 <p className="display text-md" style={{ color: "oklch(99% 0 0)" }}>
                   {group.title}

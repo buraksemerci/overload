@@ -197,7 +197,9 @@ test.describe("oturum açıkken", () => {
         // Çekmecede bütün gruplar açık duruyor; ayrı bir adım gerekmiyor.
         await page.getByRole("button", { name: "Menüyü aç" }).click();
       } else {
-        await page.getByRole("button", { name: group, exact: true }).click();
+        // Başlık bir bağlantı ve tıklamak grubun İLK ekranına gidiyor; alt
+        // ekranlara ulaşmak için panel imleçle açılıyor.
+        await page.getByRole("link", { name: group, exact: true }).hover();
       }
       // Erişilebilir ad etiketi VE ipucunu içeriyor ("Günlük Kalan kalori
       // ve öğünler") — ekran okuyucu için doğru olan bu. O yüzden baştan
@@ -212,14 +214,16 @@ test.describe("oturum açıkken", () => {
     await page.goto("/");
 
     const nav = page.getByRole("navigation", { name: "Ana gezinme" });
-    // Üstte YALNIZCA dört ana başlık ve Panel var.
+    await expect(nav.getByRole("link", { name: "Panel", exact: true })).toHaveCount(0);
+    // Üstte YALNIZCA dört ana başlık var — "Panel" sekmesi yok, marka
+    // yazısı ana sayfaya gidiyor.
     for (const title of ["Antrenman", "Beslenme", "Vücut", "Asistan"]) {
-      await expect(nav.getByRole("button", { name: title, exact: true })).toBeVisible();
+      await expect(nav.getByRole("link", { name: title, exact: true })).toBeVisible();
     }
     // Alt ekranlar kapalıyken DOM'da değil.
     await expect(page.getByRole("link", { name: /^Kas Haritası/ })).toBeHidden();
 
-    await nav.getByRole("button", { name: "Vücut", exact: true }).click();
+    await nav.getByRole("link", { name: "Vücut", exact: true }).hover();
     await expect(page.getByRole("link", { name: /^Kas Haritası/ })).toBeVisible();
     // Panelde dört ekranın hepsi var. Sorgu PANELE kapsamlı: ana paneldeki
     // kutucuklar da aynı rotalara bağlanıyor ("Kilo — İlk ölçümünü gir").
@@ -234,8 +238,21 @@ test.describe("oturum açıkken", () => {
     await page.goto("/");
 
     const nav = page.getByRole("navigation", { name: "Ana gezinme" });
-    await nav.getByRole("button", { name: "Antrenman", exact: true }).hover();
+    await nav.getByRole("link", { name: "Antrenman", exact: true }).hover();
     await expect(page.getByRole("link", { name: /^Programlar/ })).toBeVisible();
+  });
+
+  test("başlığa tıklamak grubun ilk ekranına gidiyor", async ({ page }) => {
+    test.skip((page.viewportSize()?.width ?? 1280) < 768, "masaüstü gezinmesi");
+    await page.goto("/");
+
+    // "Antrenman" -> /workout. Menüyü açıp ikinci bir tıklama beklemek
+    // gereksiz bir adımdı: başlığa tıklayan zaten o bölümü istiyor.
+    await page
+      .getByRole("navigation", { name: "Ana gezinme" })
+      .getByRole("link", { name: "Antrenman", exact: true })
+      .click();
+    await expect(page).toHaveURL(/\/workout$/);
   });
 
   test("Escape paneli kapatıyor", async ({ page }) => {
@@ -243,7 +260,7 @@ test.describe("oturum açıkken", () => {
     await page.goto("/");
 
     const nav = page.getByRole("navigation", { name: "Ana gezinme" });
-    await nav.getByRole("button", { name: "Antrenman", exact: true }).click();
+    await nav.getByRole("link", { name: "Antrenman", exact: true }).hover();
     await expect(page.getByRole("link", { name: /^Programlar/ })).toBeVisible();
 
     await page.keyboard.press("Escape");

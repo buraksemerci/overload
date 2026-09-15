@@ -442,7 +442,7 @@ function Confirm({
             type="button"
             aria-pressed={quantity === preset}
             onClick={() => onGrams(String(preset))}
-            className="seg-item tnum rounded-full border border-[var(--color-border)] px-3 py-1 text-xs"
+            className="seg-item tnum border border-[var(--color-border)] px-3 py-1 text-xs"
           >
             {preset} g
           </button>
@@ -509,7 +509,7 @@ function Stepper({
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="grid size-11 place-items-center rounded-full border border-[var(--color-border-strong)] text-lg text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-ink)]"
+      className="grid size-11 place-items-center border border-[var(--color-border-strong)] text-lg text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-ink)]"
       style={{ transitionDuration: "var(--dur-micro)" }}
     >
       {glyph}

@@ -112,14 +112,22 @@
   --text-3xl: 3.0518rem; /* 49px */
   --text-4xl: 3.8147rem; /* 61px — panelin büyük sayısı */
 
-  /* --- Köşe yarıçapı ---
-     Eski tasarımda 3/5/7px vardı — koyu temada keskinlik teknik duruyordu.
-     Açık temada bu kadar keskin köşe sert görünüyor; cömert yarıçap kağıt
-     hissini güçlendiriyor. */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  /* --- Köşe yarıçapı: SIFIR ---
+     Üç aşamadan geçti. Koyu temada 3/5/7px vardı, açık temaya geçerken
+     cömert yarıçapa (6/10/16/24) çıkıldı çünkü kağıt hissini güçlendiriyordu.
+
+     Fotoğraflar girince denge bozuldu: yuvarlatılmış bir fotoğraf kartı
+     "uygulama arayüzü" gibi duruyor, keskin kenarlı bir fotoğraf ise
+     editoryal — dergi sayfası gibi. Sıkışık display yüzü ve tam genişlikte
+     görseller zaten o dili konuşuyordu, yarıçap tek başına direniyordu.
+
+     Belirteçler SIFIR ama silinmedi: `rounded-[var(--radius-md)]` yazan
+     onlarca yer var ve hepsini düzenlemek gereksiz bir fark üretirdi. Bir
+     gün yarıçap geri istenirse tek yerden dönüyor. */
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
 
   /* --- Hareket ---
      Üstel ease-out: öğeler yerine yavaşlayarak oturuyor. Tarayıcı
@@ -135,6 +143,9 @@
   --dur-micro: 120ms; /* basma, geçiş rengi */
   --dur-short: 220ms; /* hover, tooltip, menü */
   --dur-long: 420ms; /* modal, çekmece, sayfa açılışı */
+  /* Panel kapanırken arka planın netleşmesi. Tek başına duruyor çünkü
+     ölçekteki hiçbir süreye bağlı değil: kasıtlı olarak en yavaş geçiş. */
+  --dur-blur-out: 560ms;
 }
 
 /* --- Katman sırası: altı isimli seviye, serbest sayı yok --- */
@@ -412,6 +423,39 @@
     color: var(--color-accent-deep);
   }
 
+  /* --- Fotoğraf üstündeki çerçevesiz gezinme bağlantısı ------------------
+     Gezinme panelinde fotoğraf zemin, bağlantılar onun üstünde duruyor.
+     Kutu, kenarlık ve zemin YOK — istenen "sadece tıklanabilir yazı".
+
+     Bunun bedeli, üzerine gelindiğinin anlaşılmaması: fotoğraf üstünde
+     beyaz yazının rengini değiştirmek yeterince okunmuyor. O yüzden alta
+     volt bir çizgi açılıyor. Çizgi bir DOLGU ama 2 piksel yüksekliğinde ve
+     aynı anda yalnızca bir tanesi görünüyor; aksan bütçesi korunuyor. */
+  .photo-link {
+    opacity: 0.82;
+    transition: opacity var(--dur-micro) var(--ease-out);
+  }
+  .photo-link:hover,
+  .photo-link:focus-visible,
+  .photo-link[aria-current="page"] {
+    opacity: 1;
+  }
+
+  .photo-link > .rule {
+    display: block;
+    height: 2px;
+    margin-top: 0.25rem;
+    background: var(--color-accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--dur-short) var(--ease-out);
+  }
+  .photo-link:hover > .rule,
+  .photo-link:focus-visible > .rule,
+  .photo-link[aria-current="page"] > .rule {
+    transform: scaleX(1);
+  }
+
   .badge-warning {
     background: oklch(96% 0.04 70);
     color: var(--color-warning);
@@ -464,6 +508,31 @@
   }
 }
 
+/* Gezinme paneli AŞAĞI İNİYOR.
+   Opaklıkla belirmek "beliren bir katman" hissi veriyordu; perde gibi inmek
+   panelin üst çubuktan geldiğini anlatıyor. Dış kap `overflow: hidden`,
+   içerideki yüzey tam boyundan yukarıda başlayıp yerine kayıyor. */
+@keyframes panel-down {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* ...ve yukarı çekiliyor. Kapanışın da animasyonu var çünkü panel bir
+   "bölüm kapağı": aniden yok olması onu bir açılır kutuya indirgiyordu.
+   Çıkış girişten kısa — bekleyen bir kullanıcı yok. */
+@keyframes panel-up {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-100%);
+  }
+}
+
 @keyframes sheet-in {
   from {
     opacity: 0;
@@ -486,6 +555,48 @@
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+/* Panel açıkken arkadaki içerik.
+   Bulanıklık okunabilirliği bilerek düşürüyor: panel açıkken arkadaki ekran
+   okunacak bir şey değil, terk edilmek üzere olan bir bağlam.
+
+   --------------------------------------------------------------------------
+   SÜRELER PANELİN HAREKETİNE BAĞLI
+   --------------------------------------------------------------------------
+   Bulanıklık panel İNERKEN artıyor ve indiği anda yerine oturuyor: geçiş
+   süresi iniş animasyonuyla (`--dur-long`) aynı. Önce `--dur-short` ile
+   giriyordu ve panel daha yoldayken arka plan çoktan bulanmış oluyordu —
+   iki hareket birbirinden kopuk görünüyordu.
+
+   Netleşme KASITLI olarak daha uzun (`--dur-blur-out`). Panel yukarı
+   kayarken arka planın aniden keskinleşmesi bir "sıçrama" yaratıyordu;
+   yavaşça toparlanınca göz panelin gittiğini izleyip ardından içeriğe
+   dönüyor.
+
+   `filter` yalnızca `main`e uygulanıyor, bütün sayfaya değil: üst çubuk ve
+   panel keskin kalmalı. */
+.behind-panel {
+  filter: blur(5px) saturate(0.9);
+  opacity: 0.55;
+  transition:
+    filter var(--dur-long) var(--ease-out),
+    opacity var(--dur-long) var(--ease-out);
+}
+
+.behind-panel-idle {
+  filter: blur(0) saturate(1);
+  opacity: 1;
+  transition:
+    filter var(--dur-blur-out) var(--ease-out),
+    opacity var(--dur-blur-out) var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .behind-panel {
+    filter: none;
+    opacity: 0.75;
   }
 }
 

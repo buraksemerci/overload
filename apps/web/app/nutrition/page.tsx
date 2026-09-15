@@ -364,9 +364,9 @@ function MacroBar({
           {fmt(current, 0)} / {target} g
         </span>
       </div>
-      <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-[var(--color-surface-raised)]">
+      <div className="mt-1.5 h-1 overflow-hidden bg-[var(--color-surface-raised)]">
         <div
-          className="h-full rounded-full"
+          className="h-full"
           style={{
             width: `${Math.min(100, ratio * 100)}%`,
             background: color,

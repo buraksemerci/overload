@@ -69,17 +69,20 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="mx-auto grid min-h-[80dvh] max-w-[64rem] items-center gap-10 lg:grid-cols-2 lg:gap-16">
-      {/* Telefonda gizli: dikey bir fotoğraf formu ekranın dışına itiyordu. */}
+    <div className="mx-auto grid min-h-[88dvh] max-w-[72rem] items-stretch gap-10 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
+      {/* Telefonda gizli: dikey bir fotoğraf formu ekranın dışına itiyordu.
+          Masaüstünde `fill` ile satır yüksekliğini kaplıyor — sabit bir oran
+          verince yanındaki formdan kısa kalıyor ve ızgarada boşluk
+          bırakıyordu. */}
       <Photo
         slug="hero-login"
-        ratio="3 / 4"
-        className="hidden rounded-[var(--radius-lg)] lg:block"
+        fill
+        className="hidden min-h-[34rem] lg:block"
         position="center 30%"
         scrim
       >
-        <div className="flex size-full flex-col justify-end p-8">
-          <p className="display text-2xl" style={{ color: "oklch(99% 0 0)" }}>
+        <div className="flex size-full flex-col justify-end p-10">
+          <p className="display text-3xl" style={{ color: "oklch(99% 0 0)" }}>
             Ağırlık artmazsa
             <br />
             kas büyümez.
@@ -91,7 +94,7 @@ export default function LoginPage() {
         </div>
       </Photo>
 
-      <div className="mx-auto w-full max-w-sm">
+      <div className="mx-auto flex w-full max-w-sm flex-col justify-center">
         <h1 className="display text-2xl">overload</h1>
         <p className="mt-1.5 text-sm text-[var(--color-ink-muted)]">
           {mode === "login"

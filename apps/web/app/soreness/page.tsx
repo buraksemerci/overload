@@ -192,7 +192,7 @@ export default function SorenessPage() {
                               setChoosing(false);
                               setPicking(group);
                             }}
-                            className="flex items-center gap-1.5 rounded-full border border-[var(--color-border-strong)] px-3 py-1.5 text-xs transition-colors hover:bg-[var(--color-surface-raised)]"
+                            className="flex items-center gap-1.5 border border-[var(--color-border-strong)] px-3 py-1.5 text-xs transition-colors hover:bg-[var(--color-surface-raised)]"
                             style={{ transitionDuration: "var(--dur-micro)" }}
                           >
                             {level && (

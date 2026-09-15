@@ -44,6 +44,15 @@ export function Photo({
   scrim = false,
   /** Görsel kırpılırken hangi bölge korunacak. İnsan fotoğraflarında üst. */
   position = "center",
+  /**
+   * Yüksekliği DIŞARIDAN al, oranı uygulama.
+   *
+   * Gezinme paneli için eklendi: orada bütün grupların paneli aynı boyda
+   * olmak zorunda, yoksa imleç başlıklar arasında gezerken panel her
+   * seferinde zıplıyor. Sabit yükseklikli bir kabın içinde `aspect-ratio`
+   * ikinci bir yükseklik kaynağı oluyor ve ikisi çakışıyor.
+   */
+  fill = false,
 }: {
   slug: string;
   /** Dekoratif fotoğrafta BOŞ kalır — ekran okuyucu gereksiz yere okumasın. */
@@ -54,6 +63,7 @@ export function Photo({
   children?: React.ReactNode;
   scrim?: boolean;
   position?: string;
+  fill?: boolean;
 }) {
   /**
    * Görsel YÜKLENENE kadar görünmez.
@@ -70,11 +80,19 @@ export function Photo({
     <div
       className={`relative overflow-hidden ${className}`}
       style={{
-        aspectRatio: ratio,
-        // İşlem katmanı: fotoğraf yoksa görünen şey bu. Volt DEĞİL — nötr
-        // bir taş dokusu, çünkü volt bütçesi ekran başına bir öğe.
-        background:
-          "linear-gradient(145deg, var(--color-surface-raised), var(--color-border))",
+        ...(fill ? { height: "100%" } : { aspectRatio: ratio }),
+        /* İşlem katmanı: fotoğraf yoksa ya da henüz yüklenmediyse görünen
+           şey bu. Volt DEĞİL — nötr bir doku, çünkü volt bütçesi ekran
+           başına bir öğe.
+
+           Tonu `scrim`e bağlı ve bu tesadüf değil: perde isteyen her yerde
+           üstte AÇIK RENKLİ yazı var, yani zemin koyu olmak zorunda. Açık
+           dokuyla başlayınca panel ilk açılışta bir an beyaz parlıyor ve
+           ardından koyu fotoğrafa geçiyordu — göze çarpan bir sıçrama.
+           Koyu başlayınca geçiş görünmüyor. */
+        background: scrim
+          ? "linear-gradient(145deg, oklch(28% 0.012 115), oklch(18% 0.010 115))"
+          : "linear-gradient(145deg, var(--color-surface-raised), var(--color-border))",
       }}
     >
       <img

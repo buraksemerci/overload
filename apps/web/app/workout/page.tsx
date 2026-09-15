@@ -324,9 +324,9 @@ function Progress({ done, total }: { done: number; total: number }) {
   const ratio = total > 0 ? Math.min(1, done / total) : 0;
   return (
     <div className="flex items-center gap-4">
-      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--color-surface-raised)]">
+      <div className="h-1.5 flex-1 overflow-hidden bg-[var(--color-surface-raised)]">
         <div
-          className="h-full rounded-full"
+          className="h-full"
           style={{
             width: `${ratio * 100}%`,
             background: "var(--color-accent)",
@@ -648,7 +648,7 @@ function OtherExercises({
                 >
                   <span
                     aria-hidden
-                    className="h-6 w-[3px] shrink-0 rounded-full"
+                    className="h-6 w-[3px] shrink-0"
                     style={{
                       background: isCurrent ? "var(--color-accent-deep)" : "transparent",
                     }}

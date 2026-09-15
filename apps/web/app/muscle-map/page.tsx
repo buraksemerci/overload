@@ -181,9 +181,9 @@ function MuscleRow({
   return (
     <li onMouseEnter={onHover} onMouseLeave={onLeave} className="flex items-center gap-4 py-2.5">
       <span className="w-[8.5rem] shrink-0 truncate text-sm">{muscle.nameTr}</span>
-      <span className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-[var(--color-surface-raised)]">
+      <span className="h-1.5 min-w-0 flex-1 overflow-hidden bg-[var(--color-surface-raised)]">
         <span
-          className="block h-full rounded-full"
+          className="block h-full"
           style={{ width: `${width}%`, background: color }}
         />
       </span>

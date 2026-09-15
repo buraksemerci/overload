@@ -254,11 +254,11 @@ function ActiveProgram({
 }) {
   return (
     <section className="card overflow-hidden">
-      <div className="flex flex-col gap-0 sm:flex-row">
+      <div className="flex flex-col gap-0 sm:flex-row sm:items-stretch">
         <Photo
           slug={GOAL_PHOTO[program.goal] ?? "goal-general-fitness"}
           ratio="16 / 9"
-          className="sm:w-[18rem] sm:shrink-0"
+          className="sm:w-[24rem] sm:shrink-0"
         />
 
         <div className="flex min-w-0 flex-1 flex-col justify-between gap-4 p-6">

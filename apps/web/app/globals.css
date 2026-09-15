@@ -415,6 +415,48 @@
   animation: check-in var(--dur-short) var(--ease-out);
 }
 
+/* Odaklanmış panel (`Sheet`). Zemin yalnızca soluyor; panelin kendisi
+   aşağıdan geliyor — telefonda alttan açılan yüzey, masaüstünde ortada
+   hafifçe yükselen kart. Taşma (overshoot) YOK: `--ease-out` eğrisi
+   1'e oturuyor, geri sekmiyor. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Sayı değişince kısa bir vurgu. Kaydedilen değerin gerçekten değiştiğini
+   göstermek için; miktar girdisi ile makro önizlemesi arasındaki bağı
+   kullanıcı bir kez görünce kuruyor. */
+@keyframes tick {
+  from {
+    opacity: 0.35;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-tick {
+  animation: tick var(--dur-short) var(--ease-out);
+}
+
 /* Hareket azaltma tercihi: uzamsal hareket tamamen kalkıyor, yalnızca
    opaklık geçişi kalıyor. İşlevsel hareket (ilerleme çubuğu, iskelet)
    çalışmaya devam ediyor, sadece yavaşlıyor. */

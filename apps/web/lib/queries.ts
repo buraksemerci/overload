@@ -208,19 +208,35 @@ export interface ConsistencyDay {
   total_volume_kg: string;
 }
 
+/** Besin önbelleği satırı. Makrolar **100 gram başına** — kaynak tanımı böyle. */
+export interface FoodRow {
+  id: string;
+  name: string;
+  brand: string | null;
+  calories_per_100g: string;
+  protein_g: string;
+  carbs_g: string;
+  fat_g: string;
+}
+
+/** Günlüğe girmiş bir öğün kalemi. */
+export interface FoodLogRow {
+  id: string;
+  date: string;
+  meal_type: string;
+  quantity_g: string;
+  /** 100g başına değerler burada da geliyor: miktarı düzenlerken önizleme
+   *  hesaplanabilsin diye. Ayrı bir istek gerekmiyor. */
+  food: FoodRow;
+  calories: string;
+  protein_g: string;
+  carbs_g: string;
+  fat_g: string;
+}
+
 export interface NutritionDay {
   date: string;
-  items: Array<{
-    id: string;
-    date: string;
-    meal_type: string;
-    quantity_g: string;
-    food: { id: string; name: string; brand: string | null };
-    calories: string;
-    protein_g: string;
-    carbs_g: string;
-    fat_g: string;
-  }>;
+  items: FoodLogRow[];
   totals: { calories: string; protein_g: string; carbs_g: string; fat_g: string };
   target: {
     calories: number;
@@ -361,10 +377,97 @@ export interface MealSuggestions {
   reason: string | null;
 }
 
-export function useMealSuggestions(goal = "maintain"): UseQueryResult<MealSuggestions> {
+/**
+ * Kalan makrolara uyan öğün önerileri.
+ *
+ * `enabled` var çünkü bu uç PAHALI: besin önbelleğinde kombinasyon deniyor.
+ * Öneriler ekranda kapalı başlıyor ve kullanıcı hiç açmayabiliyor; sorgu
+ * koşulsuz çalıştığında her sayfa açılışında boşa bir hesap yapılıyordu.
+ */
+export function useMealSuggestions(
+  goal = "maintain",
+  enabled = true,
+): UseQueryResult<MealSuggestions> {
   return useQuery({
     queryKey: [...keys.nutrition, "meal-suggestions", goal],
     queryFn: () => api.get<MealSuggestions>(`/nutrition/meal-suggestions?goal=${goal}`),
+    enabled,
+  });
+}
+
+/* --- Besin günlüğü ---------------------------------------------------------
+   Bu mutasyonlar önceden beslenme sayfasının içinde satır içi yazılmıştı.
+   Buraya taşındılar çünkü geçersizleme mantığı tek yerde olmalı: bir öğün
+   kalemi eklenince günlük, sık kullanılanlar ve öğün önerisi birden
+   bayatlıyor. Sayfa içinde yazıldığında bunlardan biri her seferinde
+   unutuluyordu. */
+
+export interface FrequentFood {
+  food: FoodRow;
+  times_logged: number;
+  last_quantity_g: string;
+  last_meal_type: string;
+  last_used: string;
+}
+
+export function useRecentFoods(): UseQueryResult<FrequentFood[]> {
+  return useQuery({
+    queryKey: [...keys.nutrition, "recent-foods"],
+    queryFn: () => api.get<FrequentFood[]>("/nutrition/foods/recent"),
+  });
+}
+
+/** Arama bir mutasyon olarak yazıldı: kullanıcı "Ara"ya basınca tetiklenmeli,
+ *  her tuş vuruşunda değil — USDA kotası her istekte harcanıyor. */
+export function useFoodSearch(): UseMutationResult<FoodRow[], Error, string> {
+  return useMutation({
+    mutationFn: (q) => api.get<FoodRow[]>(`/foods/search?q=${encodeURIComponent(q)}`),
+  });
+}
+
+export function useBarcodeLookup(): UseMutationResult<FoodRow, Error, string> {
+  return useMutation({
+    mutationFn: (code) => api.get<FoodRow>(`/foods/barcode/${encodeURIComponent(code)}`),
+  });
+}
+
+export interface FoodLogInput {
+  food_database_entry_id: string;
+  quantity_g: number;
+  meal_type: string;
+  date?: string;
+}
+
+/** Günlük + sık kullanılanlar + öğün önerisi: üçü birden bayatlıyor. */
+function invalidateNutrition(client: ReturnType<typeof useQueryClient>): void {
+  void client.invalidateQueries({ queryKey: keys.nutrition });
+}
+
+export function useAddFoodLog(): UseMutationResult<unknown, Error, FoodLogInput> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body) => api.post("/nutrition/log", body),
+    onSuccess: () => invalidateNutrition(client),
+  });
+}
+
+export function useUpdateFoodLog(): UseMutationResult<
+  unknown,
+  Error,
+  { id: string; quantity_g?: number; meal_type?: string }
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }) => api.patch(`/nutrition/log/${id}`, body),
+    onSuccess: () => invalidateNutrition(client),
+  });
+}
+
+export function useDeleteFoodLog(): UseMutationResult<unknown, Error, string> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => api.delete(`/nutrition/log/${id}`),
+    onSuccess: () => invalidateNutrition(client),
   });
 }
 

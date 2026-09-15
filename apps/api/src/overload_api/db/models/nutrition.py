@@ -121,7 +121,15 @@ class NutritionLog(TimestampMixin, Base):
     )
 
     def _scale(self, per_100g: Decimal) -> Decimal:
-        return per_100g * self.quantity_g / Decimal(100)
+        """100 gram başına değeri gerçek miktara ölçekler.
+
+        Sonuç 2 ondalığa YUVARLANIYOR. Yuvarlamadan Decimal aritmetiği girdiye
+        göre değişen basamak sayısı üretiyor: 200 gram için "200.000",
+        133 gram için "164.18850", bölünmeyen miktarlarda 28 basamağa kadar.
+        Bu değerler API'den aynen çıkıyor ve asistan da onları okuyor; besinde
+        iki ondalık fazlasıyla yeterli hassasiyet.
+        """
+        return (per_100g * self.quantity_g / Decimal(100)).quantize(Decimal("0.01"))
 
     @property
     def calories(self) -> Decimal:

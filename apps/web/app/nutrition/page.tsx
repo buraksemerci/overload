@@ -1,22 +1,46 @@
 "use client";
 
-/** Beslenme (Bölüm 8, ekran 9): günlük log, TDEE hedefi, kalan makrolar. */
+/**
+ * Beslenme — günün o anki öğünü merkezde.
+ *
+ * --------------------------------------------------------------------------
+ * EKRANDA NE VAR, NE YOK
+ * --------------------------------------------------------------------------
+ * Önceki sürüm dört bölümü alt alta diziyordu: hedef tablosu, arama formu,
+ * öğün önerileri ve günün bütün kalemleri. Hepsi doğru veriydi ama sabah
+ * 8'de ekranın yarısı akşam yemeğiyle ilgiliydi.
+ *
+ * Şimdi ekranda üç şey var:
+ *
+ *   1. Bir sayı — kalan kalori. Kullanıcının gün içinde sorduğu tek soru bu.
+ *   2. O anki öğün — saate göre seçiliyor, kalemleri ve ekleme düğmesiyle.
+ *   3. Diğer öğünler — tek satırlık özetler, dokununca açılıyor.
+ *
+ * Makro çubukları, öğün önerileri ve kaynak açıklaması kaldırılmadı; istek
+ * üzerine açılıyor. Uygulamanın dürüstlüğü (sayının nereden geldiğini
+ * gizlememek) korunuyor, ama her açılışta okunması gerekmiyor.
+ *
+ * --------------------------------------------------------------------------
+ * TEK VOLT ÖĞE
+ * --------------------------------------------------------------------------
+ * Halka `--color-accent-deep` ile ÇİZGİ olarak çiziliyor, dolgu değil —
+ * antrenman ekranındaki dinlenme sayacının aynısı. Ekrandaki tek volt dolgu
+ * birincil ekleme düğmesi. Tasarım kuralı `e2e/design-rules.spec.ts` ile
+ * sınanıyor.
+ */
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useState } from "react";
-import { BarcodeScanner } from "@/components/BarcodeScanner";
-import { PageHeader } from "@/components/Layout";
-import { ErrorBox, Empty, Loading, fmt } from "@/components/States";
-import { api } from "@/lib/api";
-import { keys, useMealSuggestions, useNutritionDay } from "@/lib/queries";
-
-const MEAL_LABEL: Record<string, string> = {
-  breakfast: "Kahvaltı",
-  lunch: "Öğle",
-  dinner: "Akşam",
-  snack: "Ara öğün",
-};
+import { FoodSheet, type SheetMode } from "@/components/FoodSheet";
+import { InfoTip, Page, PageHeader, Section } from "@/components/Layout";
+import { ErrorBox, Loading, fmt } from "@/components/States";
+import { currentMeal, dayLabel, MEAL_ORDER, mealLabel, shiftDay } from "@/lib/meals";
+import {
+  useMealSuggestions,
+  useNutritionDay,
+  type FoodLogRow,
+  type NutritionDay,
+} from "@/lib/queries";
 
 const GOALS = [
   { value: "cut", label: "Yağ kaybı" },
@@ -24,72 +48,39 @@ const GOALS = [
   { value: "bulk", label: "Kas kazanımı" },
 ] as const;
 
-interface FoodResult {
-  id: string;
-  name: string;
-  brand: string | null;
-  calories_per_100g: string;
-  protein_g: string;
-  carbs_g: string;
-  fat_g: string;
-}
+const num = (value: string | number | null | undefined): number =>
+  typeof value === "number" ? value : Number.parseFloat(value ?? "0") || 0;
 
 export default function NutritionPage() {
   const [goal, setGoal] = useState<string>("maintain");
-  const day = useNutritionDay(null, goal);
-  const suggestions = useMealSuggestions(goal);
-  const client = useQueryClient();
+  const [date, setDate] = useState<string | null>(null);
+  const day = useNutritionDay(date, goal);
 
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<FoodResult[] | null>(null);
-  const [selected, setSelected] = useState<FoodResult | null>(null);
-  const [grams, setGrams] = useState("100");
-  const [meal, setMeal] = useState("snack");
+  // Odaktaki öğün saate göre başlıyor ama kilitli değil: kullanıcı başka bir
+  // öğüne dokununca odak oraya geçiyor ve orada kalıyor.
+  const [focused, setFocused] = useState<string>(() => currentMeal());
+  const [sheet, setSheet] = useState<SheetMode | null>(null);
+  const [showMacros, setShowMacros] = useState(false);
 
-  const [scanning, setScanning] = useState(false);
+  const data = day.data;
 
-  const search = useMutation({
-    mutationFn: (q: string) =>
-      api.get<FoodResult[]>(`/foods/search?q=${encodeURIComponent(q)}`),
-    onSuccess: setResults,
-  });
-
-  const barcode = useMutation({
-    mutationFn: (code: string) =>
-      api.get<FoodResult>(`/foods/barcode/${encodeURIComponent(code)}`),
-    // Barkod tek bir ürüne çözülüyor; arama listesi yerine doğrudan
-    // miktar girişine geçmek bir adım kısaltıyor.
-    onSuccess: (food) => {
-      setResults(null);
-      setSelected(food);
-    },
-  });
-
-  const addItem = useMutation({
-    mutationFn: (body: { food_database_entry_id: string; quantity_g: number; meal_type: string }) =>
-      api.post("/nutrition/log", body),
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: keys.nutrition });
-      setSelected(null);
-      setResults(null);
-      setQuery("");
-    },
-  });
-
-  const remove = useMutation({
-    mutationFn: (id: string) => api.delete(`/nutrition/log/${id}`),
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: keys.nutrition });
-    },
-  });
+  const byMeal = useMemo(() => {
+    const groups = new Map<string, FoodLogRow[]>(MEAL_ORDER.map((meal) => [meal, []]));
+    for (const item of data?.items ?? []) {
+      groups.get(item.meal_type)?.push(item) ??
+        groups.set(item.meal_type, [item]);
+    }
+    return groups;
+  }, [data]);
 
   if (day.isLoading) return <Loading />;
   if (day.isError) return <ErrorBox error={day.error} onRetry={() => void day.refetch()} />;
+  if (!data) return <Loading />;
 
-  const data = day.data!;
+  const remainingCalories = data.remaining ? num(data.remaining.calories) : null;
 
   return (
-    <div className="mx-auto flex max-w-[68rem] flex-col gap-6">
+    <Page>
       <PageHeader
         title="Beslenme"
         info={
@@ -97,349 +88,468 @@ export default function NutritionPage() {
             Değerler USDA FoodData Central ve Open Food Facts&apos;ten geliyor;
             kalori ve makro <strong>tahmin edilmiyor</strong>, gerçek veriden
             okunuyor. Makrolar 100 gram başına normalize ediliyor çünkü iki
-            kaynağın porsiyon tanımları tutarsız.
+            kaynağın porsiyon tanımları tutarsız. Hedef, kilo geçmişinden
+            hesaplanan TDEE üzerine hedefe göre açık/fazla eklenerek çıkıyor.
           </>
         }
+        actions={<DayNav date={date} onChange={setDate} />}
       />
 
-      {/* --- Hedef ve kalan --- */}
-      <section className="card p-6">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-base">Bugün</h2>
+      {/* --- 1. Kalan kalori --------------------------------------------- */}
+      <Hero
+        data={data}
+        goal={goal}
+        onGoal={setGoal}
+        showMacros={showMacros}
+        onToggleMacros={() => setShowMacros((v) => !v)}
+      />
+
+      {/* --- 2. O anki öğün ---------------------------------------------- */}
+      <FocusedMeal
+        meal={focused}
+        items={byMeal.get(focused) ?? []}
+        onAdd={() => setSheet({ kind: "add", meal: focused })}
+        onEdit={(log) => setSheet({ kind: "edit", log })}
+      />
+
+      {/* --- 3. Diğer öğünler -------------------------------------------- */}
+      <OtherMeals
+        focused={focused}
+        byMeal={byMeal}
+        onFocus={setFocused}
+      />
+
+      <Suggestions goal={goal} />
+
+      {sheet && (
+        <FoodSheet
+          mode={sheet}
+          date={date}
+          remainingCalories={remainingCalories}
+          onClose={() => setSheet(null)}
+        />
+      )}
+    </Page>
+  );
+}
+
+/* --- Gün gezinme ---------------------------------------------------------- */
+
+function DayNav({
+  date,
+  onChange,
+}: {
+  date: string | null;
+  onChange: (date: string | null) => void;
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      <Arrow label="Önceki gün" direction="left" onClick={() => onChange(shiftDay(date, -1))} />
+      <span className="min-w-[6.5rem] text-center text-sm font-medium">{dayLabel(date)}</span>
+      {/* Bugünden ileri gidilemiyor: gelecekte yenen bir şey yok. */}
+      <Arrow
+        label="Sonraki gün"
+        direction="right"
+        disabled={date === null}
+        onClick={() => onChange(shiftDay(date, 1))}
+      />
+    </div>
+  );
+}
+
+function Arrow({
+  label,
+  direction,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  direction: "left" | "right";
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+      className="btn-quiet grid size-9 place-items-center rounded-[var(--radius-md)] text-[var(--color-ink-muted)] disabled:opacity-30"
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+        <path d={direction === "left" ? "M15 6l-6 6 6 6" : "M9 6l6 6-6 6"} />
+      </svg>
+    </button>
+  );
+}
+
+/* --- Kalan kalori --------------------------------------------------------- */
+
+function Hero({
+  data,
+  goal,
+  onGoal,
+  showMacros,
+  onToggleMacros,
+}: {
+  data: NutritionDay;
+  goal: string;
+  onGoal: (goal: string) => void;
+  showMacros: boolean;
+  onToggleMacros: () => void;
+}) {
+  const eaten = num(data.totals.calories);
+
+  if (!data.target) {
+    return (
+      <Section>
+        <p className="text-sm">Kalori hedefi hesaplanamıyor.</p>
+        <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
+          Boy, doğum tarihi, cinsiyet ve en az bir kilo kaydı gerekiyor. O zamana
+          kadar yediklerin kaydedilebilir; sadece hedefle karşılaştırılamaz.
+        </p>
+        <div className="mt-4 flex gap-2">
+          <Link href="/account" className="btn btn-ghost">
+            Profili tamamla
+          </Link>
+          <Link href="/weight" className="btn btn-ghost">
+            Kilo gir
+          </Link>
+        </div>
+      </Section>
+    );
+  }
+
+  const target = data.target.calories;
+  const remaining = target - eaten;
+  const ratio = target > 0 ? Math.min(1.25, eaten / target) : 0;
+  const over = remaining < 0;
+
+  return (
+    <section className="card px-8 py-10 lg:px-12">
+      {/* İçerik kartın içinde ORTALANMIŞ ve genişliği sınırlı: `justify-between`
+          denendi, 1440px'te halka ile denetimler arasında yarım ekran boşluk
+          bırakıyordu. Sade olmak seyrek olmak değil. */}
+      <div className="mx-auto flex max-w-[46rem] flex-col items-center gap-8 lg:flex-row lg:items-center lg:gap-14">
+        <Ring ratio={ratio} over={over}>
+          <p className="figure tnum text-4xl leading-none">{fmt(Math.abs(remaining), 0)}</p>
+          <p className="label mt-1.5">{over ? "kcal fazla" : "kcal kaldı"}</p>
+        </Ring>
+
+        <div className="flex w-full min-w-0 flex-col gap-4">
           <div className="seg" role="group" aria-label="Hedef">
             {GOALS.map((option) => (
               <button
                 key={option.value}
                 type="button"
                 aria-pressed={goal === option.value}
-                onClick={() => setGoal(option.value)}
-                className="seg-item text-xs"
+                onClick={() => onGoal(option.value)}
+                className="seg-item flex-1 text-xs"
               >
                 {option.label}
               </button>
             ))}
           </div>
-        </div>
 
-        {data.target ? (
-          <>
-            <div className="mt-4 grid grid-cols-4 gap-2 text-center">
-              <MacroCell
-                label="kcal"
-                current={data.totals.calories}
-                target={data.target.calories}
-              />
-              <MacroCell
-                label="Protein"
-                current={data.totals.protein_g}
-                target={data.target.protein_g}
-                unit="g"
-              />
-              <MacroCell
-                label="Karb."
-                current={data.totals.carbs_g}
-                target={data.target.carbs_g}
-                unit="g"
-              />
-              <MacroCell
-                label="Yağ"
-                current={data.totals.fat_g}
-                target={data.target.fat_g}
-                unit="g"
-              />
-            </div>
-            {data.target.floor_applied && (
-              <p className="mt-3 text-xs" style={{ color: "var(--color-warning)" }}>
-                Hesaplanan hedef 1200 kcal&apos;in altına düştü; güvenlik tabanı
-                uygulandı. Bu kadar düşük bir açık kas kaybı riski taşır.
-              </p>
-            )}
-          </>
-        ) : (
-          <div className="mt-4">
-            <Empty
-              title="Kalori hedefi hesaplanamıyor"
-              hint="Boy, doğum tarihi, cinsiyet ve en az bir kilo kaydı gerekiyor."
-              action={
-                <div className="flex justify-center gap-2">
-                  <Link href="/account" className="btn btn-primary">
-                    Profili tamamla
-                  </Link>
-                  <Link href="/weight" className="btn btn-ghost">
-                    Kilo gir
-                  </Link>
-                </div>
-              }
-            />
-          </div>
-        )}
-      </section>
-
-      {/* --- Besin ekle --- */}
-      <section className="card p-6">
-        <h2 className="text-base">Besin ekle</h2>
-        <p className="mt-0.5 text-xs text-[var(--color-ink-muted)]">
-          İngilizce ad daha iyi sonuç verir (ör. &ldquo;chicken breast&rdquo;). Fotoğrafla
-          eklemek için <Link href="/chat" className="underline">asistanı</Link> kullan.
-        </p>
-
-        <form
-          className="mt-3 flex gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (query.trim().length >= 2) search.mutate(query.trim());
-          }}
-        >
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="chicken breast"
-            aria-label="Besin ara"
-            className="h-11 min-w-0 flex-1 rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-3 text-sm outline-none"
-          />
-          <button type="submit" className="btn btn-ghost shrink-0" disabled={search.isPending}>
-            {search.isPending ? "…" : "Ara"}
-          </button>
-          <button
-            type="button"
-            onClick={() => setScanning(true)}
-            aria-label="Barkod oku"
-            className="grid size-11 shrink-0 place-items-center rounded-[3px] border border-[var(--color-border-strong)] text-[var(--color-ink-muted)]"
-          >
-            ▥
-          </button>
-        </form>
-
-        {scanning && (
-          <div className="mt-3">
-            <BarcodeScanner
-              onClose={() => setScanning(false)}
-              onDetected={(code) => {
-                setScanning(false);
-                barcode.mutate(code);
-              }}
-            />
-          </div>
-        )}
-
-        {barcode.isPending && (
-          <p className="mt-3 text-xs text-[var(--color-ink-faint)]">Barkod aranıyor…</p>
-        )}
-        {barcode.isError && <ErrorBox error={barcode.error} />}
-        {search.isError && <ErrorBox error={search.error} />}
-
-        {results !== null && results.length === 0 && (
-          <p className="mt-3 text-xs text-[var(--color-ink-muted)]">
-            Sonuç yok. Daha genel bir ad dene.
+          <p className="tnum text-sm text-[var(--color-ink-muted)]">
+            <span className="font-semibold text-[var(--color-ink)]">{fmt(eaten, 0)}</span> /{" "}
+            {fmt(target, 0)} kcal yendi
           </p>
-        )}
 
-        {results && results.length > 0 && !selected && (
-          <ul className="mt-3 divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
-            {results.map((food) => (
-              <li key={food.id}>
-                <button
-                  onClick={() => setSelected(food)}
-                  className="flex w-full items-center justify-between gap-3 py-2.5 text-left"
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm">{food.name}</span>
-                    {food.brand && (
-                      <span className="block truncate text-2xs text-[var(--color-ink-faint)]">
-                        {food.brand}
-                      </span>
-                    )}
-                  </span>
-                  <span className="tnum shrink-0 text-xs text-[var(--color-ink-muted)]">
-                    {fmt(food.calories_per_100g, 0)} kcal/100g
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {selected && (
-          <div className="mt-3 rounded-[3px] border border-[var(--color-accent)]/40 p-3">
-            <p className="text-sm">{selected.name}</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <label className="flex-1">
-                <span className="sr-only">Gram</span>
-                <input
-                  inputMode="decimal"
-                  value={grams}
-                  onChange={(e) => setGrams(e.target.value)}
-                  className="tnum h-11 w-full rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-3 text-center text-sm outline-none"
-                />
-              </label>
-              <select
-                value={meal}
-                onChange={(e) => setMeal(e.target.value)}
-                className="h-11 rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-2 text-sm outline-none"
-              >
-                {Object.entries(MEAL_LABEL).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <p className="tnum mt-2 text-xs text-[var(--color-ink-muted)]">
-              ≈{" "}
-              {fmt(
-                (Number.parseFloat(selected.calories_per_100g) *
-                  (Number.parseFloat(grams.replace(",", ".")) || 0)) /
-                  100,
-                0,
-              )}{" "}
-              kcal
+          {data.target.floor_applied && (
+            <p className="text-xs" style={{ color: "var(--color-warning)" }}>
+              Hedef 1200 kcal tabanına oturtuldu — daha düşük bir açık kas kaybı
+              riski taşır.
             </p>
-            <div className="mt-3 flex gap-2">
-              <button
-                className="btn btn-primary"
-                disabled={addItem.isPending}
-                onClick={() =>
-                  addItem.mutate({
-                    food_database_entry_id: selected.id,
-                    quantity_g: Number.parseFloat(grams.replace(",", ".")) || 0,
-                    meal_type: meal,
-                  })
-                }
-              >
-                Ekle
-              </button>
-              <button className="btn btn-ghost" onClick={() => setSelected(null)}>
-                Vazgeç
-              </button>
-            </div>
-            {addItem.isError && <ErrorBox error={addItem.error} />}
+          )}
+
+          {/* Makrolar istek üzerine: gün içinde bakılan sayı kalori, makrolar
+              planlama sayısı. İkisini birden göstermek ekranı kalabalıklaştırıp
+              asıl sayıyı gölgeliyordu. */}
+          <div>
+            <button
+              type="button"
+              className="btn btn-quiet -ml-2.5"
+              aria-expanded={showMacros}
+              onClick={onToggleMacros}
+            >
+              {showMacros ? "Makroları gizle" : "Makroları gör"}
+            </button>
+
+            {showMacros && (
+              <div className="reveal mt-3 flex flex-col gap-3">
+                <MacroBar
+                  label="Protein"
+                  current={num(data.totals.protein_g)}
+                  target={data.target.protein_g}
+                />
+                <MacroBar
+                  label="Karbonhidrat"
+                  current={num(data.totals.carbs_g)}
+                  target={data.target.carbs_g}
+                />
+                <MacroBar
+                  label="Yağ"
+                  current={num(data.totals.fat_g)}
+                  target={data.target.fat_g}
+                />
+              </div>
+            )}
           </div>
-        )}
-      </section>
+        </div>
+      </div>
+    </section>
+  );
+}
 
-      {/* --- Öğün önerisi --- */}
-      <section className="card p-6">
-        <h2 className="text-base">Kalan makrolara göre öneri</h2>
-        <p className="mt-0.5 text-xs text-[var(--color-ink-muted)]">
-          Porsiyonlar kalan makro açığını dolduracak şekilde hesaplanıyor —
-          tahmin değil, aritmetik.
-        </p>
+function Ring({
+  ratio,
+  over,
+  children,
+}: {
+  ratio: number;
+  over: boolean;
+  children: React.ReactNode;
+}) {
+  const r = 46;
+  const circumference = 2 * Math.PI * r;
+  // Halka ÇİZGİ, dolgu değil: volt dolgu ekranda tek olmalı ve o birincil
+  // düğme. Aynı karar antrenman ekranındaki dinlenme sayacında da alındı.
+  const stroke = over ? "var(--color-warning)" : "var(--color-accent-deep)";
 
-        {suggestions.isLoading ? (
-          <Loading />
-        ) : suggestions.isError ? (
-          <ErrorBox error={suggestions.error} />
-        ) : suggestions.data?.reason ? (
-          <p className="mt-3 text-sm text-[var(--color-ink-muted)]">
-            {suggestions.data.reason}
-          </p>
-        ) : (
-          <ul className="mt-3 space-y-3">
-            {(suggestions.data?.suggestions ?? []).map((suggestion, index) => (
-              <li
-                key={index}
-                className="rounded-[3px] border border-[var(--color-border)] p-3"
-              >
-                <ul className="space-y-1">
-                  {suggestion.items.map((item) => (
-                    <li
-                      key={item.food_id}
-                      className="flex items-baseline justify-between gap-3 text-sm"
-                    >
-                      <span className="min-w-0 truncate">{item.name}</span>
-                      <span className="tnum shrink-0 text-[var(--color-ink-muted)]">
-                        {item.quantity_g} g
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                <p className="tnum mt-2 border-t border-[var(--color-border)] pt-2 text-xs text-[var(--color-ink-faint)]">
-                  {suggestion.total_calories} kcal · P{suggestion.total_protein_g} K
-                  {suggestion.total_carbs_g} Y{suggestion.total_fat_g}
-                  <span className="ml-2">
-                    uyum %{Math.round(suggestion.fit_score * 100)}
-                  </span>
-                </p>
-              </li>
-            ))}
-          </ul>
+  return (
+    <div className="relative grid size-[13.5rem] shrink-0 place-items-center">
+      <svg viewBox="0 0 100 100" className="absolute inset-0 -rotate-90" aria-hidden>
+        <circle cx="50" cy="50" r={r} fill="none" stroke="var(--color-border)" strokeWidth="3" />
+        {ratio > 0 && (
+          <circle
+            cx="50"
+            cy="50"
+            r={r}
+            fill="none"
+            stroke={stroke}
+            strokeWidth="3"
+            // `round` uç, uzunluk sıfırken bile bir NOKTA çiziyor: hiçbir şey
+            // yenmemişken halkanın tepesinde açıklanamayan bir işaret duruyordu.
+            // Yay yalnızca gerçekten varsa çiziliyor.
+            strokeLinecap="round"
+            strokeDasharray={`${Math.min(1, ratio) * circumference} ${circumference}`}
+            style={{ transition: "stroke-dasharray var(--dur-long) var(--ease-out)" }}
+          />
         )}
-      </section>
-
-      {/* --- Günün kalemleri --- */}
-      <section className="card p-6">
-        <h2 className="text-base">Günlük kayıt</h2>
-        {data.items.length === 0 ? (
-          <p className="mt-3 text-xs text-[var(--color-ink-faint)]">
-            Bugün henüz bir şey kaydetmedin.
-          </p>
-        ) : (
-          <ul className="mt-3 divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
-            {data.items.map((item) => (
-              <li key={item.id} className="flex items-center justify-between gap-3 py-2.5">
-                <div className="min-w-0">
-                  <p className="truncate text-sm">{item.food.name}</p>
-                  <p className="tnum text-2xs text-[var(--color-ink-faint)]">
-                    {MEAL_LABEL[item.meal_type]} · {fmt(item.quantity_g, 0)} g ·{" "}
-                    P{fmt(item.protein_g, 0)} K{fmt(item.carbs_g, 0)} Y{fmt(item.fat_g, 0)}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className="tnum text-sm">{fmt(item.calories, 0)}</span>
-                  <button
-                    onClick={() => remove.mutate(item.id)}
-                    aria-label="Sil"
-                    className="text-xs text-[var(--color-ink-faint)] hover:text-[var(--color-danger)]"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      </svg>
+      <div className="text-center">{children}</div>
     </div>
   );
 }
 
-function MacroCell({
+function MacroBar({
   label,
   current,
   target,
-  unit = "",
 }: {
   label: string;
-  current: string;
+  current: number;
   target: number;
-  unit?: string;
 }) {
-  const value = Number.parseFloat(current) || 0;
-  const ratio = target > 0 ? value / target : 0;
-  // Hedefin üstü uyarı değil bilgi; kırmızı sadece gerçek hatalar için (Bölüm 7).
-  const color =
-    ratio > 1.1
-      ? "var(--color-warning)"
-      : ratio >= 0.9
-        ? "var(--color-accent-deep)"
-        : "var(--color-ink)";
+  const ratio = target > 0 ? current / target : 0;
+  // Hedefin üstü uyarı değil bilgi; kırmızı yalnızca gerçek hatalar için.
+  const color = ratio > 1.1 ? "var(--color-warning)" : "var(--color-accent-deep)";
 
   return (
     <div>
-      <p className="text-2xs text-[var(--color-ink-muted)]">{label}</p>
-      <p className="tnum mt-0.5 text-sm font-semibold" style={{ color }}>
-        {fmt(value, 0)}
-      </p>
-      <p className="tnum text-2xs text-[var(--color-ink-faint)]">
-        / {target}
-        {unit}
-      </p>
-      <div className="mt-1 h-1 overflow-hidden rounded-full bg-[var(--color-surface-raised)]">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-xs text-[var(--color-ink-muted)]">{label}</span>
+        <span className="tnum text-xs text-[var(--color-ink-faint)]">
+          {fmt(current, 0)} / {target} g
+        </span>
+      </div>
+      <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-[var(--color-surface-raised)]">
         <div
           className="h-full rounded-full"
-          style={{ width: `${Math.min(100, Math.round(ratio * 100))}%`, background: color }}
+          style={{
+            width: `${Math.min(100, ratio * 100)}%`,
+            background: color,
+            transition: "width var(--dur-long) var(--ease-out)",
+          }}
         />
       </div>
     </div>
+  );
+}
+
+/* --- Odaktaki öğün -------------------------------------------------------- */
+
+function FocusedMeal({
+  meal,
+  items,
+  onAdd,
+  onEdit,
+}: {
+  meal: string;
+  items: FoodLogRow[];
+  onAdd: () => void;
+  onEdit: (log: FoodLogRow) => void;
+}) {
+  const calories = items.reduce((sum, item) => sum + num(item.calories), 0);
+
+  return (
+    <section className="card p-6 lg:p-8">
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <div className="flex items-baseline gap-3">
+          <h2 className="display text-lg">{mealLabel(meal)}</h2>
+          {items.length > 0 && (
+            <span className="tnum text-sm text-[var(--color-ink-muted)]">
+              {fmt(calories, 0)} kcal
+            </span>
+          )}
+        </div>
+        <button type="button" className="btn btn-primary" onClick={onAdd}>
+          Besin ekle
+        </button>
+      </div>
+
+      {items.length === 0 ? (
+        <p className="mt-5 text-sm text-[var(--color-ink-faint)]">
+          {mealLabel(meal)} için henüz bir şey yok.
+        </p>
+      ) : (
+        <ul className="mt-5 divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
+          {items.map((item, index) => (
+            <li key={item.id} className="reveal" style={{ ["--i" as string]: index }}>
+              {/* Satırın tamamı düzenlemeyi açıyor. Ayrı bir kalem simgesi
+                  koymak hem küçük bir hedef hem de öğrenilmesi gereken bir
+                  şey olurdu; satıra dokunmak beklenen davranış. */}
+              <button
+                type="button"
+                onClick={() => onEdit(item)}
+                aria-label={`${item.food.name} kalemini düzenle`}
+                className="flex w-full items-center justify-between gap-4 py-3 text-left transition-colors hover:bg-[var(--color-surface-raised)]"
+                style={{ transitionDuration: "var(--dur-micro)" }}
+              >
+                <span className="min-w-0">
+                  <span className="block truncate text-sm">{item.food.name}</span>
+                  <span className="tnum block text-2xs text-[var(--color-ink-faint)]">
+                    {fmt(item.quantity_g, 0)} g · P{fmt(item.protein_g, 0)} K
+                    {fmt(item.carbs_g, 0)} Y{fmt(item.fat_g, 0)}
+                  </span>
+                </span>
+                <span className="tnum shrink-0 text-sm">{fmt(item.calories, 0)}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/* --- Diğer öğünler -------------------------------------------------------- */
+
+function OtherMeals({
+  focused,
+  byMeal,
+  onFocus,
+}: {
+  focused: string;
+  byMeal: Map<string, FoodLogRow[]>;
+  onFocus: (meal: string) => void;
+}) {
+  const others = MEAL_ORDER.filter((meal) => meal !== focused);
+
+  return (
+    <Section bare>
+      <ul className="grid gap-2 sm:grid-cols-3">
+        {others.map((meal) => {
+          const items = byMeal.get(meal) ?? [];
+          const calories = items.reduce((sum, item) => sum + num(item.calories), 0);
+          return (
+            <li key={meal}>
+              <button
+                type="button"
+                onClick={() => onFocus(meal)}
+                className="card flex w-full items-baseline justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--color-surface-raised)]"
+                style={{ transitionDuration: "var(--dur-micro)" }}
+              >
+                <span className="text-sm">{mealLabel(meal)}</span>
+                <span className="tnum text-xs text-[var(--color-ink-faint)]">
+                  {items.length === 0 ? "—" : `${fmt(calories, 0)} kcal`}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </Section>
+  );
+}
+
+/* --- Öneri ---------------------------------------------------------------- */
+
+/**
+ * "Ne yesem" sorusuna aritmetik yanıt. Kapalı başlıyor: gün içinde her
+ * açılışta okunacak bir şey değil, takıldığında bakılacak bir şey.
+ */
+function Suggestions({ goal }: { goal: string }) {
+  const [open, setOpen] = useState(false);
+  // Açılana kadar istek yok: uç besin önbelleğinde kombinasyon deniyor.
+  const suggestions = useMealSuggestions(goal, open);
+
+  return (
+    <Section bare>
+      <button
+        type="button"
+        className="btn btn-quiet -ml-2.5"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        {open ? "Önerileri gizle" : "Kalan makrolara göre ne yesem?"}
+      </button>
+
+      {open && (
+        <div className="reveal mt-4">
+          <div className="mb-3 flex items-center gap-2">
+            <p className="label">Öneriler</p>
+            <InfoTip label="Öneriler nasıl hesaplanıyor">
+              Porsiyonlar kalan makro açığını dolduracak şekilde hesaplanıyor —
+              tahmin değil, aritmetik. Besinler senin daha önce kaydettiklerinden
+              seçiliyor.
+            </InfoTip>
+          </div>
+
+          {suggestions.isLoading ? (
+            <Loading />
+          ) : suggestions.isError ? (
+            <ErrorBox error={suggestions.error} />
+          ) : suggestions.data?.reason ? (
+            <p className="text-sm text-[var(--color-ink-muted)]">{suggestions.data.reason}</p>
+          ) : (
+            <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {(suggestions.data?.suggestions ?? []).map((suggestion, index) => (
+                <li key={index} className="card reveal p-4" style={{ ["--i" as string]: index }}>
+                  <ul className="space-y-1">
+                    {suggestion.items.map((item) => (
+                      <li
+                        key={item.food_id}
+                        className="flex items-baseline justify-between gap-3 text-sm"
+                      >
+                        <span className="min-w-0 truncate">{item.name}</span>
+                        <span className="tnum shrink-0 text-[var(--color-ink-muted)]">
+                          {item.quantity_g} g
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="tnum mt-3 border-t border-[var(--color-border)] pt-2 text-2xs text-[var(--color-ink-faint)]">
+                    {suggestion.total_calories} kcal · P{suggestion.total_protein_g} K
+                    {suggestion.total_carbs_g} Y{suggestion.total_fat_g}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </Section>
   );
 }

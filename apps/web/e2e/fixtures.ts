@@ -136,6 +136,10 @@ export async function mockApi(page: Page): Promise<void> {
       remaining: { calories: "2800", protein_g: "160", carbs_g: "350", fat_g: "78" },
     }),
   );
+  await page.route(`${API}/nutrition/foods/recent`, (route) => json(route, []));
+  await page.route(`${API}/nutrition/meal-suggestions**`, (route) =>
+    json(route, { suggestions: [], reason: "Kalan makro yok." }),
+  );
   await page.route(`${API}/bodyweight/trend**`, (route) => json(route, []));
   await page.route(`${API}/supplements/today`, (route) => json(route, []));
   await page.route(`${API}/muscle-groups`, (route) => json(route, []));

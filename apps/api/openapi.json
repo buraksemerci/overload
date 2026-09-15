@@ -737,6 +737,40 @@
         "title": "FoodSource",
         "type": "string"
       },
+      "FrequentFoodOut": {
+        "description": "Sık kullanılan besin — son kullanılan miktar ve öğünle birlikte.\n\nMiktar ve öğün de dönüyor çünkü tek dokunuşla tekrar eklemenin anlamlı\nolması için \"ne kadar\" ve \"hangi öğün\" bilgisinin de hazır olması gerekiyor.",
+        "properties": {
+          "food": {
+            "$ref": "#/components/schemas/FoodOut"
+          },
+          "last_meal_type": {
+            "$ref": "#/components/schemas/MealType"
+          },
+          "last_quantity_g": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Last Quantity G",
+            "type": "string"
+          },
+          "last_used": {
+            "format": "date",
+            "title": "Last Used",
+            "type": "string"
+          },
+          "times_logged": {
+            "title": "Times Logged",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "food",
+          "times_logged",
+          "last_quantity_g",
+          "last_meal_type",
+          "last_used"
+        ],
+        "title": "FrequentFoodOut",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1243,6 +1277,40 @@
           "fat_g"
         ],
         "title": "NutritionLogOut",
+        "type": "object"
+      },
+      "NutritionLogPatch": {
+        "description": "Kısmi güncelleme: yalnızca verilen alanlar değişir.",
+        "properties": {
+          "meal_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MealType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quantity_g": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 10000.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity G"
+          }
+        },
+        "title": "NutritionLogPatch",
         "type": "object"
       },
       "PRType": {
@@ -4212,7 +4280,7 @@
     },
     "/foods/search": {
       "get": {
-        "description": "Önbellekte arar, bulamazsa USDA'ya gider ve sonucu önbelleğe yazar.",
+        "description": "Önbellekte arar, bulamazsa USDA'ya gider ve adayları önbelleğe yazar.\n\nBirden çok aday döner ve seçimi kullanıcı yapar; gerekçesi\n`sources.search_foods` içinde.",
         "operationId": "search_foods_foods_search_get",
         "parameters": [
           {
@@ -4749,6 +4817,37 @@
         ]
       }
     },
+    "/nutrition/foods/recent": {
+      "get": {
+        "description": "Kullanıcının en sık ve en son kaydettiği besinler.\n\n**Besin takibinin gerçek darboğazı arama değil, tekrar.** İnsanlar her gün\naynı beş altı şeyi yiyor; her sabah \"chicken breast\" yazıp listeden seçmek,\ndoğru miktarı hatırlamak ve yeniden girmek bıktırıyor. Bu uç, son kullanılan\nmiktar ve öğünle birlikte dönüyor — arayüz tek dokunuşla aynı kaydı\ntekrarlayabiliyor.\n\nSıralama ölçütü sıklık, sonra tazelik: her gün yenen yulaf, dün bir kez\nyenen tatlıdan önce gelmeli.",
+        "operationId": "recent_foods_nutrition_foods_recent_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FrequentFoodOut"
+                  },
+                  "title": "Response Recent Foods Nutrition Foods Recent Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Recent Foods",
+        "tags": [
+          "nutrition"
+        ]
+      }
+    },
     "/nutrition/log": {
       "post": {
         "operationId": "add_nutrition_log_nutrition_log_post",
@@ -4831,6 +4930,63 @@
           }
         ],
         "summary": "Delete Nutrition Log",
+        "tags": [
+          "nutrition"
+        ]
+      },
+      "patch": {
+        "description": "Kaydedilmiş bir kalemin miktarını ya da öğününü düzeltir.\n\nBu uç olmadan düzeltmenin tek yolu silip yeniden eklemekti: kullanıcı\n200 gram yazıp 250 olduğunu fark edince kaydı siliyor, besini yeniden\narıyor, miktarı yeniden giriyordu. Günlük kullanımda insanları besin\ntakibinden vazgeçiren şey tam olarak bu tür sürtünmeler.",
+        "operationId": "update_nutrition_log_nutrition_log__log_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "log_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Log Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NutritionLogPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NutritionLogOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Nutrition Log",
         "tags": [
           "nutrition"
         ]

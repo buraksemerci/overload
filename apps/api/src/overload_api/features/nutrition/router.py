@@ -97,6 +97,27 @@ class NutritionLogIn(BaseModel):
     date: date_t | None = None
 
 
+class NutritionLogPatch(BaseModel):
+    """Kısmi güncelleme: yalnızca verilen alanlar değişir."""
+
+    quantity_g: Decimal | None = Field(default=None, gt=0, le=10000)
+    meal_type: MealType | None = None
+
+
+class FrequentFoodOut(BaseModel):
+    """Sık kullanılan besin — son kullanılan miktar ve öğünle birlikte.
+
+    Miktar ve öğün de dönüyor çünkü tek dokunuşla tekrar eklemenin anlamlı
+    olması için "ne kadar" ve "hangi öğün" bilgisinin de hazır olması gerekiyor.
+    """
+
+    food: FoodOut
+    times_logged: int
+    last_quantity_g: Decimal
+    last_meal_type: MealType
+    last_used: date_t
+
+
 class BodyWeightIn(BaseModel):
     weight_kg: Decimal = Field(ge=20, le=400)
     date: date_t | None = None
@@ -202,6 +223,16 @@ async def lookup_barcode(barcode: str, db: DbSession, user: CurrentUser) -> Food
 # --- Günlük beslenme ---------------------------------------------------------
 
 
+#: `nutrition_log.quantity_g` sütunu Numeric(7,1). Bellekteki değeri de aynı
+#: hassasiyete yuvarlamak ZORUNLU değil ama cevabın saklanan değerle aynı
+#: olmasını sağlıyor: aksi halde PATCH "250" dönüyor, hemen ardından yapılan
+#: GET "250.0" dönüyordu. Aynı sınıf bir tutarsızlık kişisel rekorlarda gerçek
+#: bir hataya yol açmıştı (aynı performans her seferinde "yeni rekor"
+#: sayılıyordu), o yüzden burada da yazarken yuvarlanıyor.
+def _quantity(value: Decimal) -> Decimal:
+    return value.quantize(Decimal("0.1"))
+
+
 @router.get("/nutrition/day", response_model=DayOut)
 async def nutrition_day(
     db: DbSession,
@@ -265,11 +296,35 @@ async def add_nutrition_log(
         user_id=user.id,
         date=payload.date or today_in(user.timezone),
         food_database_entry_id=food.id,
-        quantity_g=payload.quantity_g,
+        quantity_g=_quantity(payload.quantity_g),
         meal_type=payload.meal_type,
     )
     log.food_entry = food
     db.add(log)
+    await db.flush()
+    return _log_out(log)
+
+
+@router.patch("/nutrition/log/{log_id}", response_model=NutritionLogOut)
+async def update_nutrition_log(
+    log_id: uuid.UUID, payload: NutritionLogPatch, db: DbSession, user: CurrentUser
+) -> NutritionLogOut:
+    """Kaydedilmiş bir kalemin miktarını ya da öğününü düzeltir.
+
+    Bu uç olmadan düzeltmenin tek yolu silip yeniden eklemekti: kullanıcı
+    200 gram yazıp 250 olduğunu fark edince kaydı siliyor, besini yeniden
+    arıyor, miktarı yeniden giriyordu. Günlük kullanımda insanları besin
+    takibinden vazgeçiren şey tam olarak bu tür sürtünmeler.
+    """
+    log = await db.get(NutritionLog, log_id)
+    if log is None or log.user_id != user.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Kayıt bulunamadı.")
+
+    if payload.quantity_g is not None:
+        log.quantity_g = _quantity(payload.quantity_g)
+    if payload.meal_type is not None:
+        log.meal_type = payload.meal_type
+
     await db.flush()
     return _log_out(log)
 
@@ -281,6 +336,65 @@ async def delete_nutrition_log(log_id: uuid.UUID, db: DbSession, user: CurrentUs
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Kayıt bulunamadı.")
     await db.delete(log)
     await db.flush()
+
+
+#: Sık kullanılan besin listesinde kaç kalem döner.
+RECENT_FOOD_LIMIT = 12
+
+#: Sıklık hesabı için kaç geçmiş kayıt taranır. Kullanıcının bütün geçmişini
+#: taramak gereksiz: son iki-üç haftanın alışkanlığı bugünün önerisini
+#: belirliyor, altı ay önce bir kez yenen şey değil.
+_RECENT_SCAN = 300
+
+
+@router.get("/nutrition/foods/recent", response_model=list[FrequentFoodOut])
+async def recent_foods(db: DbSession, user: CurrentUser) -> list[FrequentFoodOut]:
+    """Kullanıcının en sık ve en son kaydettiği besinler.
+
+    **Besin takibinin gerçek darboğazı arama değil, tekrar.** İnsanlar her gün
+    aynı beş altı şeyi yiyor; her sabah "chicken breast" yazıp listeden seçmek,
+    doğru miktarı hatırlamak ve yeniden girmek bıktırıyor. Bu uç, son kullanılan
+    miktar ve öğünle birlikte dönüyor — arayüz tek dokunuşla aynı kaydı
+    tekrarlayabiliyor.
+
+    Sıralama ölçütü sıklık, sonra tazelik: her gün yenen yulaf, dün bir kez
+    yenen tatlıdan önce gelmeli.
+    """
+    rows = (
+        (
+            await db.execute(
+                select(NutritionLog)
+                .where(NutritionLog.user_id == user.id)
+                .options(selectinload(NutritionLog.food_entry))
+                .order_by(NutritionLog.date.desc(), NutritionLog.created_at.desc())
+                .limit(_RECENT_SCAN)
+            )
+        )
+        .scalars()
+        .unique()
+        .all()
+    )
+
+    # Python tarafında toplanıyor: pencere fonksiyonuyla "en son miktar"
+    # çekmek tek sorguda mümkün ama okunması zor, ve taranan satır sayısı
+    # zaten sınırlı.
+    seen: dict[uuid.UUID, FrequentFoodOut] = {}
+    for log in rows:
+        existing = seen.get(log.food_database_entry_id)
+        if existing is None:
+            seen[log.food_database_entry_id] = FrequentFoodOut(
+                food=FoodOut.model_validate(log.food_entry),
+                times_logged=1,
+                # `rows` en yeniden eskiye sıralı, yani ilk görülen en sonuncusu.
+                last_quantity_g=log.quantity_g,
+                last_meal_type=log.meal_type,
+                last_used=log.date,
+            )
+        else:
+            existing.times_logged += 1
+
+    ordered = sorted(seen.values(), key=lambda f: (-f.times_logged, -f.last_used.toordinal()))
+    return ordered[:RECENT_FOOD_LIMIT]
 
 
 @router.get("/nutrition/target", response_model=MacroTargetOut)

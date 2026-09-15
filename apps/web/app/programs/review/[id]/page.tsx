@@ -91,9 +91,9 @@ export default function ProgramReviewPage() {
   return (
     <div className="space-y-6">
       <header>
-        <p className="text-2xs uppercase tracking-wide" style={{ color: "var(--color-accent)" }}>
-          Program önerisi · onayın gerekiyor
-        </p>
+        {/* Volt DOLGU olarak: metin rengi olarak kırık beyaz üzerinde
+            ~1.3:1 kontrast veriyor ve okunmuyordu. */}
+        <span className="badge badge-accent">ONAYIN GEREKİYOR</span>
         <h1 className="mt-1 text-xl lg:text-2xl">Programı gözden geçir</h1>
         <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
           Aşağıdaki her satırı değiştirebilirsin. <strong>Onaylayana kadar hiçbir şey
@@ -127,7 +127,7 @@ export default function ProgramReviewPage() {
             value={draft.name}
             disabled={!isOpen}
             onChange={(e) => edit((next) => void (next.name = e.target.value))}
-            className="h-11 w-full rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-3 text-sm outline-none"
+            className="field h-11 w-full px-3 text-sm"
           />
         </label>
 
@@ -138,7 +138,7 @@ export default function ProgramReviewPage() {
               value={draft.goal}
               disabled={!isOpen}
               onChange={(e) => edit((next) => void (next.goal = e.target.value))}
-              className="h-11 w-full rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-2 text-sm outline-none"
+              className="field h-11 w-full px-2 text-sm"
             >
               {GOALS.map((g) => (
                 <option key={g.value} value={g.value}>
@@ -153,7 +153,7 @@ export default function ProgramReviewPage() {
               value={draft.level}
               disabled={!isOpen}
               onChange={(e) => edit((next) => void (next.level = e.target.value))}
-              className="h-11 w-full rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-2 text-sm outline-none"
+              className="field h-11 w-full px-2 text-sm"
             >
               {LEVELS.map((l) => (
                 <option key={l.value} value={l.value}>
@@ -182,13 +182,13 @@ export default function ProgramReviewPage() {
               onChange={(e) =>
                 edit((next) => void (next.days[dayIndex]!.label = e.target.value))
               }
-              className="h-10 flex-1 rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-3 text-sm font-medium outline-none"
+              className="field h-10 flex-1 px-3 text-sm font-medium"
             />
             <button
               disabled={!isOpen || draft.days.length <= 1}
               onClick={() => edit((next) => void next.days.splice(dayIndex, 1))}
               aria-label={`${day.label} gününü sil`}
-              className="grid size-10 shrink-0 place-items-center rounded-[3px] border border-[var(--color-border-strong)] text-[var(--color-ink-faint)] hover:text-[var(--color-danger)] disabled:opacity-30"
+              className="grid size-10 shrink-0 place-items-center rounded-[var(--radius-md)] border border-[var(--color-border-strong)] text-[var(--color-ink-faint)] hover:text-[var(--color-danger)] disabled:opacity-30"
             >
               ✕
             </button>
@@ -198,7 +198,7 @@ export default function ProgramReviewPage() {
             {day.exercises.map((exercise, exerciseIndex) => (
               <li
                 key={exerciseIndex}
-                className="rounded-[3px] border border-[var(--color-border)] p-2.5"
+                className="rounded-[var(--radius-md)] border border-[var(--color-border)] p-2.5"
               >
                 <div className="flex items-center gap-2">
                   <select
@@ -211,7 +211,7 @@ export default function ProgramReviewPage() {
                             e.target.value),
                       )
                     }
-                    className="h-9 min-w-0 flex-1 rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-2 text-sm outline-none"
+                    className="field h-9 min-w-0 flex-1 px-2 text-sm"
                   >
                     {/* Kütüphane yüklenmediyse en azından mevcut id korunsun */}
                     {!nameById.has(exercise.exercise_id) && (
@@ -239,7 +239,7 @@ export default function ProgramReviewPage() {
                         })
                       }
                       aria-label="Yukarı taşı"
-                      className="grid size-9 place-items-center rounded-[3px] border border-[var(--color-border-strong)] text-xs text-[var(--color-ink-muted)] disabled:opacity-30"
+                      className="grid size-9 place-items-center rounded-[var(--radius-md)] border border-[var(--color-border-strong)] text-xs text-[var(--color-ink-muted)] disabled:opacity-30"
                     >
                       ↑
                     </button>
@@ -255,7 +255,7 @@ export default function ProgramReviewPage() {
                         })
                       }
                       aria-label="Aşağı taşı"
-                      className="grid size-9 place-items-center rounded-[3px] border border-[var(--color-border-strong)] text-xs text-[var(--color-ink-muted)] disabled:opacity-30"
+                      className="grid size-9 place-items-center rounded-[var(--radius-md)] border border-[var(--color-border-strong)] text-xs text-[var(--color-ink-muted)] disabled:opacity-30"
                     >
                       ↓
                     </button>
@@ -265,7 +265,7 @@ export default function ProgramReviewPage() {
                         edit((next) => void next.days[dayIndex]!.exercises.splice(exerciseIndex, 1))
                       }
                       aria-label="Hareketi sil"
-                      className="grid size-9 place-items-center rounded-[3px] border border-[var(--color-border-strong)] text-xs text-[var(--color-ink-faint)] hover:text-[var(--color-danger)] disabled:opacity-30"
+                      className="grid size-9 place-items-center rounded-[var(--radius-md)] border border-[var(--color-border-strong)] text-xs text-[var(--color-ink-faint)] hover:text-[var(--color-danger)] disabled:opacity-30"
                     >
                       ✕
                     </button>
@@ -320,7 +320,7 @@ export default function ProgramReviewPage() {
                               e.target.value),
                         )
                       }
-                      className="h-9 w-full rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-1.5 text-xs outline-none"
+                      className="h-9 w-full rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-1.5 text-xs outline-none"
                     >
                       {TECHNIQUES.map((t) => (
                         <option key={t.value} value={t.value}>
@@ -416,7 +416,7 @@ function NumField({
           // NaN'ı state'e yazmak alanı kilitliyor; geçersiz girdide değeri koru.
           if (Number.isFinite(parsed)) onChange(parsed);
         }}
-        className="tnum h-9 w-full rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-1.5 text-center text-xs outline-none"
+        className="tnum h-9 w-full rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-1.5 text-center text-xs outline-none"
       />
     </label>
   );

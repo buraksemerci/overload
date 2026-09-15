@@ -99,8 +99,11 @@ test.describe("kişisel rekorlar", () => {
     await mockRecords(page, RECORDS);
     await page.goto("/progress");
 
-    await expect(page.getByText("Barbell Bench Press")).toBeVisible();
-    await expect(page.getByText("Barbell Deadlift")).toBeVisible();
+    // Rekor bölümüne KAPSAMLI: hareket adları grafik seçicisinde de geçiyor
+    // ve `getByText` ikisini birden buluyor.
+    const cards = page.getByRole("listitem");
+    await expect(cards.filter({ hasText: "Barbell Bench Press" }).first()).toBeVisible();
+    await expect(cards.filter({ hasText: "Barbell Deadlift" }).first()).toBeVisible();
   });
 
   test("bir hareketin dört türü tek kartta", async ({ page }) => {

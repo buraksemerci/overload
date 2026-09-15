@@ -200,9 +200,13 @@ test.describe("oturum açıkken", () => {
 
   test("hesap ayarları AI sınırını açıkça yazar", async ({ page }) => {
     await page.goto("/account");
-    await expect(page.getByRole("heading", { name: "Hesap Ayarları" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Hesap", level: 1 })).toBeVisible();
+    // GÖRÜNÜR olmalı — "?" arkasında değil. Bu bir açıklama değil güvence:
+    // kullanıcının asistanın neye dokunamadığını görmek için baktığı yer.
     await expect(page.getByText(/asistanının bu alanlara erişimi yok/i)).toBeVisible();
-    await expect(page.getByRole("heading", { name: "AI sınırı" })).toBeVisible();
+    // Ayrıntı (hangi tool'un var olmadığı) "?" arkasında duruyor.
+    await page.getByRole("button", { name: /Hesap nasıl hesaplanıyor/ }).click();
+    await expect(page.getByText(/karşılık gelen bir AI tool/i)).toBeVisible();
   });
 
   test("güç standartları tahmin olduğunu belirtir", async ({ page }) => {
@@ -210,7 +214,8 @@ test.describe("oturum açıkken", () => {
     await expect(page.getByRole("heading", { name: "Güç standartları" })).toBeVisible();
     // 1RM'in tahmin olduğu kullanıcıya söylenmeli — bu bir dürüstlük şartı.
     await expect(page.getByText(/tahmin/i).first()).toBeVisible();
-    await expect(page.getByText("Bench Press")).toBeVisible();
+    // `.first()`: hareket adı bu ekranda grafik seçicisinde de geçiyor.
+    await expect(page.getByText("Bench Press").first()).toBeVisible();
   });
 });
 

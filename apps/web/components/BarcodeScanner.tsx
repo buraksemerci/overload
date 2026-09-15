@@ -151,7 +151,7 @@ export function BarcodeScanner({ onDetected, onClose }: Props) {
 
       {status === "scanning" && (
         <>
-          <div className="mt-3 overflow-hidden rounded-[3px] border border-[var(--color-border-strong)]">
+          <div className="mt-3 overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-border-strong)]">
             {/* `playsInline` iOS'ta zorunlu: olmadan video tam ekrana atlıyor. */}
             <video
               ref={videoRef}
@@ -189,7 +189,7 @@ export function BarcodeScanner({ onDetected, onClose }: Props) {
           onChange={(e) => setManual(e.target.value)}
           placeholder="Barkodu elle gir"
           aria-label="Barkod numarası"
-          className="tnum h-11 min-w-0 flex-1 rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-3 text-sm outline-none"
+          className="field tnum h-11 min-w-0 flex-1 px-3 text-sm"
         />
         <button type="submit" className="btn btn-ghost" disabled={!manual.trim()}>
           Ara

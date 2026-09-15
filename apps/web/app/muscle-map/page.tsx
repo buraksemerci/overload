@@ -27,7 +27,7 @@
  */
 
 import { useState } from "react";
-import { PageHeader, Section } from "@/components/Layout";
+import { Page, PageHeader, Section } from "@/components/Layout";
 import { MuscleMap } from "@/components/MuscleMap";
 import { ErrorBox, Empty, Loading, fmt } from "@/components/States";
 import { useMuscleVolume } from "@/lib/queries";
@@ -39,9 +39,19 @@ const RANGES = [
   { days: 30, label: "30 gün" },
 ] as const;
 
+/**
+ * Listede varsayılan olarak gösterilen satır sayısı.
+ *
+ * On sekiz kas grubunun tamamı vücutta zaten görünüyor — liste kesin sayı
+ * için var. İlk altı satır orana göre en eksik olanlar, yani eylem
+ * gerektirenler; gerisi merak edildiğinde açılıyor.
+ */
+const VISIBLE_ROWS = 6;
+
 export default function MuscleMapPage() {
   const [days, setDays] = useState<number>(7);
   const [highlight, setHighlight] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
   const volume = useMuscleVolume(days);
 
   const volumes: MuscleVolume[] = (volume.data ?? []).map((row) => ({
@@ -65,7 +75,7 @@ export default function MuscleMapPage() {
   const ranked = [...scaled].sort((a, b) => a.sets / a.target - b.sets / b.target);
 
   return (
-    <div className="mx-auto flex max-w-[68rem] flex-col gap-6">
+    <Page>
       <PageHeader
         title="Kas Haritası"
         actions={
@@ -110,12 +120,13 @@ export default function MuscleMapPage() {
             <MuscleMap volumes={scaled} highlight={highlight} />
           </div>
 
-          <Section title="Kas grupları" className="min-w-0">
-            <p className="-mt-3 mb-4 text-xs text-[var(--color-ink-faint)]">
-              En eksik olan üstte. Bir satıra gel — vücutta o bölge işaretlenir.
-            </p>
+          <Section
+            title="En eksik kaslar"
+            className="min-w-0"
+            info="Orana göre artan sırada: eylem gerektiren en üstte. Bir satıra gelince vücutta o bölge işaretleniyor. Hiç çalışılmamış bir kas 'ihmal edilmiş' değil, sadece sıra gelmemiş — o yüzden ayrı bir uyarı etiketi yok."
+          >
             <ul className="divide-y divide-[var(--color-border)]">
-              {ranked.map((muscle) => (
+              {(showAll ? ranked : ranked.slice(0, VISIBLE_ROWS)).map((muscle) => (
                 <MuscleRow
                   key={muscle.slug}
                   muscle={muscle}
@@ -124,10 +135,23 @@ export default function MuscleMapPage() {
                 />
               ))}
             </ul>
+
+            {ranked.length > VISIBLE_ROWS && (
+              <button
+                type="button"
+                className="btn btn-quiet mt-3 -ml-2.5"
+                aria-expanded={showAll}
+                onClick={() => setShowAll((v) => !v)}
+              >
+                {showAll
+                  ? "Kısalt"
+                  : `Kalan ${ranked.length - VISIBLE_ROWS} kas grubu`}
+              </button>
+            )}
           </Section>
         </div>
       )}
-    </div>
+    </Page>
   );
 }
 

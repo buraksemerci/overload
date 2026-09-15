@@ -130,13 +130,13 @@ export default function ProgramEditPage() {
                 value={day.label}
                 aria-label={`${dayIndex + 1}. günün adı`}
                 onChange={(e) => edit((next) => void (next[dayIndex]!.label = e.target.value))}
-                className="h-10 min-w-0 flex-1 rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-3 text-sm font-medium outline-none"
+                className="field h-10 min-w-0 flex-1 px-3 text-sm font-medium"
               />
               <button
                 disabled={days.length <= 1}
                 onClick={() => edit((next) => void next.splice(dayIndex, 1))}
                 aria-label={`${day.label} gününü sil`}
-                className="grid size-10 shrink-0 place-items-center rounded-[3px] border border-[var(--color-border-strong)] text-[var(--color-ink-faint)] hover:text-[var(--color-danger)] disabled:opacity-30"
+                className="grid size-10 shrink-0 place-items-center rounded-[var(--radius-md)] border border-[var(--color-border-strong)] text-[var(--color-ink-faint)] hover:text-[var(--color-danger)] disabled:opacity-30"
               >
                 ✕
               </button>
@@ -150,7 +150,7 @@ export default function ProgramEditPage() {
                   edit((next) => void (next[dayIndex]!.exercises = reordered))
                 }
                 renderItem={(exercise, exerciseIndex) => (
-                  <div className="mb-2 rounded-[3px] border border-[var(--color-border)] p-2.5">
+                  <div className="mb-2 rounded-[var(--radius-md)] border border-[var(--color-border)] p-2.5">
                     <div className="flex items-center gap-2">
                       <select
                         value={exercise.exercise_id}
@@ -161,7 +161,7 @@ export default function ProgramEditPage() {
                                 e.target.value),
                           )
                         }
-                        className="h-9 min-w-0 flex-1 rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-2 text-sm outline-none"
+                        className="field h-9 min-w-0 flex-1 px-2 text-sm"
                       >
                         {(library.data ?? []).map((option) => (
                           <option key={option.id} value={option.id}>
@@ -176,7 +176,7 @@ export default function ProgramEditPage() {
                           )
                         }
                         aria-label="Hareketi sil"
-                        className="grid size-9 shrink-0 place-items-center rounded-[3px] border border-[var(--color-border-strong)] text-xs text-[var(--color-ink-faint)] hover:text-[var(--color-danger)]"
+                        className="grid size-9 shrink-0 place-items-center rounded-[var(--radius-md)] border border-[var(--color-border-strong)] text-xs text-[var(--color-ink-faint)] hover:text-[var(--color-danger)]"
                       >
                         ✕
                       </button>
@@ -226,7 +226,7 @@ export default function ProgramEditPage() {
                                   e.target.value),
                             )
                           }
-                          className="h-9 w-full rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-1.5 text-xs outline-none"
+                          className="h-9 w-full rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-1.5 text-xs outline-none"
                         >
                           {TECHNIQUES.map((t) => (
                             <option key={t.value} value={t.value}>
@@ -255,7 +255,7 @@ export default function ProgramEditPage() {
                                   : null),
                             );
                           }}
-                          className="tnum h-9 w-full rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-1.5 text-center text-xs outline-none"
+                          className="tnum h-9 w-full rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-1.5 text-center text-xs outline-none"
                         />
                       </label>
                     </div>
@@ -356,7 +356,7 @@ function NumField({
           // NaN'ı state'e yazmak alanı kilitliyor; geçersiz girdide değeri koru.
           if (Number.isFinite(parsed)) onChange(parsed);
         }}
-        className="tnum h-9 w-full rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-1.5 text-center text-xs outline-none"
+        className="tnum h-9 w-full rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-1.5 text-center text-xs outline-none"
       />
     </label>
   );

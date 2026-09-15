@@ -147,7 +147,25 @@ export function InfoTip({
   );
 }
 
-/** Ekranın ana içerik genişliği. Tek yerde tutuluyor ki ekranlar arası kaymasın. */
-export function Page({ children }: { children: React.ReactNode }) {
-  return <div className="mx-auto flex max-w-[68rem] flex-col gap-6">{children}</div>;
+/**
+ * Ekranın ana içerik genişliği. Tek yerde tutuluyor ki ekranlar arası kaymasın.
+ *
+ * `flush`: yalnızca genişlik kabı, dikey ritim yok. Ana panel kendi ızgarasını
+ * ve kendi kademeli açılış gecikmelerini kuruyor; `gap-6` onun aralıklarını
+ * bozuyordu. Genişliğin tek kaynakta kalması için ayrı bir sarmalayıcı yazmak
+ * yerine buraya bir kapı açıldı — `lib/design-tokens.test.ts` elle yazılmış
+ * genişlikleri reddediyor.
+ */
+export function Page({
+  children,
+  flush = false,
+}: {
+  children: React.ReactNode;
+  flush?: boolean;
+}) {
+  return (
+    <div className={`mx-auto max-w-[68rem] ${flush ? "" : "flex flex-col gap-6"}`}>
+      {children}
+    </div>
+  );
 }

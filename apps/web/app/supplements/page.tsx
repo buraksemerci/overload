@@ -1,9 +1,32 @@
 "use client";
 
-/** Supplement Takibi (Bölüm 8, ekran 11). */
+/**
+ * Supplement — bugün alınacaklar, tek dokunuşla.
+ *
+ * --------------------------------------------------------------------------
+ * EKRANDA SADECE BUGÜN VAR
+ * --------------------------------------------------------------------------
+ * Liste bütün tanımlı supplementleri gösteriyordu; "bugün gerekmiyor" olanlar
+ * da aynı ağırlıkta satır kaplıyordu. Antrenman gününde alınan bir şey,
+ * dinlenme gününde ekranda durmasın.
+ *
+ * Şimdi bugün alınacaklar üstte; bugün gerekmeyenler kapalı bir bölümde.
+ * Tepede tek satırlık durum: kaç tanesi işaretlendi.
+ *
+ * --------------------------------------------------------------------------
+ * "ATLADIM" AYRI BİR CEVAP
+ * --------------------------------------------------------------------------
+ * Üç durum var ve üçü ayrı: alındı, atlandı, dokunulmadı. Atlamayı
+ * kaydetmemek uyum oranını hesaplanamaz kılıyor — boş bırakılan gün
+ * "bilinmiyor", atlanan gün "alınmadı".
+ *
+ * Bu yüzden iki düğme var, tek bir onay kutusu değil. Onay kutusu üçüncü
+ * durumu ifade edemiyor.
+ */
 
 import { useState } from "react";
-import { PageHeader } from "@/components/Layout";
+import { Page, PageHeader, Section } from "@/components/Layout";
+import { Sheet } from "@/components/Sheet";
 import { ErrorBox, Empty, Loading } from "@/components/States";
 import { useCreateSupplement, useMarkIntake, useSupplementsToday } from "@/lib/queries";
 
@@ -17,156 +40,303 @@ const SCHEDULE_LABEL: Record<string, string> = {
 export default function SupplementsPage() {
   const today = useSupplementsToday();
   const mark = useMarkIntake();
-  const create = useCreateSupplement();
-
-  const [name, setName] = useState("");
-  const [dose, setDose] = useState("");
-  const [schedule, setSchedule] = useState("daily");
   const [adding, setAdding] = useState(false);
+  const [showOther, setShowOther] = useState(false);
+
+  const rows = today.data ?? [];
+  const due = rows.filter((row) => row.due_today);
+  const notDue = rows.filter((row) => !row.due_today);
+  const answered = due.filter((row) => row.taken !== null).length;
 
   return (
-    <div className="mx-auto flex max-w-[68rem] flex-col gap-6">
+    <Page>
       <PageHeader
         title="Supplement"
         info={
           <>
-            &ldquo;Atladım&rdquo; da kaydediliyor: işaretlememek ile almamak ayrı
-            tutuluyor, yoksa uyum oranı hesaplanamaz. Boş bırakılan bir gün
+            Üç durum ayrı tutuluyor: <strong>alındı</strong>,{" "}
+            <strong>atlandı</strong> ve <strong>dokunulmadı</strong>. Atlamayı
+            kaydetmemek uyum oranını hesaplanamaz kılıyor — boş bırakılan gün
             &ldquo;bilinmiyor&rdquo;, atlanan gün ise &ldquo;alınmadı&rdquo;.
+            Asistana &ldquo;kreatini aldım&rdquo; diyerek de
+            işaretleyebilirsin.
           </>
         }
+        actions={
+          <button type="button" className="btn btn-ghost" onClick={() => setAdding(true)}>
+            Supplement ekle
+          </button>
+        }
       />
+
+      {mark.isError && <ErrorBox error={mark.error} />}
 
       {today.isLoading ? (
         <Loading />
       ) : today.isError ? (
         <ErrorBox error={today.error} onRetry={() => void today.refetch()} />
-      ) : (today.data ?? []).length === 0 ? (
+      ) : rows.length === 0 ? (
         <Empty
           title="Henüz supplement tanımlamadın"
-          hint="Aşağıdan ekleyebilirsin. Ekledikten sonra asistana 'kreatini aldım' diyerek de işaretleyebilirsin."
+          hint="Ekledikten sonra her gün tek dokunuşla işaretleyebilirsin."
+          action={
+            <button type="button" className="btn btn-primary" onClick={() => setAdding(true)}>
+              İlkini ekle
+            </button>
+          }
         />
       ) : (
-        <ul className="space-y-2">
-          {(today.data ?? []).map((row) => (
-            <li key={row.supplement.id} className="card p-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm">
-                    {row.supplement.name}
-                    {row.supplement.dose && (
-                      <span className="ml-1.5 text-xs text-[var(--color-ink-faint)]">
-                        {row.supplement.dose}
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-2xs text-[var(--color-ink-faint)]">
-                    {SCHEDULE_LABEL[row.supplement.schedule] ?? row.supplement.schedule}
-                    {!row.due_today && " · bugün gerekmiyor"}
-                  </p>
-                </div>
+        <>
+          <section className="card p-6 lg:p-8">
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
+              <h2 className="display text-lg">Bugün</h2>
+              {due.length > 0 && (
+                <span className="tnum text-sm text-[var(--color-ink-muted)]">
+                  {answered} / {due.length}
+                </span>
+              )}
+            </div>
 
-                <div className="flex shrink-0 gap-1">
-                  <button
-                    aria-label="Aldım"
-                    onClick={() =>
-                      mark.mutate({ supplementId: row.supplement.id, taken: true })
-                    }
-                    className="grid size-11 place-items-center rounded-[3px] border transition-colors"
-                    style={
-                      row.taken === true
-                        ? {
-                            background: "var(--color-accent)",
-                            borderColor: "transparent",
-                            color: "var(--color-ink)",
-                          }
-                        : { borderColor: "var(--color-border-strong)", color: "var(--color-ink-muted)" }
-                    }
+            {due.length === 0 ? (
+              <p className="mt-5 text-sm text-[var(--color-ink-faint)]">
+                Bugün alınacak bir şey yok.
+              </p>
+            ) : (
+              <ul className="mt-5 divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
+                {due.map((row, index) => (
+                  <li
+                    key={row.supplement.id}
+                    className="reveal flex items-center justify-between gap-4 py-3"
+                    style={{ ["--i" as string]: index }}
                   >
-                    <span className={row.taken === true ? "animate-check" : undefined}>✓</span>
-                  </button>
-                  <button
-                    aria-label="Atladım"
-                    onClick={() =>
-                      mark.mutate({ supplementId: row.supplement.id, taken: false })
-                    }
-                    className="grid size-11 place-items-center rounded-[3px] border transition-colors"
-                    style={
-                      row.taken === false
-                        ? { background: "var(--color-surface-raised)", borderColor: "var(--color-border-strong)", color: "var(--color-ink-muted)" }
-                        : { borderColor: "var(--color-border-strong)", color: "var(--color-ink-faint)" }
-                    }
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm">
+                        {row.supplement.name}
+                        {row.supplement.dose && (
+                          <span className="ml-1.5 text-xs text-[var(--color-ink-faint)]">
+                            {row.supplement.dose}
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-2xs text-[var(--color-ink-faint)]">
+                        {SCHEDULE_LABEL[row.supplement.schedule] ??
+                          row.supplement.schedule}
+                      </p>
+                    </div>
+
+                    <Answer
+                      taken={row.taken}
+                      onTaken={(taken) =>
+                        mark.mutate({ supplementId: row.supplement.id, taken })
+                      }
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {notDue.length > 0 && (
+            <Section bare>
+              <button
+                type="button"
+                className="btn btn-quiet -ml-2.5"
+                aria-expanded={showOther}
+                onClick={() => setShowOther((v) => !v)}
+              >
+                {showOther
+                  ? "Gizle"
+                  : `Bugün gerekmeyenler (${notDue.length})`}
+              </button>
+
+              {showOther && (
+                <ul className="mt-3 flex flex-col gap-1.5">
+                  {notDue.map((row, index) => (
+                    <li
+                      key={row.supplement.id}
+                      className="card reveal flex items-center justify-between gap-4 px-4 py-3"
+                      style={{ ["--i" as string]: index }}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm text-[var(--color-ink-muted)]">
+                          {row.supplement.name}
+                        </p>
+                        <p className="text-2xs text-[var(--color-ink-faint)]">
+                          {SCHEDULE_LABEL[row.supplement.schedule] ??
+                            row.supplement.schedule}
+                        </p>
+                      </div>
+                      {/* Bugün gerekmese de alınabiliyor: program bir öneri,
+                          yasak değil. */}
+                      <Answer
+                        taken={row.taken}
+                        onTaken={(taken) =>
+                          mark.mutate({ supplementId: row.supplement.id, taken })
+                        }
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Section>
+          )}
+        </>
       )}
 
-      {mark.isError && <ErrorBox error={mark.error} />}
+      {adding && <AddSheet onClose={() => setAdding(false)} />}
+    </Page>
+  );
+}
 
-      <section className="card p-6">
-        {adding ? (
-          <form
-            className="space-y-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!name.trim()) return;
-              create.mutate(
-                { name: name.trim(), dose: dose.trim() || null, schedule },
-                {
-                  onSuccess: () => {
-                    setName("");
-                    setDose("");
-                    setAdding(false);
-                  },
-                },
-              );
-            }}
-          >
-            <h2 className="text-base">Yeni supplement</h2>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Ad (ör. Kreatin)"
-              className="h-11 w-full rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-3 text-sm outline-none"
-            />
-            <input
-              value={dose}
-              onChange={(e) => setDose(e.target.value)}
-              placeholder="Doz (ör. 5 g) — isteğe bağlı"
-              className="h-11 w-full rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-3 text-sm outline-none"
-            />
-            <select
-              value={schedule}
-              onChange={(e) => setSchedule(e.target.value)}
-              className="h-11 w-full rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-2 text-sm outline-none"
-            >
-              {Object.entries(SCHEDULE_LABEL).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            <div className="flex gap-2">
-              <button type="submit" className="btn btn-primary" disabled={create.isPending}>
-                Ekle
-              </button>
-              <button type="button" className="btn btn-ghost" onClick={() => setAdding(false)}>
-                Vazgeç
-              </button>
-            </div>
-            {create.isError && <ErrorBox error={create.error} />}
-          </form>
-        ) : (
-          <button className="btn btn-ghost w-full" onClick={() => setAdding(true)}>
-            + Supplement ekle
-          </button>
-        )}
-      </section>
+/* --- Üç durumlu cevap ----------------------------------------------------- */
+
+function Answer({
+  taken,
+  onTaken,
+}: {
+  taken: boolean | null;
+  onTaken: (taken: boolean) => void;
+}) {
+  return (
+    <div className="flex shrink-0 gap-1.5" role="group" aria-label="Durum">
+      <button
+        type="button"
+        aria-label="Aldım"
+        aria-pressed={taken === true}
+        onClick={() => onTaken(true)}
+        className="grid size-10 place-items-center rounded-full border transition-colors"
+        style={{
+          transitionDuration: "var(--dur-micro)",
+          ...(taken === true
+            ? {
+                // Volt DOLGU: ekrandaki tek aksiyon işareti ve kazanılmış
+                // bir durum. Metin `--color-ink`, volt üstünde okunuyor.
+                background: "var(--color-accent)",
+                borderColor: "transparent",
+                color: "var(--color-ink)",
+              }
+            : {
+                borderColor: "var(--color-border-strong)",
+                color: "var(--color-ink-faint)",
+              }),
+        }}
+      >
+        <span className={taken === true ? "animate-check" : undefined} aria-hidden>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 13l4 4L19 7" />
+          </svg>
+        </span>
+      </button>
+
+      <button
+        type="button"
+        aria-label="Atladım"
+        aria-pressed={taken === false}
+        onClick={() => onTaken(false)}
+        className="grid size-10 place-items-center rounded-full border transition-colors"
+        style={{
+          transitionDuration: "var(--dur-micro)",
+          ...(taken === false
+            ? {
+                // Atlamak bir HATA değil, bir cevap. Kırmızı değil nötr.
+                background: "var(--color-surface-raised)",
+                borderColor: "var(--color-border-strong)",
+                color: "var(--color-ink-muted)",
+              }
+            : {
+                borderColor: "var(--color-border-strong)",
+                color: "var(--color-ink-faint)",
+              }),
+        }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
+          <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
+      </button>
     </div>
+  );
+}
+
+/* --- Ekleme paneli -------------------------------------------------------- */
+
+function AddSheet({ onClose }: { onClose: () => void }) {
+  const create = useCreateSupplement();
+  const [name, setName] = useState("");
+  const [dose, setDose] = useState("");
+  const [schedule, setSchedule] = useState("daily");
+
+  const submit = () => {
+    if (!name.trim()) return;
+    create.mutate(
+      { name: name.trim(), dose: dose.trim() || null, schedule },
+      { onSuccess: onClose },
+    );
+  };
+
+  return (
+    <Sheet
+      title="Yeni supplement"
+      onClose={onClose}
+      width="26rem"
+      footer={
+        <button
+          type="button"
+          className="btn btn-primary w-full py-3"
+          disabled={create.isPending || !name.trim()}
+          onClick={submit}
+        >
+          {create.isPending ? "Ekleniyor…" : "Ekle"}
+        </button>
+      }
+    >
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          submit();
+        }}
+      >
+        {create.isError && <ErrorBox error={create.error} />}
+
+        <label className="flex flex-col gap-1.5">
+          <span className="label">Ad</span>
+          <input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Kreatin"
+            autoFocus
+            className="field h-11 px-3 text-sm"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="label">Doz</span>
+          <input
+            value={dose}
+            onChange={(event) => setDose(event.target.value)}
+            placeholder="5 g"
+            className="field h-11 px-3 text-sm"
+          />
+          <span className="text-2xs text-[var(--color-ink-faint)]">İsteğe bağlı.</span>
+        </label>
+
+        <div>
+          <p className="label mb-2">Ne zaman</p>
+          <div className="seg w-full flex-wrap" role="group" aria-label="Program">
+            {Object.entries(SCHEDULE_LABEL).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={schedule === value}
+                onClick={() => setSchedule(value)}
+                className="seg-item flex-1 text-xs"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </form>
+    </Sheet>
   );
 }

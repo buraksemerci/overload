@@ -225,7 +225,7 @@ export default function ChatPage() {
 
       <div className="sticky bottom-20 mt-4 sm:bottom-0">
         {photo && (
-          <div className="mb-2 flex items-center gap-2 rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-2.5 py-1.5 text-xs">
+          <div className="card mb-2 flex items-center gap-2 px-3 py-2 text-xs">
             <span className="min-w-0 flex-1 truncate">{photo.name}</span>
             <span className="tnum shrink-0 text-[var(--color-ink-faint)]">
               {(photo.size / 1024 / 1024).toFixed(1)} MB
@@ -265,15 +265,20 @@ export default function ChatPage() {
             aria-label="Fotoğraf ekle"
             onClick={() => fileRef.current?.click()}
             disabled={busy}
-            className="grid size-10 shrink-0 place-items-center rounded-[3px] border border-[var(--color-border-strong)] text-[var(--color-ink-muted)] disabled:opacity-40"
+            className="field grid size-10 shrink-0 place-items-center text-[var(--color-ink-muted)] disabled:opacity-40"
           >
-            📷
+            {/* Emoji YERİNE simge: emoji her platformda farklı çiziliyor ve
+                yanındaki nötr arayüzün içinde renkli bir leke bırakıyor. */}
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h1.2a2 2 0 0 0 1.7-.95l.5-.8A2 2 0 0 1 10.6 3h2.8a2 2 0 0 1 1.7.95l.5.8A2 2 0 0 0 17.3 6h1.2A2.5 2.5 0 0 1 21 8.5v9A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5z" />
+              <circle cx="12" cy="13" r="3.4" />
+            </svg>
           </button>
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={photo ? "Not ekle (isteğe bağlı)…" : "Bir şey sor ya da anlat…"}
-            className="min-w-0 flex-1 rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 py-2 text-sm outline-none placeholder:text-[var(--color-ink-faint)]"
+            className="field min-w-0 flex-1 px-3 py-2.5 text-sm"
             disabled={busy}
           />
           <button

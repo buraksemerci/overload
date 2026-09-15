@@ -11,7 +11,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { PageHeader } from "@/components/Layout";
+import { Page, PageHeader, Section } from "@/components/Layout";
 import { ErrorBox, Loading } from "@/components/States";
 import { api } from "@/lib/api";
 import { logout, type Me } from "@/lib/auth";
@@ -79,22 +79,31 @@ export default function AccountPage() {
   const set = (patch: Partial<ProfileForm>) => setForm({ ...form, ...patch });
 
   return (
-    <div className="mx-auto flex max-w-[68rem] flex-col gap-6">
+    <Page>
       <PageHeader
-        title="Hesap Ayarları"
-        lead="Bu sayfadaki bilgiler yalnızca buradan değiştirilebilir — AI asistanının bu alanlara erişimi yok."
+        title="Hesap"
+        /* Bu satır GÖRÜNÜR kalıyor, "?" arkasına girmiyor. Ekranın geri
+           kalanında açıklamalar gizlendi ama bu bir açıklama değil, bir
+           güvence: kullanıcının asistanın neye dokunamadığını görmek için
+           baktığı tek yer burası. */
+        lead="Bu sayfadaki bilgileri yalnızca sen değiştirebilirsin — AI asistanının bu alanlara erişimi yok."
+        info={
+          <>
+            Bu sayfadaki hiçbir alan sohbet üzerinden değiştirilemez ve bu bir
+            istem talimatı değil: karşılık gelen bir AI tool&apos;u{" "}
+            <strong>yok</strong>. Model olmayan bir tool&apos;u çağıramaz.
+            Asistan verilerini okuyabilir ve yeni kayıt ekleyebilir; var olan
+            bir kaydı değiştirmek için senin onayını isteyen bir kart gösterir.
+          </>
+        }
       />
 
-      <section className="card p-6">
-        <h2 className="text-base">Profil</h2>
-        <p className="mt-0.5 text-xs text-[var(--color-ink-muted)]">
-          Boy, doğum tarihi ve cinsiyet TDEE hesabı ve güç standartları için gerekli.
-          Cinsiyet belirtilmezse bu iki özellik kapalı kalır — ortalama almak
-          kimseyi doğru temsil etmediği için tahmin üretilmiyor.
-        </p>
-
+      <Section
+        title="Profil"
+        info="Boy, doğum tarihi ve cinsiyet TDEE hesabı ve güç standartları için gerekli. Cinsiyet belirtilmezse bu iki özellik kapalı kalıyor — ortalama almak kimseyi doğru temsil etmediği için tahmin üretilmiyor."
+      >
         <form
-          className="mt-4 space-y-3"
+          className="grid gap-4 sm:grid-cols-2"
           onSubmit={(e) => {
             e.preventDefault();
             save.mutate({
@@ -138,46 +147,47 @@ export default function AccountPage() {
             onChange={(v) => set({ timezone: v })}
           />
 
-          <div className="flex items-center gap-3 pt-1">
+          <div className="flex items-center gap-3 pt-1 sm:col-span-2">
             <button type="submit" className="btn btn-primary" disabled={save.isPending}>
               {save.isPending ? "Kaydediliyor…" : "Kaydet"}
             </button>
             {saved && (
-              <span className="text-xs" style={{ color: "var(--color-accent-deep)" }}>
-                ✓ Kaydedildi
+              <span
+                className="animate-check text-xs"
+                style={{ color: "var(--color-accent-deep)" }}
+                role="status"
+              >
+                Kaydedildi
               </span>
             )}
           </div>
         </form>
-        {save.isError && <div className="mt-3"><ErrorBox error={save.error} /></div>}
-      </section>
+        {save.isError && (
+          <div className="mt-4">
+            <ErrorBox error={save.error} />
+          </div>
+        )}
+      </Section>
 
-      <section className="card p-6">
-        <h2 className="text-base">Oturum</h2>
-        <p className="mt-0.5 text-xs text-[var(--color-ink-muted)]">
-          E-posta: {me.data?.email}
-        </p>
-        <button
-          className="btn btn-ghost mt-3"
-          onClick={() => {
-            logout();
-            router.replace("/login");
-          }}
-        >
-          Çıkış yap
-        </button>
-      </section>
-
-      <section className="card p-6">
-        <h2 className="text-base">AI sınırı</h2>
-        <p className="mt-2 text-xs text-[var(--color-ink-muted)]">
-          Asistan verilerini okuyabilir ve yeni kayıt ekleyebilir. Var olan kayıtları
-          değiştirmek ya da silmek için senin onayını isteyen bir kart gösterir.
-          E-posta, şifre ve bu sayfadaki ayarlar ise tamamen erişimi dışında —
-          bunlar için bir tool tanımlı değil.
-        </p>
-      </section>
-    </div>
+      <Section bare>
+        <div className="card flex flex-wrap items-center justify-between gap-4 px-6 py-5">
+          <div className="min-w-0">
+            <p className="label">Oturum</p>
+            <p className="mt-1 truncate text-sm">{me.data?.email}</p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-ghost shrink-0"
+            onClick={() => {
+              logout();
+              router.replace("/login");
+            }}
+          >
+            Çıkış yap
+          </button>
+        </div>
+      </Section>
+    </Page>
   );
 }
 
@@ -196,13 +206,13 @@ function Field({
   // TypeScript ikisinin birleşimini bekler ve hiçbir fonksiyon uymaz.
 } & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type">) {
   return (
-    <label className="block">
-      <span className="mb-1 block text-xs text-[var(--color-ink-muted)]">{label}</span>
+    <label className="flex flex-col gap-1.5">
+      <span className="label">{label}</span>
       <input
         type={type}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-11 w-full rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-3 text-sm outline-none"
+        onChange={(event) => onChange(event.target.value)}
+        className="field h-11 w-full px-3 text-sm"
         {...rest}
       />
     </label>
@@ -221,12 +231,12 @@ function Select({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="block">
-      <span className="mb-1 block text-xs text-[var(--color-ink-muted)]">{label}</span>
+    <label className="flex flex-col gap-1.5">
+      <span className="label">{label}</span>
       <select
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-11 w-full rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-2 text-sm outline-none"
+        onChange={(event) => onChange(event.target.value)}
+        className="field h-11 w-full px-2.5 text-sm"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>

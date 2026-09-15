@@ -1,6 +1,28 @@
 "use client";
 
-/** Kilo Takibi (Bölüm 8, ekran 10): giriş, trend çizgisi, hareketli ortalama. */
+/**
+ * Kilo Takibi — bir sayı, bir eğilim, bir çizgi.
+ *
+ * --------------------------------------------------------------------------
+ * HANGİ SAYIYA BAKILIYOR
+ * --------------------------------------------------------------------------
+ * Önceki sürüm üç eşit kart gösteriyordu: güncel, toplam değişim, haftalık
+ * eğilim. Üçü de doğru ama karar VERDİREN tek sayı haftalık eğilim: "haftada
+ * 0,4 kg iniyorum" bilgisi hedefin tutup tutmadığını söylüyor. Güncel kilo
+ * bağlam, toplam değişim ise geçmişe bakış.
+ *
+ * Şimdi güncel kilo büyük, haftalık eğilim onun yanında ve toplam değişim
+ * "?" arkasında. Grafik yerinde kalıyor — bu ekranın var olma sebebi o.
+ *
+ * --------------------------------------------------------------------------
+ * KALIN ÇİZGİ NEDEN VOLT DEĞİL
+ * --------------------------------------------------------------------------
+ * Hareketli ortalama çizgisi `--color-accent` ile çiziliyordu. Tasarım kuralı
+ * grafiklerde volt kullanımına izin veriyor (ölçek olarak) ama burada mesele
+ * kural değil görünürlük: %90 parlaklıktaki volt, kırık beyaz zeminde 2px'lik
+ * bir çizgi olarak neredeyse kayboluyor. `accent-deep` aynı hue'nun okunur
+ * hâli.
+ */
 
 import { useState } from "react";
 import {
@@ -12,8 +34,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { PageHeader } from "@/components/Layout";
-import { ErrorBox, Empty, Loading, Stat, fmt } from "@/components/States";
+import { Page, PageHeader, Section } from "@/components/Layout";
+import { ErrorBox, Empty, Loading, fmt } from "@/components/States";
 import { useLogBodyweight, useWeightTrend } from "@/lib/queries";
 
 export default function WeightPage() {
@@ -21,12 +43,13 @@ export default function WeightPage() {
   const log = useLogBodyweight();
   const [weight, setWeight] = useState("");
 
-  const points = (trend.data ?? []).map((p) => ({
-    date: p.date,
+  const points = (trend.data ?? []).map((point) => ({
+    date: point.date,
     // Recharts sayı bekliyor; backend Decimal'i string olarak döndürüyor.
-    kilo: Number.parseFloat(p.weight_kg),
-    ortalama: p.moving_average === null ? null : Number.parseFloat(p.moving_average),
-    label: new Date(`${p.date}T00:00:00`).toLocaleDateString("tr-TR", {
+    kilo: Number.parseFloat(point.weight_kg),
+    ortalama:
+      point.moving_average === null ? null : Number.parseFloat(point.moving_average),
+    label: new Date(`${point.date}T00:00:00`).toLocaleDateString("tr-TR", {
       day: "2-digit",
       month: "short",
     }),
@@ -36,34 +59,92 @@ export default function WeightPage() {
   const first = points[0];
   const change = latest && first ? latest.kilo - first.kilo : null;
 
-  // Trend için ham değer değil hareketli ortalama karşılaştırılıyor — günlük
+  // Eğilim için ham değer değil HAREKETLİ ORTALAMA karşılaştırılıyor: günlük
   // dalgalanma (su, tuz, sindirim) ham farkı anlamsız kılıyor.
-  const avgLatest = [...points].reverse().find((p) => p.ortalama !== null)?.ortalama ?? null;
+  const avgLatest =
+    [...points].reverse().find((point) => point.ortalama !== null)?.ortalama ?? null;
   const avgEarlier =
-    points.length >= 14
-      ? points[points.length - 8]?.ortalama ?? null
-      : null;
-  const weeklyTrend =
-    avgLatest !== null && avgEarlier !== null ? avgLatest - avgEarlier : null;
+    points.length >= 14 ? points[points.length - 8]?.ortalama ?? null : null;
+  const weekly = avgLatest !== null && avgEarlier !== null ? avgLatest - avgEarlier : null;
 
   return (
-    <div className="mx-auto flex max-w-[68rem] flex-col gap-6">
+    <Page>
       <PageHeader
-        title="Kilo Takibi"
+        title="Kilo"
         info={
           <>
             Günde tek kayıt tutuluyor; aynı güne ikinci giriş üzerine yazıyor.
-            Gün içi dalgalanma (su, yemek) trend çizgisini gürültüye boğuyor.
-            Karar verirken 7 günlük hareketli ortalamaya bak, tek güne değil.
+            Gün içi dalgalanma (su, yemek, sindirim) 1-2 kg oynayabiliyor, bu
+            yüzden kararlar <strong>7 günlük hareketli ortalamaya</strong> göre
+            veriliyor — tek güne göre değil.
+            {change !== null && (
+              <>
+                {" "}
+                Bu dönemdeki toplam değişim{" "}
+                <strong>
+                  {change > 0 ? "+" : ""}
+                  {fmt(change, 1)} kg
+                </strong>
+                .
+              </>
+            )}
           </>
         }
       />
 
-      <section className="card p-6">
+      {/* --- Bugünün kaydı ve durum -------------------------------------- */}
+      <section className="card flex flex-col gap-6 p-6 lg:flex-row lg:items-center lg:justify-between lg:p-8">
+        {latest ? (
+          <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
+            <div>
+              <p className="label">Güncel</p>
+              <p className="mt-1">
+                <span className="figure tnum text-3xl leading-none">
+                  {fmt(latest.kilo, 1)}
+                </span>
+                <span className="ml-1.5 text-sm text-[var(--color-ink-muted)]">kg</span>
+              </p>
+            </div>
+
+            <div>
+              <p className="label">Haftalık eğilim</p>
+              {weekly === null ? (
+                <p className="mt-1 text-sm text-[var(--color-ink-faint)]">
+                  14+ gün gerekli
+                </p>
+              ) : (
+                <p className="mt-1">
+                  <span
+                    className="figure tnum text-xl leading-none"
+                    style={{
+                      // Yön iyi/kötü DEĞİL — hedefe bağlı. Renk yalnızca
+                      // duruşu belirginleştiriyor, yargı taşımıyor.
+                      color:
+                        Math.abs(weekly) < 0.1
+                          ? "var(--color-ink-muted)"
+                          : "var(--color-accent-deep)",
+                    }}
+                  >
+                    {weekly > 0 ? "+" : ""}
+                    {fmt(weekly, 2)}
+                  </span>
+                  <span className="ml-1.5 text-xs text-[var(--color-ink-faint)]">
+                    kg/hafta
+                  </span>
+                </p>
+              )}
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-[var(--color-ink-muted)]">
+            İlk kaydından sonra trend burada görünecek.
+          </p>
+        )}
+
         <form
-          className="flex gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
+          className="flex shrink-0 gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
             const value = Number.parseFloat(weight.replace(",", "."));
             if (Number.isFinite(value)) {
               log.mutate({ weight_kg: value });
@@ -71,23 +152,27 @@ export default function WeightPage() {
             }
           }}
         >
-          <label className="flex-1">
-            <span className="sr-only">Kilo (kg)</span>
-            <input
-              inputMode="decimal"
-              value={weight}
-              onChange={(e) => setWeight(e.target.value)}
-              placeholder="Bugünkü kilon (kg)"
-              className="tnum h-11 w-full rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-3 text-sm outline-none"
-            />
-          </label>
-          <button type="submit" className="btn btn-primary" disabled={log.isPending || !weight}>
-            Kaydet
+          <input
+            inputMode="decimal"
+            value={weight}
+            onChange={(event) => setWeight(event.target.value)}
+            placeholder="0,0"
+            aria-label="Bugünkü kilon (kg)"
+            className="field tnum h-12 w-24 text-center text-sm"
+          />
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={log.isPending || !weight}
+          >
+            {log.isPending ? "…" : "Kaydet"}
           </button>
         </form>
-        {log.isError && <div className="mt-3"><ErrorBox error={log.error} /></div>}
       </section>
 
+      {log.isError && <ErrorBox error={log.error} />}
+
+      {/* --- Trend -------------------------------------------------------- */}
       {trend.isLoading ? (
         <Loading />
       ) : trend.isError ? (
@@ -98,79 +183,60 @@ export default function WeightPage() {
           hint="İlk kaydından sonra trend çizgisi ve hareketli ortalama burada görünecek."
         />
       ) : (
-        <>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Stat label="Güncel" value={fmt(latest?.kilo, 1)} unit="kg" />
-            <Stat
-              label="Toplam değişim"
-              value={change === null ? "—" : `${change > 0 ? "+" : ""}${fmt(change, 1)}`}
-              unit="kg"
-            />
-            <Stat
-              label="Haftalık eğilim"
-              value={
-                weeklyTrend === null
-                  ? "—"
-                  : `${weeklyTrend > 0 ? "+" : ""}${fmt(weeklyTrend, 2)}`
-              }
-              unit={weeklyTrend === null ? "14+ gün gerekli" : "kg/hafta"}
-            />
+        <Section
+          title="Trend"
+          info="İnce çizgi günlük ölçüm, kalın çizgi 7 günlük hareketli ortalama. Kararlarını kalın çizgiye göre ver — ince çizgi su ve sindirim gürültüsü taşıyor."
+        >
+          <div className="h-64 w-full lg:h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={points} margin={{ top: 4, right: 8, bottom: 4, left: -16 }}>
+                <CartesianGrid stroke="var(--color-border)" strokeDasharray="2 4" />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fill: "var(--color-ink-faint)", fontSize: 10 }}
+                  stroke="var(--color-border)"
+                  minTickGap={32}
+                />
+                <YAxis
+                  domain={["dataMin - 1", "dataMax + 1"]}
+                  tick={{ fill: "var(--color-ink-faint)", fontSize: 10 }}
+                  stroke="var(--color-border)"
+                  width={44}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "var(--color-surface)",
+                    border: "1px solid var(--color-border-strong)",
+                    borderRadius: "var(--radius-md)",
+                    fontSize: 12,
+                  }}
+                  labelStyle={{ color: "var(--color-ink-muted)" }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="kilo"
+                  stroke="var(--color-ink-faint)"
+                  strokeWidth={1}
+                  // Tek ölçüm varken NOKTA gerekiyor: çizgi iki nokta
+                  // arasına çiziliyor, yani ilk kaydından sonra grafik
+                  // tamamen boş görünüyordu.
+                  dot={points.length < 3 ? { r: 2.5 } : false}
+                  name="Ham"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="ortalama"
+                  stroke="var(--color-accent-deep)"
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls
+                  name="7 günlük ortalama"
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
-
-          <section className="card p-6">
-            <h2 className="text-base">Trend</h2>
-            <div className="mt-4 h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={points} margin={{ top: 4, right: 8, bottom: 4, left: -16 }}>
-                  <CartesianGrid stroke="var(--color-border)" strokeDasharray="2 4" />
-                  <XAxis
-                    dataKey="label"
-                    tick={{ fill: "var(--color-ink-faint)", fontSize: 10 }}
-                    stroke="var(--color-border)"
-                    minTickGap={32}
-                  />
-                  <YAxis
-                    domain={["dataMin - 1", "dataMax + 1"]}
-                    tick={{ fill: "var(--color-ink-faint)", fontSize: 10 }}
-                    stroke="var(--color-border)"
-                    width={44}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: "var(--color-surface)",
-                      border: "1px solid var(--color-border-strong)",
-                      borderRadius: 5,
-                      fontSize: 12,
-                    }}
-                    labelStyle={{ color: "var(--color-ink-muted)" }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="kilo"
-                    stroke="var(--color-ink-faint)"
-                    strokeWidth={1}
-                    dot={false}
-                    name="Ham"
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="ortalama"
-                    stroke="var(--color-accent)"
-                    strokeWidth={2}
-                    dot={false}
-                    connectNulls
-                    name="7 günlük ortalama"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <p className="mt-2 text-2xs text-[var(--color-ink-faint)]">
-              İnce çizgi günlük ölçüm, kalın çizgi 7 günlük hareketli ortalama.
-              Kararlarını kalın çizgiye göre ver.
-            </p>
-          </section>
-        </>
+        </Section>
       )}
-    </div>
+    </Page>
   );
 }

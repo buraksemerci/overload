@@ -116,7 +116,7 @@ function SortableRow({ id, children }: { id: string; children: React.ReactNode }
         <button
           type="button"
           aria-label="Sıralamak için sürükle"
-          className="mt-0.5 grid size-9 shrink-0 cursor-grab place-items-center rounded-[3px] text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] active:cursor-grabbing"
+          className="mt-0.5 grid size-9 shrink-0 cursor-grab place-items-center rounded-[var(--radius-md)] text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] active:cursor-grabbing"
           {...attributes}
           {...listeners}
         >

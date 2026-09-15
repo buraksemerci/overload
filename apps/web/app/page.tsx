@@ -27,6 +27,7 @@
  */
 
 import Link from "next/link";
+import { Page } from "@/components/Layout";
 import { ErrorBox, Loading, fmt } from "@/components/States";
 import {
   useNutritionDay,
@@ -64,7 +65,9 @@ export default function DashboardPage() {
   const weighedToday = latestWeight ? isToday(latestWeight.date) : false;
 
   return (
-    <div className="mx-auto max-w-[68rem]">
+    // `flush`: panel kendi ızgarasını ve kademeli açılış gecikmelerini
+    // kuruyor, `Page`in dikey ritmi onun aralıklarını bozuyordu.
+    <Page flush>
       <Greeting />
 
       <div className="reveal mt-6" style={{ "--i": 1 } as React.CSSProperties}>
@@ -108,7 +111,7 @@ export default function DashboardPage() {
           <Tile label="Kilo" value="—" foot="İlk ölçümünü gir" href="/weight" />
         )}
       </div>
-    </div>
+    </Page>
   );
 }
 

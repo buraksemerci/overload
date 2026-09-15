@@ -117,7 +117,7 @@ function Field({
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-11 w-full rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 text-sm outline-none"
+        className="field h-11 w-full px-3 text-sm"
         {...rest}
       />
     </label>

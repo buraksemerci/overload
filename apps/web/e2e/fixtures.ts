@@ -119,7 +119,31 @@ export async function mockApi(page: Page): Promise<void> {
     ]),
   );
   await page.route(`${API}/programs/templates`, (route) => json(route, []));
-  await page.route(`${API}/exercises**`, (route) => json(route, []));
+  // Boş liste DEĞİL. Hareket satırları render edilmediği için `/exercises`
+  // ekranındaki volt METİN hatası (birincil kaslar `--color-accent` ile
+  // yazılıydı, kırık beyaz üzerinde ~1.3:1) hiçbir teste yakalanmıyordu.
+  await page.route(`${API}/exercises**`, (route) =>
+    json(route, [
+      {
+        id: "55555555-5555-5555-5555-555555555555",
+        name: "Barbell Bench Press",
+        equipment: "barbell",
+        is_custom: false,
+        is_unilateral: false,
+        primary_muscles: ["Göğüs"],
+        secondary_muscles: ["Ön omuz", "Triceps"],
+      },
+      {
+        id: "66666666-6666-6666-6666-666666666666",
+        name: "Bulgarian Split Squat",
+        equipment: "dumbbell",
+        is_custom: true,
+        is_unilateral: true,
+        primary_muscles: ["Quadriceps"],
+        secondary_muscles: ["Kalça"],
+      },
+    ]),
+  );
   await page.route(`${API}/progress/consistency**`, (route) => json(route, []));
   await page.route(`${API}/progress/strength-standards`, (route) =>
     json(route, {

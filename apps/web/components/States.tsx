@@ -9,6 +9,8 @@
  * sokar; "ilk kilonu gir" demek ne yapacağını söyler.
  */
 
+import { Photo } from "@/components/Photo";
+
 export function Loading({ label = "Yükleniyor…" }: { label?: string }) {
   return (
     <p className="py-8 text-center text-sm text-[var(--color-ink-faint)]" role="status">
@@ -38,11 +40,43 @@ export function Empty({
   title,
   hint,
   action,
+  photo,
 }: {
   title: string;
   hint?: string;
   action?: React.ReactNode;
+  /**
+   * Geniş bir fotoğraf şeridi. Verilirse başlık onun üstüne çıkıyor.
+   *
+   * Boş durum, ekranın en ölü ânı: veri yok, gösterilecek bir şey yok.
+   * Fotoğraf orada "hiçbir şey yok" cümlesini bir davete çeviriyor — ve
+   * ekranın en çok yer açan yeri zaten burası. Fotoğraf yoksa yuva nötr
+   * dokuya düşüyor ve kart yine çalışıyor.
+   */
+  photo?: string;
 }) {
+  if (photo) {
+    return (
+      <section className="card overflow-hidden">
+        <Photo slug={photo} ratio="21 / 9" scrim>
+          <div className="flex size-full items-end p-6 lg:p-8">
+            <p className="display text-lg lg:text-xl" style={{ color: "oklch(99% 0 0)" }}>
+              {title}
+            </p>
+          </div>
+        </Photo>
+        {(hint || action) && (
+          <div className="flex flex-wrap items-center justify-between gap-4 p-6 lg:px-8">
+            {hint && (
+              <p className="max-w-[54ch] text-sm text-[var(--color-ink-muted)]">{hint}</p>
+            )}
+            {action && <div className="shrink-0">{action}</div>}
+          </div>
+        )}
+      </section>
+    );
+  }
+
   return (
     <div className="card p-6 text-center">
       <p className="text-sm text-[var(--color-ink)]">{title}</p>

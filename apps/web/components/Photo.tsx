@@ -35,6 +35,26 @@
 
 import { useState } from "react";
 
+/**
+ * Dört kenarı saydama götüren maske.
+ *
+ * İki doğrusal gradyan kesişiyor: biri yatay, biri dikey. `intersect`
+ * olmadan ikisi toplanıyor ve köşeler yumuşamıyordu.
+ *
+ * `-webkit-` karşılıkları Safari için; o tarafta `source-in` aynı işi
+ * yapıyor.
+ */
+const EDGE =
+  "linear-gradient(to right, transparent 0%, #000 9%, #000 91%, transparent 100%), " +
+  "linear-gradient(to bottom, transparent 0%, #000 9%, #000 91%, transparent 100%)";
+
+const FEATHER: React.CSSProperties = {
+  maskImage: EDGE,
+  maskComposite: "intersect",
+  WebkitMaskImage: EDGE,
+  WebkitMaskComposite: "source-in",
+};
+
 export function Photo({
   slug,
   alt = "",
@@ -53,6 +73,19 @@ export function Photo({
    * ikinci bir yükseklik kaynağı oluyor ve ikisi çakışıyor.
    */
   fill = false,
+  /**
+   * Fotoğrafın TAMAMI görünsün ve kenarları zemine karışsın.
+   *
+   * Gezinme paneli için: orada görsel kırpılmıyor, bütün kare duruyor.
+   * Kırpmayınca kutuda boşluk kalıyor ve fotoğrafın bittiği yer keskin bir
+   * çizgi olarak görünüyordu — kutu gibi. Maske dört kenarı saydama
+   * götürüyor, yani altındaki zemin ne renkse fotoğraf ona karışıyor.
+   *
+   * Kutu, yüklenen görselin GERÇEK oranını alıyor. `object-fit: contain` ile
+   * bırakılsaydı maske kutunun kenarlarını yumuşatırdı, görselin değil —
+   * letterbox boşluğunun ortasında keskin bir fotoğraf kenarı kalırdı.
+   */
+  feather = false,
 }: {
   slug: string;
   /** Dekoratif fotoğrafta BOŞ kalır — ekran okuyucu gereksiz yere okumasın. */
@@ -64,6 +97,7 @@ export function Photo({
   scrim?: boolean;
   position?: string;
   fill?: boolean;
+  feather?: boolean;
 }) {
   /**
    * Görsel YÜKLENENE kadar görünmez.
@@ -75,12 +109,25 @@ export function Photo({
    * altındaki işlem katmanı kalıyor ve hiçbir an kırık bir şey görünmüyor.
    */
   const [loaded, setLoaded] = useState(false);
+  /** Yüklenen görselin gerçek oranı — `feather` kipinde kutuyu o belirliyor. */
+  const [natural, setNatural] = useState<number | null>(null);
+
+  const box = feather
+    ? {
+        height: "100%",
+        width: "auto",
+        aspectRatio: natural !== null ? String(natural) : ratio,
+        maxWidth: "100%",
+      }
+    : fill
+      ? { height: "100%" }
+      : { aspectRatio: ratio };
 
   return (
     <div
-      className={`relative overflow-hidden ${className}`}
+      className={`relative ${feather ? "" : "overflow-hidden"} ${className}`}
       style={{
-        ...(fill ? { height: "100%" } : { aspectRatio: ratio }),
+        ...box,
         /* İşlem katmanı: fotoğraf yoksa ya da henüz yüklenmediyse görünen
            şey bu. Volt DEĞİL — nötr bir doku, çünkü volt bütçesi ekran
            başına bir öğe.
@@ -90,9 +137,13 @@ export function Photo({
            dokuyla başlayınca panel ilk açılışta bir an beyaz parlıyor ve
            ardından koyu fotoğrafa geçiyordu — göze çarpan bir sıçrama.
            Koyu başlayınca geçiş görünmüyor. */
-        background: scrim
-          ? "linear-gradient(145deg, oklch(28% 0.012 115), oklch(18% 0.010 115))"
-          : "linear-gradient(145deg, var(--color-surface-raised), var(--color-border))",
+        // `feather` kipinde yer tutucu YOK: kutu görselin oranında ve
+        // kenarları saydama gidiyor, arkasında bir dikdörtgen görünmemeli.
+        background: feather
+          ? undefined
+          : scrim
+            ? "linear-gradient(145deg, oklch(28% 0.012 115), oklch(18% 0.010 115))"
+            : "linear-gradient(145deg, var(--color-surface-raised), var(--color-border))",
       }}
     >
       <img
@@ -100,12 +151,19 @@ export function Photo({
         alt={alt}
         loading="lazy"
         decoding="async"
-        onLoad={() => setLoaded(true)}
+        onLoad={(event) => {
+          const image = event.currentTarget;
+          if (image.naturalHeight > 0) {
+            setNatural(image.naturalWidth / image.naturalHeight);
+          }
+          setLoaded(true);
+        }}
         className="absolute inset-0 size-full object-cover"
         style={{
           objectPosition: position,
           opacity: loaded ? 1 : 0,
           transition: "opacity var(--dur-long) var(--ease-out)",
+          ...(feather ? FEATHER : {}),
         }}
       />
 

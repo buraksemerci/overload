@@ -32,6 +32,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { FoodSheet, type SheetMode } from "@/components/FoodSheet";
+import { Photo } from "@/components/Photo";
 import { InfoTip, Page, PageHeader, Section } from "@/components/Layout";
 import { ErrorBox, Loading, fmt } from "@/components/States";
 import { currentMeal, dayLabel, MEAL_ORDER, mealLabel, shiftDay } from "@/lib/meals";
@@ -410,9 +411,18 @@ function FocusedMeal({
       </div>
 
       {items.length === 0 ? (
-        <p className="mt-5 text-sm text-[var(--color-ink-faint)]">
-          {mealLabel(meal)} için henüz bir şey yok.
-        </p>
+        /* Boş öğün ekranın en ölü ânı. Fotoğraf "henüz bir şey yok"
+           cümlesini bir davete çeviriyor ve ekranın o bölümünü canlı
+           tutuyor — arkasında okunacak bir sayı olmadığı için güvenli. */
+        <div className="mt-5 -mx-6 -mb-6 overflow-hidden lg:-mx-8 lg:-mb-8">
+          <Photo slug="empty-nutrition" ratio="21 / 9" scrim>
+            <div className="flex size-full items-end p-6 lg:p-8">
+              <p className="text-sm" style={{ color: "oklch(94% 0.01 115)" }}>
+                {mealLabel(meal)} için henüz bir şey yok.
+              </p>
+            </div>
+          </Photo>
+        </div>
       ) : (
         <ul className="mt-5 divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
           {items.map((item, index) => (

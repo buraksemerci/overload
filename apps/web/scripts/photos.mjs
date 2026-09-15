@@ -6,22 +6,21 @@
  * --------------------------------------------------------------------------
  * NEDEN BİR BETİK, NEDEN ELLE DEĞİL
  * --------------------------------------------------------------------------
- * Unsplash'ten indirilen dosyalar 0.6-3.8 MB ve 5000 pikselden geniş; oldukları
- * gibi kullanılamazlar. Elle kırpmak da işe yaramıyor çünkü her yuvanın
- * **kendi oranı** var: gezinme paneli 4/5 dikey, giriş hero'su 3/4, boş durum
- * şeridi 21/9. Yanlış orandaki bir fotoğraf `object-fit: cover` ile kırpılıyor
- * ve önemli bölge kadrajdan çıkıyor.
+ * İndirilen dosyalar 0.6-6.9 MB ve 7000 piksele kadar; oldukları gibi
+ * kullanılamazlar. Elle kırpmak da işe yaramıyor çünkü her yuvanın **kendi
+ * işi** var ve iki farklı kip gerekiyor:
  *
- * Hedef boyutlar ekranda kaplanan alana göre: panel fotoğrafı ~420px
- * genişliğinde duruyor, yani 2x ekran için 840 yeterli. Daha büyüğü yalnızca
- * bant genişliği harcıyor.
+ *   cover  — kutuyu doldur, taşanı kes. Kart ve şerit gibi ölçüsü sabit
+ *            yerlerde. `position` ile konunun kadrajda kalacağı taraf
+ *            seçiliyor.
+ *   inside — hiç kırpma, kutuya sığdır. Gezinme panelinde fotoğrafın TAMAMI
+ *            görünmek zorunda; orada kırpmak istenmiyor.
  *
- * `sharp` Next.js ile birlikte zaten kurulu; ayrı bir bağımlılık eklenmedi.
- * Betik `apps/web` içinden koşmak ZORUNDA (modül çözümlemesi buradan yapılıyor).
+ * Hedef boyutlar ekranda kaplanan alana göre. Daha büyüğü yalnızca bant
+ * genişliği harcıyor.
  *
- * Yeni bir fotoğraf eklerken: `JOBS` listesine bir satır ekle, dosyayı
- * indirme klasörüne koy, betiği çalıştır. Lisans notları
- * `public/photos/README.md` içinde.
+ * `sharp` devDependency; betik `apps/web` içinden koşmak ZORUNDA.
+ * Lisans notları `public/photos/README.md` içinde.
  */
 
 import sharp from "sharp";
@@ -37,60 +36,52 @@ if (!SRC) {
 }
 
 /**
- * Her yuva için kaynak dosya, hedef boyut ve kırpma konumu.
+ * Yuva tanımları.
  *
- * `position` önemli: `cover` kırpması varsayılan olarak merkezden kesiyor ve
- * bazı karelerde konu kenarda duruyor.
+ * `fit: "inside"` olanlarda `height` üst sınır; oran korunuyor ve dosya
+ * kaynağın oranında çıkıyor.
  */
 const JOBS = [
-  // --- Gezinme panelleri: 4/5 dikey ---------------------------------------
-  {
-    slug: "nav-antrenman",
-    file: "tyler-raye-Xb1d-N04Quc-unsplash.jpg",
-    width: 900,
-    height: 1125,
-    position: "center",
-  },
-  {
-    slug: "nav-beslenme",
-    file: "maahid-photos-DQVH7P46g0Y-unsplash.jpg",
-    width: 900,
-    height: 1125,
-    // Kahvaltı tabağı sağda; merkez kırpımda yumurta kadrajdan çıkıyor.
-    position: "right",
-  },
-  {
-    slug: "nav-vucut",
-    file: "tyler-raye-eiAHNFufvDA-unsplash.jpg",
-    width: 900,
-    height: 1125,
-    position: "center",
-  },
-  {
-    slug: "nav-asistan",
-    file: "samuel-girven-2e4lbLTqPIo-unsplash.jpg",
-    width: 900,
-    height: 1125,
-    position: "center",
-  },
+  // --- Gezinme panelleri ---------------------------------------------------
+  // Fotoğraf panelin sol 3/4'ünü KAPLIYOR: sol kenara dayalı, dikey boşluk
+  // yok. Bu yüzden kutu geniş (≈2.3) ve kırpma `cover`.
+  //
+  // `position` her kare için ayrı seçildi: konunun kadrajda kalması bu
+  // orandaki kırpmada tek tek karar gerektiriyor. Hepsi YATAY kaynak;
+  // dikey bir kare bu kutuda konuyu tamamen kaybediyor.
+  { slug: "nav-antrenman", file: "woman shoulder press.jpg", fit: "cover", width: 1600, height: 700, position: "center" },
+  { slug: "nav-beslenme", file: "breakfast.jpg", fit: "cover", width: 1600, height: 700, position: "center" },
+  // "Vücut" bölümü için sırt karesi: bölümün adını birebir karşılıyor.
+  { slug: "nav-vucut", file: "woman back.jpg", fit: "cover", width: 1600, height: 700, position: "top" },
+  { slug: "nav-asistan", file: "deadlift.jpg", fit: "cover", width: 1600, height: 700, position: "center" },
 
-  // --- Giriş ekranı hero'su: 3/4 ------------------------------------------
-  {
-    slug: "hero-login",
-    file: "tyler-raye-gnJqUTCPzzg-unsplash.jpg",
-    width: 1000,
-    height: 1333,
-    position: "center",
-  },
+  // --- Giriş ekranı --------------------------------------------------------
+  { slug: "hero-login", file: "squat.jpg", fit: "cover", width: 1000, height: 1333, position: "center" },
 
-  // --- Boş durum şeridi: 21/9, tam genişlik -------------------------------
-  {
-    slug: "empty-workout",
-    file: "clark-douglas-VepJDAuitQ4-unsplash.jpg",
-    width: 1800,
-    height: 771,
-    position: "center",
-  },
+  // --- Boş durumlar: geniş şerit -------------------------------------------
+  { slug: "empty-workout", file: "another deadlift.jpg", fit: "cover", width: 1800, height: 771, position: "center" },
+  { slug: "empty-nutrition", file: "salad.jpg", fit: "cover", width: 1800, height: 771, position: "center" },
+  { slug: "empty-history", file: "gym.jpg", fit: "cover", width: 1800, height: 771, position: "top" },
+
+  // --- Program şablonları: 3/2 kart ----------------------------------------
+  { slug: "goal-strength", file: "deadlift.jpg", fit: "cover", width: 900, height: 600, position: "center" },
+  { slug: "goal-hypertrophy", file: "incline dumbell chestpress.jpg", fit: "cover", width: 900, height: 600, position: "top" },
+  { slug: "goal-powerbuilding", file: "barbell rack.jpg", fit: "cover", width: 900, height: 600, position: "center" },
+  { slug: "goal-general-fitness", file: "home workout.jpg", fit: "cover", width: 900, height: 600, position: "top" },
+
+  // --- Ekipman kartları: 3/2 -----------------------------------------------
+  // Kettlebell ve direnç bandı KASITLI olarak boş: elde o ekipmanın fotoğrafı
+  // yok ve yanlış bir görsel koymak, hiç koymamaktan kötü. O kartlar nötr
+  // dokuyla çalışıyor.
+  { slug: "equipment-barbell", file: "barbell rack.jpg", fit: "cover", width: 800, height: 533, position: "center" },
+  { slug: "equipment-dumbbell", file: "incline dumbell chestpress.jpg", fit: "cover", width: 800, height: 533, position: "center" },
+  { slug: "equipment-machine", file: "rack.jpg", fit: "cover", width: 800, height: 533, position: "center" },
+  { slug: "equipment-plate-loaded", file: "rack.jpg", fit: "cover", width: 800, height: 533, position: "top" },
+  { slug: "equipment-cable", file: "gym.jpg", fit: "cover", width: 800, height: 533, position: "center" },
+  { slug: "equipment-bodyweight", file: "home workout.jpg", fit: "cover", width: 800, height: 533, position: "center" },
+
+  // --- Antrenman bitiş ekranı ----------------------------------------------
+  { slug: "celebration", file: "threadmill.jpg", fit: "cover", width: 1800, height: 771, position: "center" },
 ];
 
 await mkdir(OUT, { recursive: true });
@@ -99,20 +90,26 @@ let total = 0;
 for (const job of JOBS) {
   const out = join(OUT, `${job.slug}.jpg`);
   try {
-    const info = await sharp(join(SRC, job.file))
-      .resize(job.width, job.height, { fit: "cover", position: job.position })
-      // mozjpeg: aynı görsel kalitede belirgin biçimde küçük dosya.
+    const pipeline = sharp(join(SRC, job.file)).resize(job.width, job.height, {
+      fit: job.fit,
+      ...(job.fit === "cover" ? { position: job.position } : {}),
+      // `inside` kipinde kaynak hedeften küçükse büyütme.
+      withoutEnlargement: job.fit === "inside",
+    });
+
+    // mozjpeg: aynı görsel kalitede belirgin biçimde küçük dosya.
+    const info = await pipeline
       .jpeg({ quality: 80, mozjpeg: true, progressive: true })
       .toFile(out);
 
     const kb = Math.round(info.size / 1024);
     total += kb;
     console.log(
-      `${job.slug.padEnd(16)} ${info.width}x${info.height}  ${String(kb).padStart(4)} KB`,
+      `${job.slug.padEnd(24)} ${String(info.width).padStart(4)}x${String(info.height).padEnd(4)} ${String(kb).padStart(4)} KB`,
     );
-  } catch (error) {
+  } catch {
     // Eksik bir kaynak dosya betiği durdurmuyor: diğerleri yine üretilsin.
-    console.warn(`${job.slug.padEnd(16)} ATLANDI — ${job.file} okunamadı`);
+    console.warn(`${job.slug.padEnd(24)} ATLANDI — "${job.file}" okunamadı`);
   }
 }
-console.log(`${"toplam".padEnd(16)} ${String(total).padStart(14)} KB`);
+console.log(`${"toplam".padEnd(24)} ${String(total).padStart(14)} KB`);

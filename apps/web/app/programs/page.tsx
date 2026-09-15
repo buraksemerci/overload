@@ -114,6 +114,7 @@ export default function ProgramsPage() {
         <ActiveProgram program={active} onOpen={() => setDetail(active)} />
       ) : (
         <Empty
+          photo="goal-strength"
           title={
             programs.length > 0 ? "Aktif program yok" : "Henüz programın yok"
           }

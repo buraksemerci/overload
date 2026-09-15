@@ -116,6 +116,7 @@ export default function HistoryPage() {
       <Page>
         <PageHeader title="Geçmiş" />
         <Empty
+          photo="empty-history"
           title="Henüz tamamlanmış antrenmanın yok"
           hint="İlk seansını bitirdiğinde burada birikmeye başlayacak."
           action={

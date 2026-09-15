@@ -88,8 +88,37 @@ type NavGroup = {
   title: string;
   /** `public/photos/<photo>.jpg`. Yoksa nötr dokuya düşüyor. */
   photo: string;
+  /**
+   * Panelin zemin tonu. Fotoğrafın kendi rengine göre seçiliyor: görsel
+   * sağa doğru bu renge soluyor, yani yanlış ton seçilirse fotoğraf zemine
+   * karışmak yerine ondan kopuyor.
+   *
+   * Kahvaltı karesi aydınlık; onu koyuya soldurmak fotoğrafı kesiyormuş
+   * gibi duruyordu. Diğer üçü karanlık salon kareleri.
+   */
+  tone: "dark" | "light";
   items: readonly NavItem[];
 };
+
+/** Zemin ve metin renkleri tona göre. */
+const TONES = {
+  dark: {
+    surface: "oklch(14% 0.008 115)",
+    title: "oklch(99% 0 0)",
+    label: "oklch(86% 0.01 115 / 0.75)",
+    bar: "oklch(99% 0 0)",
+    barDim: "oklch(99% 0 0 / 0.6)",
+    divider: "oklch(99% 0 0 / 0.26)",
+  },
+  light: {
+    surface: "oklch(96.5% 0.006 115)",
+    title: "oklch(18% 0.014 115)",
+    label: "oklch(40% 0.011 115)",
+    bar: "oklch(18% 0.014 115)",
+    barDim: "oklch(18% 0.014 115 / 0.55)",
+    divider: "oklch(18% 0.014 115 / 0.2)",
+  },
+} as const;
 
 /**
  * Panel AYRI BİR SEKME DEĞİL: marka yazısı oraya gidiyor.
@@ -112,6 +141,7 @@ const GROUPS: readonly NavGroup[] = [
   {
     title: "Antrenman",
     photo: "nav-antrenman",
+    tone: "dark",
     items: [
       { href: "/workout", label: "Bugün", hint: "Set set akış", Icon: IconDumbbell },
       { href: "/programs", label: "Programlar", hint: "Aktif program ve şablonlar", Icon: IconProgram },
@@ -122,6 +152,7 @@ const GROUPS: readonly NavGroup[] = [
   {
     title: "Beslenme",
     photo: "nav-beslenme",
+    tone: "light",
     items: [
       { href: "/nutrition", label: "Günlük", hint: "Kalan kalori ve öğünler", Icon: IconNutrition },
       { href: "/supplements", label: "Supplement", hint: "Bugün alınacaklar", Icon: IconSupplement },
@@ -130,6 +161,7 @@ const GROUPS: readonly NavGroup[] = [
   {
     title: "Vücut",
     photo: "nav-vucut",
+    tone: "dark",
     items: [
       { href: "/progress", label: "İlerleme", hint: "Güç seviyesi ve rekorlar", Icon: IconProgress },
       { href: "/muscle-map", label: "Kas Haritası", hint: "Haftalık hacim dengesi", Icon: IconBody },
@@ -140,6 +172,7 @@ const GROUPS: readonly NavGroup[] = [
   {
     title: "Asistan",
     photo: "nav-asistan",
+    tone: "dark",
     items: [
       { href: "/chat", label: "Sohbet", hint: "Sor, anlat, fotoğraf gönder", Icon: IconChat },
       { href: "/coach", label: "Haftalık Rapor", hint: "Pazartesi değerlendirmesi", Icon: IconReport },
@@ -324,8 +357,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const groupActive = (group: NavGroup) => group.items.some((item) => isActive(item.href));
 
-  /** Çubuk fotoğrafın üstünde mi? Metin ve zemin renkleri buna bağlı. */
+  /** Çubuk panelin üstünde mi? Metin ve zemin renkleri buna bağlı. */
   const overPhoto = open !== null;
+  /* Çubuk yazısı panelin TONUNA uyuyor: aydınlık bir panelde (kahvaltı)
+     beyaz yazı okunmuyordu. Panel kapalıyken normal koyu metin. */
+  const openGroup = GROUPS.find((g) => g.title === open) ?? null;
+  const tone = openGroup ? TONES[openGroup.tone] : null;
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -379,7 +416,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               onClick={() => setDrawer(true)}
               aria-label="Menüyü aç"
               className="btn-quiet -ml-2 grid size-9 place-items-center md:hidden"
-              style={{ color: overPhoto ? "oklch(97% 0 0)" : undefined }}
+              style={{ color: tone?.bar }}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden>
                 <path d="M4 7h16M4 12h16M4 17h16" />
@@ -392,7 +429,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               href="/"
               className="display text-xl leading-none tracking-tight transition-colors"
               style={{
-                color: overPhoto ? "oklch(99% 0 0)" : "var(--color-ink)",
+                color: tone?.bar ?? "var(--color-ink)",
                 transitionDuration: "var(--dur-micro)",
               }}
             >
@@ -420,9 +457,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       aria-hidden
                       className="h-4 w-px shrink-0 transition-colors"
                       style={{
-                        background: overPhoto
-                          ? "oklch(99% 0 0 / 0.28)"
-                          : "var(--color-border-strong)",
+                        background: tone?.divider ?? "var(--color-border-strong)",
                         transitionDuration: "var(--dur-micro)",
                       }}
                     />
@@ -442,25 +477,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     onFocus={() => hoverOpen(group.title)}
                     className="display relative block px-5 py-2 text-base tracking-tight transition-colors"
                     style={{
-                      color: overPhoto
+                      color: tone
                         ? open === group.title
-                          ? "oklch(99% 0 0)"
-                          : "oklch(99% 0 0 / 0.62)"
-                        : open === group.title || groupActive(group)
+                          ? tone.bar
+                          : tone.barDim
+                        : groupActive(group)
                           ? "var(--color-ink)"
                           : "var(--color-ink-muted)",
                       transitionDuration: "var(--dur-micro)",
                     }}
                   >
                     {group.title}
-                    <ActiveMark shown={groupActive(group)} onPhoto={overPhoto} />
+                    <ActiveMark shown={groupActive(group)} onPhoto={tone !== null} />
                   </Link>
                 </div>
               ))}
             </nav>
 
             <div className="ml-auto">
-              <ProfileMenu onPhoto={overPhoto} />
+              <ProfileMenu tone={tone} />
             </div>
           </div>
         </div>
@@ -513,84 +548,100 @@ function PhotoBackdrop({
   isActive: (href: Href) => boolean;
   onNavigate: () => void;
 }) {
+  const tone = TONES[group.tone];
+
   return (
     <div
       className="absolute inset-x-0 top-0 hidden overflow-hidden md:block"
       style={{
-        // Çubuğun üstünden başlayıp panelin altında bitiyor: tek görsel,
+        // Çubuğun üstünden başlayıp panelin altında bitiyor: tek yüzey,
         // iki bölge.
         height: `calc(${BAR_HEIGHT} + ${PANEL_HEIGHT})`,
         zIndex: 0,
+        background: tone.surface,
         boxShadow: "0 18px 40px -24px oklch(21% 0.014 115 / 0.35)",
         /* Giriş perde gibi: görsel yerinde durur, açığa çıkan bölge yukarıdan
            aşağı büyür. `translateY` denendi ve çubuğun arkasındaki fotoğraf
-           kayarken kenarda bir boşluk bırakıyordu.
+           kayarken üst kenarda boşluk bırakıyordu.
 
-           Çıkış SÖNEREK: kırpma ile geri sarınca çubuğun arkasındaki fotoğraf
-           en son kayboluyor ve o ana kadar açık renkli yazı zeminini
-           kaybediyordu. Sönme, yazı renginin dönüşüyle aynı eğride gidiyor. */
+           Çıkış sönerek: kırpmayı geri sarınca çubuğun arkasındaki fotoğraf
+           en son kayboluyor ve o ana kadar açık renkli çubuk yazısı zeminini
+           kaybediyordu. Sönme, yazı renginin dönüşüyle aynı anda bitiyor. */
         animation:
           phase === "in"
             ? "curtain-down var(--dur-long) var(--ease-out)"
             : "panel-fade var(--dur-short) var(--ease-out) forwards",
       }}
     >
-      <Photo slug={group.photo} fill className="size-full">
-        {/* Üstte koyu, ortada berrak, altta yine koyu.
-            Üst koyuluk çubuğun yazısını taşıyor ama tam opak değil — istenen
-            "fotoğrafın devamı silik de olsa görünsün" tam olarak bu. */}
-        <div
-          aria-hidden
-          className="absolute inset-0"
-          style={{
-            background: `linear-gradient(to bottom,
-              oklch(16% 0.01 115 / 0.86) 0,
-              oklch(16% 0.01 115 / 0.58) ${BAR_HEIGHT},
-              oklch(16% 0.01 115 / 0.12) 48%,
-              oklch(16% 0.01 115 / 0.52) 82%,
-              oklch(16% 0.01 115 / 0.78) 100%)`,
-          }}
-        />
+      {/* --- Fotoğraf: soldan %75'e ------------------------------------------
+          Sol kenarda geçiş YOK — görsel ekranın kenarına dayanıyor. Sağda
+          panelin %50'sinden %75'ine kadar zemine soluyor; maske kutu-yerel
+          koordinatta 2/3 ile 1 arasında çalışıyor (kutu panelin %75'i).
 
-        <div
-          className="mx-auto flex size-full max-w-[84rem] flex-col justify-end px-5 pb-9 sm:px-8"
-          style={{ paddingTop: BAR_HEIGHT }}
-        >
-          <p className="label" style={{ color: "oklch(86% 0.01 115 / 0.85)" }}>
-            {group.title}
-          </p>
+          Metin bu solma bandının üzerinde başlıyor, yani okunduğu yerde
+          fotoğraf çoktan zemine karışmış oluyor. */}
+      <div
+        className="absolute inset-y-0 left-0 w-3/4"
+        style={{
+          maskImage:
+            "linear-gradient(to right, #000 0%, #000 66.7%, transparent 100%)",
+          WebkitMaskImage:
+            "linear-gradient(to right, #000 0%, #000 66.7%, transparent 100%)",
+        }}
+      >
+        <Photo slug={group.photo} fill className="size-full" />
+      </div>
 
-          {/* Çerçevesiz: kutu, kenarlık, zemin yok — yalnızca tıklanabilir
-              yazı. Kutulu bir liste fotoğrafın üstünde ikinci bir yüzey
-              kuruyor ve "fotoğraf baskın" fikrini bozuyordu.
+      {/* Metnin altındaki yumuşak perde.
+          Maske fotoğrafı %50-%75 arasında zemine soluyor ama solmanın
+          BAŞLADIĞI yerde görsel hâlâ tam opak. Menü tam orada başlıyor ve
+          "İlerleme" karenin en parlak bölgesine denk geldiğinde okunmuyordu.
+          Bu perde yalnızca metnin durduğu şeritte çalışıyor: fotoğrafın
+          uzandığı yeri değiştirmiyor, üstündeki yazıyı taşıyor. */}
+      <div
+        aria-hidden
+        className="absolute inset-y-0 right-0 left-1/2"
+        style={{
+          background: `linear-gradient(to right, transparent 0%, ${tone.surface} 34%)`,
+        }}
+      />
 
-              Dokunma hedefi yine de büyük: satırlar `py-1.5` ve display
-              yüzü bu puntoda yüksek. */}
-          <ul className="mt-1 flex flex-wrap items-baseline gap-x-9 gap-y-1">
-            {group.items.map((item, index) => {
-              const active = isActive(item.href);
-              return (
-                <li
-                  key={String(item.href)}
-                  className="reveal"
-                  style={{ ["--i" as string]: index }}
+      {/* --- Menü: ekranın yarısından sonra, alt alta --------------------- */}
+      <div
+        className="absolute inset-y-0 right-0 left-1/2 flex flex-col justify-center pr-8 pl-6 xl:pr-16"
+        style={{ paddingTop: BAR_HEIGHT }}
+      >
+        <p className="label" style={{ color: tone.label }}>
+          {group.title}
+        </p>
+
+        {/* Çerçevesiz: kutu, kenarlık, zemin yok — yalnızca tıklanabilir
+            yazı. Kutulu bir liste fotoğrafın yanında ikinci bir yüzey
+            kuruyor ve "fotoğraf baskın" fikrini bozuyordu. */}
+        <ul className="mt-2 flex flex-col gap-0.5">
+          {group.items.map((item, index) => {
+            const active = isActive(item.href);
+            return (
+              <li
+                key={String(item.href)}
+                className="reveal"
+                style={{ ["--i" as string]: index }}
+              >
+                <Link
+                  href={item.href}
+                  onClick={onNavigate}
+                  aria-current={active ? "page" : undefined}
+                  className="photo-link display inline-block py-1 text-2xl leading-tight tracking-tight"
+                  style={{ color: tone.title }}
                 >
-                  <Link
-                    href={item.href}
-                    onClick={onNavigate}
-                    aria-current={active ? "page" : undefined}
-                    className="photo-link display block py-1.5 text-2xl leading-none tracking-tight"
-                    style={{ color: "oklch(99% 0 0)" }}
-                  >
-                    {item.label}
-                    <span aria-hidden className="rule" />
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      </Photo>
+                  {item.label}
+                  <span aria-hidden className="rule" />
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </div>
   );
 }
@@ -695,7 +746,7 @@ function DrawerLink({
 
 /* --- Profil --------------------------------------------------------------- */
 
-function ProfileMenu({ onPhoto = false }: { onPhoto?: boolean }) {
+function ProfileMenu({ tone = null }: { tone?: (typeof TONES)[keyof typeof TONES] | null }) {
   const me = useMe();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -732,11 +783,11 @@ function ProfileMenu({ onPhoto = false }: { onPhoto?: boolean }) {
         aria-label="Hesap menüsü"
         className="grid size-9 place-items-center rounded-full border text-sm font-semibold transition-colors"
         style={{
-          // Fotoğraf üstündeyken cam gibi: dolu bir daire koyu görselin
-          // üzerinde yapıştırılmış duruyordu.
-          borderColor: onPhoto ? "oklch(99% 0 0 / 0.45)" : "var(--color-border-strong)",
-          background: onPhoto ? "oklch(99% 0 0 / 0.10)" : "var(--color-surface)",
-          color: onPhoto ? "oklch(99% 0 0)" : "var(--color-ink)",
+          // Panel üstündeyken cam gibi: dolu bir daire görselin üzerinde
+          // yapıştırılmış duruyordu.
+          borderColor: tone?.divider ?? "var(--color-border-strong)",
+          background: tone ? "transparent" : "var(--color-surface)",
+          color: tone?.bar ?? "var(--color-ink)",
           transitionDuration: "var(--dur-micro)",
         }}
       >

@@ -171,6 +171,7 @@ export default function ProgressPage() {
           <ErrorBox error={records.error} />
         ) : (records.data ?? []).length === 0 ? (
           <Empty
+            photo="goal-powerbuilding"
             title="Henüz rekor yok"
             hint="İlk antrenmanını tamamladığında her hareket için dört tür rekor takip edilmeye başlar."
           />

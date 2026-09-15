@@ -104,4 +104,22 @@ describe("Photo", () => {
     const { container } = render(<Photo slug="yok" />);
     expect(container.querySelectorAll('[aria-hidden="true"]').length).toBe(0);
   });
+
+  it("feather kipinde kenarlar maskeleniyor", () => {
+    // Fotoğrafın bittiği yer keskin bir çizgi olarak görünmemeli; maske dört
+    // kenarı saydama götürüyor ve altındaki zemin ne renkse ona karışıyor.
+    const { container } = render(<Photo slug="yok" feather />);
+    const img = container.querySelector("img")!;
+    expect(img.style.maskImage).toContain("transparent");
+    // İki gradyanın KESİŞİMİ; toplanırsa köşeler yumuşamıyor.
+    expect(img.style.maskComposite).toBe("intersect");
+  });
+
+  it("feather kipinde yer tutucu YOK", () => {
+    // Kutu görselin oranında ve kenarları saydama gidiyor; arkasında bir
+    // dikdörtgen görünmemeli.
+    const { container } = render(<Photo slug="yok" feather />);
+    const wrap = container.firstElementChild as HTMLElement;
+    expect(wrap.style.background).toBe("");
+  });
 });

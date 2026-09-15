@@ -69,22 +69,14 @@ Alberto Nuñez (3DMJ) · Jonnie Candito · nSuns (r/Fitness) · Cody Lefever
 
 `apps/web/public/photos/` altındaki fotoğraflar **Unsplash**'ten alındı
 ([lisans](https://unsplash.com/license)). Lisans ticari ve ticari olmayan
-kullanıma izin veriyor ve **atıf zorunlu değil**; aşağıdaki liste yine de
-tutuluyor.
-
-| Dosya | Fotoğrafçı |
-|---|---|
-| `nav-antrenman.jpg` | Tyler Raye |
-| `nav-beslenme.jpg` | Maahid Photos |
-| `nav-vucut.jpg` | Tyler Raye |
-| `nav-asistan.jpg` | Samuel Girven |
-| `hero-login.jpg` | Tyler Raye |
-| `empty-workout.jpg` | Clark Douglas |
+kullanıma izin veriyor ve **atıf zorunlu değil**.
 
 **Lisansın kapsamadığı iki şey var** ve seçim bunlara göre yapıldı:
 
 1. Lisans **tanınabilir kişiler** üzerinde hak vermiyor (model izni yok).
-   Seçilen karelerde yüz yok; hepsi harekete ya da ekipmana odaklı.
+   Seçilen karelerde yüz net görünmüyor; hepsi harekete ya da ekipmana
+   odaklı.
 2. Lisans **ticari markayı** kapsamıyor. Karelerde marka logosu bulunmuyor.
 
-Ayrıntı ve yeni fotoğraf ekleme yönergesi: `apps/web/public/photos/README.md`.
+Yuva listesi, hangi karenin nerede kullanıldığı ve yeni fotoğraf ekleme
+yönergesi: `apps/web/public/photos/README.md`.

@@ -5,6 +5,8 @@ Bu klasördeki dosyalar `<Photo slug="..." />` bileşeni tarafından
 altındaki nötr işlem katmanı görünüyor. Yani bir fotoğraf eklemek dosyayı bu
 klasöre doğru adla atmaktan ibaret; kod değişmiyor.
 
+Şu an 19 dosya, toplam ~1.3 MB.
+
 ## Hazırlama
 
 Dosyalar elle değil betikle hazırlanıyor:
@@ -14,68 +16,99 @@ cd apps/web
 node scripts/photos.mjs ~/Downloads
 ```
 
-Betik her yuvanın kendi oranına göre kırpıp (`scripts/photos.mjs` içindeki
-`JOBS` listesi) `public/photos/` altına yazıyor. Yeni bir fotoğraf eklerken o
-listeye bir satır ekleniyor.
+Betik `JOBS` listesindeki her yuvayı kaynak dosyasından üretiyor. Yeni bir
+fotoğraf eklerken o listeye bir satır ekleniyor; kaynak dosya bulunamazsa o
+yuva atlanıyor ve diğerleri yine üretiliyor.
 
-Neden betik: yuvaların oranları farklı (gezinme paneli 4/5, giriş hero'su 3/4,
-boş durum şeridi 21/9) ve yanlış orandaki bir fotoğraf `cover` ile kırpılırken
-konuyu kadrajdan çıkarıyor. Ayrıca indirilen dosyalar 0.6-3.8 MB.
+İki kırpma kipi var:
 
-## Şu an hazır olanlar
+- **`cover`** — kutuyu doldur, taşanı kes. Kart ve şeritlerde. `position`
+  konunun kadrajda kalacağı tarafı seçiyor.
+- **`inside`** — hiç kırpma, kutuya sığdır. Gezinme panelinde fotoğrafın
+  tamamı görünüyor.
 
-| Slug | Kaynak | Nerede |
+## Yuvalar
+
+### Gezinme panelleri
+
+Panel çok geniş (≈3:1) ve fotoğrafın **tamamı** görünüyor — kırpılmıyor. Bu
+yüzden hepsi yatay kare; dikey bir fotoğraf burada ince bir şeride dönüşüyor.
+Kenarlar maskeyle zemine karışıyor (`<Photo feather>`).
+
+| Slug | Kare |
+|---|---|
+| `nav-antrenman` | omuz pressi |
+| `nav-beslenme` | kahvaltı tabağı |
+| `nav-vucut` | sırt — bölümün adını birebir karşılıyor |
+| `nav-asistan` | deadlift |
+
+### Giriş ekranı
+
+| Slug | Kare | Oran |
 |---|---|---|
-| `nav-antrenman` | Tyler Raye / Unsplash | Gezinme paneli — Antrenman |
-| `nav-beslenme` | Maahid Photos / Unsplash | Gezinme paneli — Beslenme |
-| `nav-vucut` | Tyler Raye / Unsplash | Gezinme paneli — Vücut |
-| `nav-asistan` | Samuel Girven / Unsplash | Gezinme paneli — Asistan |
-| `hero-login` | Tyler Raye / Unsplash | Giriş ekranı |
-| `empty-workout` | Clark Douglas / Unsplash | Antrenman boş durumu |
+| `hero-login` | squat | 3/4 dikey |
 
-Toplam ~656 KB.
+### Boş durumlar ve bitiş
 
-## Eksik olanlar (isteğe bağlı)
+Geniş şerit (21/9). Boş durum ekranın en ölü ânı; fotoğraf "hiçbir şey yok"
+cümlesini bir davete çeviriyor.
 
-Bu yuvalar kodda tanımlı ama dosyaları yok; o ekranlar şu an nötr dokuyla
-çalışıyor ve düzgün görünüyor. Eklemek istersen `scripts/photos.mjs` içindeki
-`JOBS` listesine 4/5 oranıyla ekle.
-
-| Slug | Ne arayacaksın | Nerede |
+| Slug | Kare | Nerede |
 |---|---|---|
-| `goal-strength` | `barbell deadlift` / `squat rack` | Program şablonu kartı |
-| `goal-hypertrophy` | `dumbbell rack` / `cable machine` | Program şablonu kartı |
-| `goal-powerbuilding` | `bench press` | Program şablonu kartı |
-| `goal-general-fitness` | `kettlebell` / `bright gym` | Program şablonu kartı |
-| `equipment-barbell` | `barbell` | Hareket kütüphanesi kartı |
-| `equipment-dumbbell` | `dumbbells` | Hareket kütüphanesi kartı |
-| `equipment-machine` | `gym machine` | Hareket kütüphanesi kartı |
-| `equipment-plate-loaded` | `plate loaded machine` | Hareket kütüphanesi kartı |
-| `equipment-cable` | `cable crossover` | Hareket kütüphanesi kartı |
-| `equipment-bodyweight` | `pull up bar` | Hareket kütüphanesi kartı |
-| `equipment-kettlebell` | `kettlebell` | Hareket kütüphanesi kartı |
-| `equipment-band` | `resistance band` | Hareket kütüphanesi kartı |
+| `empty-workout` | deadlift | Bugün — program yok |
+| `empty-nutrition` | salata | Beslenme — öğün boş |
+| `empty-history` | salon | Geçmiş — kayıt yok |
+| `celebration` | koşu bandı | Antrenman bitti |
+
+### Program şablonları
+
+`goal` alanına göre seçiliyor. 3/2 kart.
+
+| Slug | Kare |
+|---|---|
+| `goal-strength` | deadlift |
+| `goal-hypertrophy` | incline dumbbell press |
+| `goal-powerbuilding` | barbell rack |
+| `goal-general-fitness` | ev antrenmanı |
+
+### Ekipman kartları
+
+Hareket başına fotoğraf **yok** — 400+ hareket için tutarlı ve ücretsiz bir
+kaynak yok. Ekipmana göre altı fotoğraf bütün kütüphaneyi kaplıyor.
+
+| Slug | Kare |
+|---|---|
+| `equipment-barbell` | barbell rack |
+| `equipment-dumbbell` | incline dumbbell press |
+| `equipment-machine` | makine |
+| `equipment-plate-loaded` | makine |
+| `equipment-cable` | salon |
+| `equipment-bodyweight` | ev antrenmanı |
+
+**Kettlebell ve direnç bandı kasıtlı olarak boş.** Elde o ekipmanın karesi
+yok ve yanlış bir görsel koymak, hiç koymamaktan kötü — o kartlar nötr
+dokuyla çalışıyor ve düzgün görünüyor.
 
 ## Nereden
 
 - **Unsplash** — <https://unsplash.com/license>
 - **Pexels** — <https://www.pexels.com/license/>
 
-İkisi de ticari kullanıma açık ve atıf zorunlu değil. Yine de fotoğrafçılar
-yukarıdaki tabloda ve `THIRD-PARTY-NOTICES.md` içinde yazılı.
+İkisi de ticari kullanıma açık ve atıf zorunlu değil.
 
-**İki sınır:**
+**Lisansın kapsamadığı iki şey var:**
 
-1. Bu lisanslar **tanınabilir kişiler** üzerinde hak vermiyor; model izni
-   yok. Kişisel kullanımda sorun değil, ama uygulama ücretli bir ürüne
-   dönerse bir sporcunun fotoğrafı "onaylıyor" gibi okunabilir. Yüzü net
-   görünmeyen, harekete odaklı kareler bu sorunu tümden kaldırıyor — şu anki
-   altı fotoğrafta da yüz yok.
-2. Karede **marka logosu olmasın**. Lisans ticari markayı kapsamıyor.
+1. **Tanınabilir kişiler** üzerinde hak vermiyor (model izni yok). Kişisel
+   kullanımda sorun değil, ama uygulama ücretli bir ürüne dönerse bir
+   sporcunun fotoğrafı "onaylıyor" gibi okunabilir. Yüzü net görünmeyen,
+   harekete odaklı kareler bu sorunu kaldırıyor.
+2. **Ticari markayı** kapsamıyor — karede logo olmasın.
 
-## Ana panelde fotoğraf yok
+## Ana panelde ve canlı sayıların arkasında fotoğraf yok
 
-Kasıtlı. Ana panel ve günlük ekranları canlı sayı gösteriyor; fotoğraf
-arkalarına konunca okunabilirlik düşüyor ve ekran "o an ne yapmalıyım"
-sorusunu yanıtlamaktan çıkıyor. Fotoğraflar gezinmede, giriş ekranında ve boş
+Kasıtlı. Ana panel, beslenme günlüğü ve ilerleme ekranları canlı sayı
+gösteriyor; fotoğraf arkalarına konunca okunabilirlik düşüyor ve ekran "o an
+ne yapmalıyım" sorusunu yanıtlamaktan çıkıyor.
+
+Fotoğraflar gezinmede, giriş ekranında, kart kapaklarında ve boş
 durumlarda — yani okunacak sayının olmadığı yerlerde.

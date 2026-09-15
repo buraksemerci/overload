@@ -287,11 +287,16 @@ test.describe("antrenman modu", () => {
     // Motorun mesajı antrenman modunda da görünmeli.
     await expect(page.getByText(/hedef aralığın üstündesin/)).toBeVisible();
 
-    // Virgülle yazılıyor — Türkçe klavyede doğal olan bu; istemci noktaya
+    // Alanlar erişilebilir adla bulunuyor, yer tutucuyla değil: masaüstü
+    // düzeninde "kg / tekrar / RIR" sütun başlığı olarak bir kez yazılıyor,
+    // her satırda tekrarlanmıyor. Yer tutucu bazlı seçiciler bu yüzden
+    // kırılgan — ve yer tutucu zaten erişilebilir ad sayılmıyor.
+    //
+    // Virgülle yazılıyor: Türkçe klavyede doğal olan bu, istemci noktaya
     // normalize edip göndermeli.
-    await page.getByPlaceholder("kg").first().fill("42,5");
-    await page.getByPlaceholder("tekrar").first().fill("5");
-    await page.getByPlaceholder("RIR").first().fill("1");
+    await page.getByLabel("Set 1 ağırlık").fill("42,5");
+    await page.getByLabel("Set 1 tekrar").fill("5");
+    await page.getByLabel("Set 1 RIR").fill("1");
 
     await page.getByRole("button", { name: "Set 1 tamamlandı" }).click();
 

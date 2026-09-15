@@ -1,12 +1,47 @@
 "use client";
 
-/** Onboarding / Kayıt-Giriş (Bölüm 8, ekran 1). */
+/**
+ * Giriş / Kayıt — uygulamanın ilk izlenimi.
+ *
+ * --------------------------------------------------------------------------
+ * TEK FOTOĞRAFIN OLDUĞU YER
+ * --------------------------------------------------------------------------
+ * Bu ekran fotoğraf için en verimli yer: etkisi yüksek, günlük kullanımda
+ * maliyeti sıfır (bir kez görülüyor) ve arkasında okunması gereken canlı bir
+ * sayı yok. Nike'ın görünümünü veren şeyin aynısı — tam yükseklikte bir
+ * fotoğraf, yanında kalın tipografi ve tek bir eylem.
+ *
+ * Fotoğraf yoksa sol sütun nötr bir dokuya düşüyor ve ekran yine tamam
+ * (bkz. `components/Photo.tsx`). Telefonda sütun tümden gizleniyor: 812
+ * piksellik bir ekranda fotoğraf, formu katlanma çizgisinin altına itiyordu.
+ *
+ * --------------------------------------------------------------------------
+ * GİRİŞ Mİ KAYIT MI
+ * --------------------------------------------------------------------------
+ * İki kip tek formda ve aralarında geçiş bir bağlantı değil segmentli
+ * kontrol: ikisi eşit ağırlıkta seçenek, biri diğerinin alt eylemi değil.
+ * Kip değişince hata mesajı temizleniyor — "şifre yanlış" uyarısı kayıt
+ * formunda durmamalı.
+ */
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Photo } from "@/components/Photo";
 import { login, register } from "@/lib/auth";
 
 type Mode = "login" | "register";
+
+/**
+ * Kip etiketleri KISA, gönder düğmesindekiler uzun.
+ *
+ * Önce ikisi de "Giriş yap" / "Hesap oluştur" idi ve ekranda aynı yazı iki
+ * kez görünüyordu — kullanıcı hangisinin seçim hangisinin eylem olduğunu
+ * ayırt edemiyordu (testler de aynı sebeple iki öğeye birden uyuyordu).
+ */
+const MODES = [
+  { value: "login", label: "Giriş" },
+  { value: "register", label: "Kayıt" },
+] as const;
 
 export default function LoginPage() {
   const router = useRouter();
@@ -34,64 +69,99 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-[70dvh] max-w-sm flex-col justify-center">
-      <h1 className="text-xl lg:text-2xl">overload</h1>
-      <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
-        {mode === "login"
-          ? "Devam etmek için giriş yap."
-          : "Hesap oluştur — programın ve verilerin sana özel kalır."}
-      </p>
-
-      <form onSubmit={submit} className="mt-6 space-y-3">
-        {mode === "register" && (
-          <Field
-            label="Adın (isteğe bağlı)"
-            value={displayName}
-            onChange={setDisplayName}
-            autoComplete="name"
-          />
-        )}
-        <Field
-          label="E-posta"
-          type="email"
-          value={email}
-          onChange={setEmail}
-          autoComplete="email"
-          required
-        />
-        <Field
-          label="Şifre"
-          type="password"
-          value={password}
-          onChange={setPassword}
-          autoComplete={mode === "login" ? "current-password" : "new-password"}
-          required
-          minLength={8}
-        />
-
-        {error && (
-          <p className="text-sm" style={{ color: "var(--color-danger)" }} role="alert">
-            {error}
-          </p>
-        )}
-
-        <button type="submit" className="btn btn-primary w-full" disabled={busy}>
-          {busy ? "…" : mode === "login" ? "Giriş yap" : "Hesap oluştur"}
-        </button>
-      </form>
-
-      <button
-        type="button"
-        onClick={() => {
-          setMode(mode === "login" ? "register" : "login");
-          setError(null);
-        }}
-        className="mt-4 text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
+    <div className="mx-auto grid min-h-[80dvh] max-w-[64rem] items-center gap-10 lg:grid-cols-2 lg:gap-16">
+      {/* Telefonda gizli: dikey bir fotoğraf formu ekranın dışına itiyordu. */}
+      <Photo
+        slug="hero-login"
+        ratio="3 / 4"
+        className="hidden rounded-[var(--radius-lg)] lg:block"
+        position="center 30%"
+        scrim
       >
-        {mode === "login"
-          ? "Hesabın yok mu? Kayıt ol"
-          : "Zaten hesabın var mı? Giriş yap"}
-      </button>
+        <div className="flex size-full flex-col justify-end p-8">
+          <p className="display text-2xl" style={{ color: "oklch(99% 0 0)" }}>
+            Ağırlık artmazsa
+            <br />
+            kas büyümez.
+          </p>
+          <p className="mt-2 max-w-[28ch] text-sm" style={{ color: "oklch(88% 0.01 115)" }}>
+            overload her sette ne kaldırman gerektiğini geçmişine bakarak
+            söylüyor.
+          </p>
+        </div>
+      </Photo>
+
+      <div className="mx-auto w-full max-w-sm">
+        <h1 className="display text-2xl">overload</h1>
+        <p className="mt-1.5 text-sm text-[var(--color-ink-muted)]">
+          {mode === "login"
+            ? "Devam etmek için giriş yap."
+            : "Programın ve verilerin sana özel kalır."}
+        </p>
+
+        <div className="seg mt-6 w-full" role="group" aria-label="Giriş ya da kayıt">
+          {MODES.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={mode === option.value}
+              onClick={() => {
+                setMode(option.value);
+                // Kip değişince hata temizleniyor: "şifre yanlış" uyarısı
+                // kayıt formunda anlamsız duruyor.
+                setError(null);
+              }}
+              className="seg-item flex-1 text-sm"
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        <form onSubmit={submit} className="mt-5 flex flex-col gap-3">
+          {mode === "register" && (
+            <Field
+              label="Adın"
+              value={displayName}
+              onChange={setDisplayName}
+              autoComplete="name"
+              hint="İsteğe bağlı."
+            />
+          )}
+          <Field
+            label="E-posta"
+            type="email"
+            value={email}
+            onChange={setEmail}
+            autoComplete="email"
+            required
+          />
+          <Field
+            label="Şifre"
+            type="password"
+            value={password}
+            onChange={setPassword}
+            autoComplete={mode === "login" ? "current-password" : "new-password"}
+            required
+            minLength={8}
+            hint={mode === "register" ? "En az 8 karakter." : undefined}
+          />
+
+          {error && (
+            <p className="text-sm" style={{ color: "var(--color-danger)" }} role="alert">
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            className="btn btn-primary mt-1 w-full py-3"
+            disabled={busy}
+          >
+            {busy ? "…" : mode === "login" ? "Giriş yap" : "Hesap oluştur"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
@@ -101,25 +171,28 @@ function Field({
   value,
   onChange,
   type = "text",
+  hint,
   ...rest
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   type?: string;
+  hint?: string;
   // `value`/`onChange`/`type` dışlanıyor: kendi imzamızla kesişirlerse
   // TypeScript ikisinin birleşimini bekler ve hiçbir fonksiyon uymaz.
 } & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type">) {
   return (
-    <label className="block">
-      <span className="mb-1 block text-xs text-[var(--color-ink-muted)]">{label}</span>
+    <label className="flex flex-col gap-1.5">
+      <span className="label">{label}</span>
       <input
         type={type}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(event) => onChange(event.target.value)}
         className="field h-11 w-full px-3 text-sm"
         {...rest}
       />
+      {hint && <span className="text-2xs text-[var(--color-ink-faint)]">{hint}</span>}
     </label>
   );
 }

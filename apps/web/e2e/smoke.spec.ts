@@ -23,11 +23,16 @@ test.describe("oturum kontrolü", () => {
 
   test("kayıt ve giriş arasında geçiş yapılabilir", async ({ page }) => {
     await page.goto("/login");
+    // Kip seçici ile gönder düğmesi AYRI etiketler taşıyor: ekranda aynı
+    // yazının iki kez görünmesi hangisinin seçim hangisinin eylem olduğunu
+    // belirsizleştiriyordu.
     await expect(page.getByRole("button", { name: "Giriş yap" })).toBeVisible();
 
-    await page.getByRole("button", { name: /Hesabın yok mu/ }).click();
+    await page.getByRole("button", { name: "Kayıt", exact: true }).click();
     await expect(page.getByRole("button", { name: "Hesap oluştur" })).toBeVisible();
-    await expect(page.getByText("Adın (isteğe bağlı)")).toBeVisible();
+    // Kayıt kipinde ad alanı açılıyor ve isteğe bağlı olduğu yazıyor.
+    await expect(page.getByLabel("Adın")).toBeVisible();
+    await expect(page.getByText("İsteğe bağlı.")).toBeVisible();
   });
 
   test("hatalı giriş anlaşılır bir mesaj gösterir", async ({ page }) => {

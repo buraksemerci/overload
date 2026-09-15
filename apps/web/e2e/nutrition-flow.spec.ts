@@ -8,6 +8,19 @@ import { mockApi, signIn } from "./fixtures";
  * geliyor: ekranda o anki öğün olmalı, ekleme üç aşamalı bir panelde
  * yürümeli, miktar değişince makrolar canlı hesaplanmalı ve kayıtlı bir
  * kalem satıra dokunularak düzeltilebilmeli.
+ *
+ * --------------------------------------------------------------------------
+ * SAAT SABİTLENİYOR
+ * --------------------------------------------------------------------------
+ * Ekranın odaklandığı öğün `new Date()` ile seçiliyor. Testler duvar saatine
+ * bırakıldığında gece yarısını geçince kırıldı: 19:00'da odak akşam
+ * yemeğindeydi ve yardımcı fonksiyon kahvaltıya geçiyordu, 00:05'te ise odak
+ * zaten kahvaltıda olduğu için tıklanacak "Kahvaltı" düğmesi yoktu.
+ *
+ * `setFixedTime` saati 08:00'e sabitliyor, yani odak her koşuda kahvaltıda.
+ * Taklit kayıt da kahvaltıya ait — ikisi birlikte davranışı deterministik
+ * kılıyor. `clock.install` KULLANILMIYOR: zamanı tümden dondurunca TanStack
+ * Query'nin zamanlayıcıları da duruyor.
  */
 
 const API = "http://localhost:8000";
@@ -46,7 +59,12 @@ const TARGET = {
   floor_applied: false,
 };
 
-/** Gün yanıtını iste­diğimiz kalemlerle kurar. */
+/** Odak öğününü belirleyen saat. 08:00 = kahvaltı. */
+async function freezeMorning(page: Page): Promise<void> {
+  await page.clock.setFixedTime(new Date("2026-09-15T08:00:00"));
+}
+
+/** Gün yanıtını istediğimiz kalemlerle kurar. */
 async function mockDay(page: Page, items: Array<typeof LOGGED>): Promise<void> {
   const sum = (key: "calories" | "protein_g" | "carbs_g" | "fat_g") =>
     items.reduce((total, item) => total + Number.parseFloat(item[key]), 0).toFixed(2);
@@ -78,6 +96,7 @@ async function mockDay(page: Page, items: Array<typeof LOGGED>): Promise<void> {
 
 test.describe("beslenme gün görünümü", () => {
   test.beforeEach(async ({ page }) => {
+    await freezeMorning(page);
     await signIn(page);
     await mockApi(page);
   });
@@ -118,9 +137,8 @@ test.describe("beslenme gün görünümü", () => {
     await mockDay(page, [LOGGED]);
     await page.goto("/nutrition");
 
-    // Kahvaltıda kayıt var ve odak saate göre başka bir öğünde olabilir;
-    // her durumda dört öğünün tamamı ekranda bir yerde görünüyor ama üçü
-    // yalnızca özet olarak.
+    // Odak kahvaltıda (saat sabit). Dört öğünün tamamı ekranda bir yerde
+    // görünüyor ama üçü yalnızca tek satırlık özet olarak.
     for (const label of ["Kahvaltı", "Öğle", "Ara öğün", "Akşam"]) {
       await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
     }
@@ -138,6 +156,7 @@ test.describe("beslenme gün görünümü", () => {
 
 test.describe("besin ekleme paneli", () => {
   test.beforeEach(async ({ page }) => {
+    await freezeMorning(page);
     await signIn(page);
     await mockApi(page);
     await mockDay(page, []);
@@ -282,18 +301,15 @@ test.describe("besin ekleme paneli", () => {
 
 test.describe("kayıtlı kalemi düzenleme", () => {
   test.beforeEach(async ({ page }) => {
+    await freezeMorning(page);
     await signIn(page);
     await mockApi(page);
     await mockDay(page, [LOGGED]);
   });
 
-  /** Kalem kahvaltıda; odak saate göre başka öğünde olabiliyor. */
+  /** Saat sabit olduğu için odak kahvaltıda ve kalem doğrudan ekranda. */
   async function openLogged(page: Page): Promise<void> {
     await page.goto("/nutrition");
-    const row = page.getByRole("button", { name: /kalemini düzenle/ });
-    if ((await row.count()) === 0) {
-      await page.getByRole("button", { name: /^Kahvaltı/ }).click();
-    }
     await page.getByRole("button", { name: /kalemini düzenle/ }).click();
   }
 

@@ -1,7 +1,11 @@
 "use client";
 
 /**
- * Dinlenme sayacı.
+ * Dinlenme sayacı — zamanlama mantığı.
+ *
+ * Görsel sunum burada DEĞİL: antrenman akışında sayaç ekranın ortasında büyük
+ * duruyor, köşede bir kart değil. Bu dosya yalnızca "kaç saniye kaldı" ve
+ * "bitti" bildirimini üretiyor.
  *
  * --------------------------------------------------------------------------
  * NEDEN BİTİŞ ZAMANI TUTULUYOR, SAYAÇ AZALTILMIYOR
@@ -14,7 +18,7 @@
  *
  * Şimdi tek gerçek kaynak `endsAt` zaman damgası. Ekran uyandığında kalan süre
  * `endsAt - Date.now()` ile yeniden hesaplanıyor, arka planda ne olduğu
- * önemsiz.
+ * önemsiz. Tarayıcıda 60 saniyelik donma simüle edilerek doğrulandı.
  *
  * --------------------------------------------------------------------------
  * NEDEN SES DE VAR
@@ -38,7 +42,9 @@ export interface RestState {
 /** Kullanıcı dokunması sırasında çağrılmalı; iOS ses iznini o an veriyor. */
 export function createAudioUnlock(): AudioContext | null {
   if (typeof window === "undefined") return null;
-  const Ctor = window.AudioContext ?? (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  const Ctor =
+    window.AudioContext ??
+    (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!Ctor) return null;
   try {
     const context = new Ctor();
@@ -68,82 +74,46 @@ function beep(context: AudioContext | null): void {
   }
 }
 
-export function RestTimer({
-  rest,
-  audio,
-  onDone,
-  onSkip,
-}: {
-  rest: RestState;
-  audio: AudioContext | null;
-  onDone: () => void;
-  onSkip: () => void;
-}) {
+/**
+ * Kalan saniye ve ilerleme oranı. Süre dolduğunda `onDone` bir kez çağrılıyor,
+ * titreşim ve ses denenerek.
+ */
+export function useRestCountdown(
+  rest: RestState | null,
+  audio: AudioContext | null,
+  onDone: () => void,
+): { remaining: number; progress: number } {
   const [now, setNow] = useState(() => Date.now());
   const fired = useRef(false);
 
   useEffect(() => {
+    if (rest === null) return;
     fired.current = false;
     setNow(Date.now());
     // 250ms: saniye değişimini gözle fark edilir gecikme olmadan yakalıyor.
     // Arka planda kısılsa bile `Date.now()` doğru kaldığı için sorun değil.
     const id = setInterval(() => setNow(Date.now()), 250);
     return () => clearInterval(id);
-  }, [rest.endsAt]);
+  }, [rest]);
 
-  const remaining = Math.max(0, Math.ceil((rest.endsAt - now) / 1000));
+  const remaining = rest ? Math.max(0, Math.ceil((rest.endsAt - now) / 1000)) : 0;
 
   useEffect(() => {
-    if (remaining > 0 || fired.current) return;
+    if (rest === null || remaining > 0 || fired.current) return;
     fired.current = true;
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
       navigator.vibrate([200, 100, 200]); // Android; Safari'de sessizce yok sayılır
     }
     beep(audio);
     onDone();
-  }, [remaining, audio, onDone]);
+  }, [rest, remaining, audio, onDone]);
 
-  const minutes = Math.floor(remaining / 60);
-  const seconds = remaining % 60;
-  const progress = rest.total > 0 ? (rest.total - remaining) / rest.total : 0;
-  const circumference = 2 * Math.PI * 16;
+  const progress = rest && rest.total > 0 ? (rest.total - remaining) / rest.total : 0;
+  return { remaining, progress };
+}
 
-  return (
-    <div
-      role="timer"
-      aria-live="off"
-      className="card-raised fixed right-6 bottom-6 flex items-center gap-4 p-4"
-      style={{
-        zIndex: "var(--z-sticky)",
-        animation: "reveal var(--dur-short) var(--ease-out) forwards",
-      }}
-    >
-      <div className="relative size-12 shrink-0">
-        <svg viewBox="0 0 36 36" className="size-12 -rotate-90" aria-hidden>
-          <circle cx="18" cy="18" r="16" fill="none" stroke="var(--color-border)" strokeWidth="3" />
-          <circle
-            cx="18"
-            cy="18"
-            r="16"
-            fill="none"
-            stroke="var(--color-accent-deep)"
-            strokeWidth="3"
-            strokeDasharray={`${progress * circumference} ${circumference}`}
-            strokeLinecap="round"
-          />
-        </svg>
-      </div>
-
-      <div className="min-w-[4.5rem]">
-        <p className="label">Dinlenme</p>
-        <p className="figure tnum mt-0.5 text-md">
-          {minutes}:{String(seconds).padStart(2, "0")}
-        </p>
-      </div>
-
-      <button type="button" className="btn btn-ghost" onClick={onSkip}>
-        Atla
-      </button>
-    </div>
-  );
+/** "2:28" biçiminde. */
+export function formatClock(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  return `${minutes}:${String(seconds % 60).padStart(2, "0")}`;
 }

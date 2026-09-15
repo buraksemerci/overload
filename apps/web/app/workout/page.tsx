@@ -1,22 +1,44 @@
 "use client";
 
 /**
- * Antrenman Modu.
+ * Antrenman Modu — set set yürüyen bir akış.
  *
- * Masaüstü için tasarlandı. Set girişi artık her satırda yer tutucu tekrar
- * eden kutular değil, başlıklı bir tablo: "kg / tekrar / RIR" bir kez yazılıyor
- * ve altındaki satırlar sadece sayı taşıyor. Genişlik arttığı için okunması
- * kolaylaşıyor, dikey yer de azalıyor — yedi hareketli bir gün tek ekrana
- * sığabiliyor.
+ * --------------------------------------------------------------------------
+ * NEDEN AKIŞ, NEDEN LİSTE DEĞİL
+ * --------------------------------------------------------------------------
+ * Önceki sürüm bugünün bütün hareketlerini alt alta kartlar hâlinde
+ * gösteriyordu — yedi hareket, on üç set, hepsi ekranda. Doğru veriydi ama
+ * antrenman sırasında yapılacak iş her an TEK: şu anki set. Geri kalan on iki
+ * set o an sadece gürültü ve kullanıcı her sette "neredeydim" diye ekranı
+ * taramak zorunda kalıyordu.
  *
- * Her set ANINDA sunucuya yazılıyor. Sekme kapanır, bağlantı kopar, tarayıcı
- * çöker — yarım antrenman kaybolmuyor.
+ * Şimdi ekranda bir seferde bir adım var. Sıradaki set girilir, dinlenme
+ * sayacı ortada büyük görünür, ardından bir sonraki set gelir. Bütün programı
+ * görmek isteyen açıkça isteyebiliyor ("Diğer hareketler") ama varsayılan
+ * durum odaklanmış tek adım.
+ *
+ * Adım birimi HAREKET değil SET. "3 set squat" tek adım olsaydı, kullanıcı
+ * setler arasında yine kendi kendini yönetmek zorunda kalırdı; oysa setler
+ * arası dinlenme antrenmanın yarısı.
+ *
+ * --------------------------------------------------------------------------
+ * ALANLAR ÖNCEDEN DOLU GELİYOR
+ * --------------------------------------------------------------------------
+ * Motor her hareket için somut bir hedef üretiyor (geçmiş varsa ilerleme
+ * önerisi, yoksa vücut ağırlığı ve güce göre tahmini başlangıç). O sayılar
+ * girdi alanlarına önceden yazılıyor: kullanıcının işi onaylamak ya da
+ * düzeltmek, sıfırdan karar vermek değil.
  */
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Page, PageHeader, Section } from "@/components/Layout";
-import { createAudioUnlock, RestTimer, type RestState } from "@/components/RestTimer";
+import { InfoTip, Page, PageHeader, Section } from "@/components/Layout";
+import {
+  createAudioUnlock,
+  formatClock,
+  useRestCountdown,
+  type RestState,
+} from "@/components/RestTimer";
 import { ErrorBox, Empty, Loading, fmt } from "@/components/States";
 import { prLabel, prUnit } from "@/lib/labels";
 import {
@@ -27,7 +49,15 @@ import {
   useToday,
   type PersonalRecordRow,
   type PlannedExercise,
+  type WorkoutSet,
 } from "@/lib/queries";
+
+/** Akışın tek adımı: belirli bir hareketin belirli bir seti. */
+interface Step {
+  exercise: PlannedExercise;
+  setNumber: number;
+  exerciseIndex: number;
+}
 
 interface Draft {
   weight: string;
@@ -35,11 +65,10 @@ interface Draft {
   rir: string;
 }
 
-/** "100.00" -> "100", "42.50" -> "42,5". Alana geri yazılabilir biçim;
- *  gönderimde virgül zaten noktaya çevriliyor. */
-const weightText = (value: string) => {
-  const n = Number.parseFloat(value);
-  return Number.isNaN(n) ? value : String(n).replace(".", ",");
+/** "100.00" -> "100", "42.50" -> "42,5". Alana geri yazılabilir biçim. */
+const weightText = (value: string | number) => {
+  const n = typeof value === "number" ? value : Number.parseFloat(value);
+  return Number.isNaN(n) ? "" : String(n).replace(".", ",");
 };
 
 export default function WorkoutPage() {
@@ -52,58 +81,119 @@ export default function WorkoutPage() {
 
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [rest, setRest] = useState<RestState | null>(null);
+  const [jump, setJump] = useState<number | null>(null);
+  const [showAll, setShowAll] = useState(false);
   const [newRecords, setNewRecords] = useState<PersonalRecordRow[] | null>(null);
-  // Ses bağlamı kullanıcı dokunmasında açılıyor; sayfa yüklenirken
-  // oluşturulan bağlam iOS'ta sessiz kalıyor.
   const audio = useRef<AudioContext | null>(null);
 
-  // Devam eden seansı devral. `useState` başlangıç değeri olarak veremiyoruz:
-  // veri ilk render'da henüz gelmemiş oluyor.
+  // Devam eden seansı devral. React'in önerdiği "prop değişince state'i
+  // ayarla" deseni; `useEffect`'ten bir render daha hızlı.
   if (sessionId === null && today.data?.active_session_id) {
     setSessionId(today.data.active_session_id);
   }
 
+  const workout = today.data;
+
+  const steps: Step[] = useMemo(
+    () =>
+      (workout?.exercises ?? []).flatMap((exercise, exerciseIndex) =>
+        Array.from({ length: exercise.target_sets }, (_, i) => ({
+          exercise,
+          setNumber: i + 1,
+          exerciseIndex,
+        })),
+      ),
+    [workout],
+  );
+
+  const loggedSets = session.data?.sets ?? [];
+  const findLogged = useCallback(
+    (exerciseId: string, setNumber: number): WorkoutSet | undefined =>
+      loggedSets.find((s) => s.exercise_id === exerciseId && s.set_number === setNumber),
+    [loggedSets],
+  );
+
+  // İmleç: kaydedilmemiş ilk set. Kullanıcı listeden başka bir harekete
+  // atladıysa o seçim öncelikli (`jump`), ama bir set kaydedilince temizlenip
+  // akış kendiliğinden devam ediyor.
+  const firstPending = steps.findIndex((s) => !findLogged(s.exercise.exercise_id, s.setNumber));
+  const cursor = jump ?? (firstPending === -1 ? steps.length : firstPending);
+  const step: Step | undefined = steps[cursor];
+
+  const doneCount = loggedSets.filter((s) => !s.is_warmup).length;
+
+  const onRestDone = useCallback(() => setRest(null), []);
+  const { remaining, progress } = useRestCountdown(rest, audio.current, onRestDone);
+
   const draftKey = (exerciseId: string, setNumber: number) => `${exerciseId}:${setNumber}`;
 
-  const updateDraft = useCallback((key: string, patch: Partial<Draft>) => {
-    setDrafts((prev) => ({
-      ...prev,
-      [key]: { weight: "", reps: "", rir: "", ...prev[key], ...patch },
-    }));
-  }, []);
+  /**
+   * Alanların gösterilecek değeri.
+   *
+   * Sıra önemli: kaydedilmiş set varsa SUNUCUDAN, kullanıcı bir şey yazdıysa
+   * taslaktan, aksi halde MOTORUN ÖNERİSİNDEN. Üçüncü basamak kullanıcının
+   * "kaç kilo kaldırmalıyım" sorusuna verilen cevabın alana yazılmış hâli.
+   */
+  const valuesFor = (target: Step): Draft => {
+    const logged = findLogged(target.exercise.exercise_id, target.setNumber);
+    if (logged) {
+      return {
+        weight: weightText(logged.weight_kg),
+        reps: String(logged.reps),
+        rir: logged.rir === null ? "" : String(logged.rir),
+      };
+    }
 
-  const submitSet = useCallback(
-    async (exercise: PlannedExercise, setNumber: number) => {
-      if (!sessionId) return;
-      const key = draftKey(exercise.exercise_id, setNumber);
-      const draft = drafts[key];
-      if (!draft?.weight || !draft.reps) return;
+    const typed = drafts[draftKey(target.exercise.exercise_id, target.setNumber)];
+    if (typed) return typed;
 
-      audio.current ??= createAudioUnlock();
+    const suggestion = target.exercise.progression;
+    return {
+      // Vücut ağırlığı hareketinde öneri 0 kg; alan boş kalmalı.
+      weight: suggestion && Number.parseFloat(suggestion.weight_kg) > 0
+        ? weightText(suggestion.weight_kg)
+        : "",
+      reps: suggestion ? String(suggestion.reps) : "",
+      rir: "",
+    };
+  };
 
-      await logSet.mutateAsync({
-        sessionId,
-        exercise_id: exercise.exercise_id,
-        set_number: setNumber,
-        // Türkçe klavyede virgül yazılabiliyor; nokta bekleyen API'ye
-        // göndermeden önce normalize ediyoruz.
-        weight_kg: Number.parseFloat(draft.weight.replace(",", ".")),
-        reps: Number.parseInt(draft.reps, 10),
-        rir: draft.rir === "" ? null : Number.parseInt(draft.rir, 10),
-        technique: exercise.technique,
-      });
+  const updateDraft = (key: string, patch: Partial<Draft>, base: Draft) =>
+    setDrafts((prev) => ({ ...prev, [key]: { ...base, ...prev[key], ...patch } }));
 
-      const seconds = exercise.rest_seconds ?? 150;
+  const submit = async () => {
+    if (!sessionId || !step) return;
+    const values = valuesFor(step);
+    if (!values.reps) return;
+
+    audio.current ??= createAudioUnlock();
+
+    await logSet.mutateAsync({
+      sessionId,
+      exercise_id: step.exercise.exercise_id,
+      set_number: step.setNumber,
+      // Türkçe klavyede virgül yazılabiliyor; nokta bekleyen API'ye
+      // göndermeden önce normalize ediliyor.
+      weight_kg: values.weight ? Number.parseFloat(values.weight.replace(",", ".")) : 0,
+      reps: Number.parseInt(values.reps, 10),
+      rir: values.rir === "" ? null : Number.parseInt(values.rir, 10),
+      technique: step.exercise.technique,
+    });
+
+    setJump(null); // akış kendiliğinden ilerlesin
+
+    // Son set kaydedildiyse dinlenmeye gerek yok.
+    const isLast = cursor >= steps.length - 1;
+    if (!isLast) {
+      const seconds = step.exercise.rest_seconds ?? 150;
       setRest({ endsAt: Date.now() + seconds * 1000, total: seconds });
-    },
-    [drafts, logSet, sessionId],
-  );
+    }
+  };
 
   if (today.isLoading) return <Loading />;
   if (today.isError)
     return <ErrorBox error={today.error} onRetry={() => void today.refetch()} />;
 
-  const workout = today.data;
   if (!workout || workout.exercises.length === 0) {
     return (
       <Page>
@@ -120,16 +210,11 @@ export default function WorkoutPage() {
     );
   }
 
-  const loggedSets = session.data?.sets ?? [];
-  const loggedSet = (exerciseId: string, setNumber: number) =>
-    loggedSets.find((s) => s.exercise_id === exerciseId && s.set_number === setNumber);
-
-  const totalPlanned = workout.exercises.reduce((sum, e) => sum + e.target_sets, 0);
-  const doneCount = loggedSets.filter((s) => !s.is_warmup).length;
-
   if (newRecords !== null) {
     return <Celebration records={newRecords} doneCount={doneCount} />;
   }
+
+  const allDone = cursor >= steps.length;
 
   return (
     <Page>
@@ -137,23 +222,9 @@ export default function WorkoutPage() {
         title={workout.day_label ?? "Antrenman"}
         lead={workout.program_name ?? undefined}
         actions={
-          sessionId === null ? (
+          sessionId !== null && (
             <button
-              className="btn btn-primary"
-              disabled={startSession.isPending}
-              onClick={async () => {
-                audio.current ??= createAudioUnlock();
-                const created = await startSession.mutateAsync({
-                  program_day_id: workout.program_day_id,
-                });
-                setSessionId(created.id);
-              }}
-            >
-              {startSession.isPending ? "Başlatılıyor…" : "Antrenmanı başlat"}
-            </button>
-          ) : (
-            <button
-              className="btn btn-primary"
+              className="btn btn-ghost"
               disabled={doneCount === 0 || complete.isPending}
               onClick={async () => {
                 const result = await complete.mutateAsync(sessionId);
@@ -166,39 +237,76 @@ export default function WorkoutPage() {
         }
       />
 
-      <Progress done={doneCount} total={totalPlanned} />
+      <Progress done={doneCount} total={steps.length} />
 
       {startSession.isError && <ErrorBox error={startSession.error} />}
       {logSet.isError && <ErrorBox error={logSet.error} />}
       {complete.isError && <ErrorBox error={complete.error} />}
 
-      {workout.exercises.map((exercise, index) => (
-        <ExerciseCard
-          key={exercise.program_exercise_id}
-          exercise={exercise}
-          index={index}
-          locked={sessionId === null}
-          loggedSet={loggedSet}
-          drafts={drafts}
-          draftKey={draftKey}
-          updateDraft={updateDraft}
-          onSubmit={submitSet}
+      {/* --- Sahne: bir seferde tek adım --- */}
+      {sessionId === null ? (
+        <Intro
+          exerciseCount={workout.exercises.length}
+          setCount={steps.length}
+          pending={startSession.isPending}
+          onStart={async () => {
+            audio.current ??= createAudioUnlock();
+            const created = await startSession.mutateAsync({
+              program_day_id: workout.program_day_id,
+            });
+            setSessionId(created.id);
+          }}
         />
-      ))}
-
-      {rest && (
-        <RestTimer
-          rest={rest}
-          audio={audio.current}
-          onDone={() => setRest(null)}
+      ) : rest !== null ? (
+        <RestStage
+          remaining={remaining}
+          progress={progress}
+          next={step}
           onSkip={() => setRest(null)}
         />
-      )}
+      ) : allDone ? (
+        <AllDoneStage
+          pending={complete.isPending}
+          onFinish={async () => {
+            if (!sessionId) return;
+            const result = await complete.mutateAsync(sessionId);
+            setNewRecords(result.new_records);
+          }}
+        />
+      ) : step ? (
+        <SetStage
+          step={step}
+          values={valuesFor(step)}
+          pending={logSet.isPending}
+          onChange={(patch) =>
+            updateDraft(
+              draftKey(step.exercise.exercise_id, step.setNumber),
+              patch,
+              valuesFor(step),
+            )
+          }
+          onSubmit={submit}
+        />
+      ) : null}
+
+      {/* --- İsteğe bağlı: bütün gün --- */}
+      <OtherExercises
+        steps={steps}
+        cursor={cursor}
+        open={showAll}
+        onToggle={() => setShowAll((v) => !v)}
+        findLogged={findLogged}
+        onJump={(index) => {
+          setJump(index);
+          setRest(null);
+          setShowAll(false);
+        }}
+      />
     </Page>
   );
 }
 
-/* --- İlerleme çubuğu ------------------------------------------------------ */
+/* --- İlerleme ------------------------------------------------------------- */
 
 function Progress({ done, total }: { done: number; total: number }) {
   const ratio = total > 0 ? Math.min(1, done / total) : 0;
@@ -210,7 +318,7 @@ function Progress({ done, total }: { done: number; total: number }) {
           style={{
             width: `${ratio * 100}%`,
             background: "var(--color-accent)",
-            transition: `width var(--dur-short) var(--ease-out)`,
+            transition: "width var(--dur-short) var(--ease-out)",
           }}
         />
       </div>
@@ -221,188 +329,331 @@ function Progress({ done, total }: { done: number; total: number }) {
   );
 }
 
-/* --- Hareket kartı -------------------------------------------------------- */
+/* --- Sahneler ------------------------------------------------------------- */
 
-function ExerciseCard({
-  exercise,
-  index,
-  locked,
-  loggedSet,
-  drafts,
-  draftKey,
-  updateDraft,
-  onSubmit,
-}: {
-  exercise: PlannedExercise;
-  index: number;
-  locked: boolean;
-  loggedSet: (exerciseId: string, setNumber: number) => { weight_kg: string; reps: number; rir: number | null } | undefined;
-  drafts: Record<string, Draft>;
-  draftKey: (exerciseId: string, setNumber: number) => string;
-  updateDraft: (key: string, patch: Partial<Draft>) => void;
-  onSubmit: (exercise: PlannedExercise, setNumber: number) => void;
-}) {
-  const reps =
-    exercise.target_rep_min === exercise.target_rep_max
-      ? String(exercise.target_rep_min)
-      : `${exercise.target_rep_min}-${exercise.target_rep_max}`;
-
+/** Ortak sahne kabuğu: her durum aynı yükseklikte, aynı hizada. */
+function Stage({ children }: { children: React.ReactNode }) {
   return (
-    <Section
-      className="reveal"
-      title={exercise.name}
-      actions={
-        <span className="tnum text-sm text-[var(--color-ink-muted)]">
-          {exercise.target_sets} × {reps}
-          {exercise.technique !== "straight" && (
-            <span className="ml-2 rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] px-1.5 py-0.5 text-2xs">
-              {exercise.technique}
-            </span>
-          )}
-          {exercise.superset_group !== null && (
-            <span className="ml-2 rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] px-1.5 py-0.5 text-2xs">
-              superset {exercise.superset_group}
-            </span>
-          )}
-        </span>
-      }
-    >
-      <div style={{ "--i": index + 1 } as React.CSSProperties} />
-
-      {/* Motorun çıktısı — bu ekranın var olma sebebi. Kendi yüzeyi var. */}
-      {exercise.progression && (
-        <div className="mb-5 rounded-[var(--radius-md)] bg-[var(--color-surface-raised)] p-4">
-          <p className="text-sm">{exercise.progression.message}</p>
-          {exercise.progression.warnings.map((warning, i) => (
-            <p key={i} className="mt-2 text-xs" style={{ color: "var(--color-warning)" }}>
-              {warning}
-            </p>
-          ))}
-          {exercise.last_session_summary && (
-            <p className="tnum mt-2 text-xs text-[var(--color-ink-faint)]">
-              Geçen sefer: {exercise.last_session_summary}
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Sütun başlıkları bir kez. Önceden her satırdaki üç kutuda yer tutucu
-          olarak tekrarlanıyordu; masaüstü genişliğinde bu gereksiz gürültü.
-
-          Genişlikler SABİT, `1fr` değil. Esnek kolonlar 1440px'te üç haneli bir
-          sayı için 180 piksellik kutular üretiyordu: hem israf, hem göz her
-          satırda gereksiz yol alıyor. Sağda kalan boşluk kasıtlı — ızgarayı
-          sola yığmak satırları taranabilir tutuyor. */}
-      <div className="grid w-fit grid-cols-[1.75rem_6rem_6rem_6rem_2.75rem] items-center gap-x-3 gap-y-2">
-        <span className="label">Set</span>
-        <span className="label text-center">kg</span>
-        <span className="label text-center">Tekrar</span>
-        <span className="label text-center">RIR</span>
-        <span />
-
-        {Array.from({ length: exercise.target_sets }, (_, i) => {
-          const setNumber = i + 1;
-          const key = draftKey(exercise.exercise_id, setNumber);
-          const logged = loggedSet(exercise.exercise_id, setNumber);
-          const done = logged !== undefined;
-
-          // Tamamlanmış setin değerleri SUNUCUDAN okunuyor, taslaktan değil.
-          // `drafts` yalnızca bellekte; sayfa yenilenince boşalıyor ve
-          // girilmiş setler boş kutu görünüyordu.
-          const draft = logged
-            ? {
-                weight: weightText(logged.weight_kg),
-                reps: String(logged.reps),
-                rir: logged.rir === null ? "" : String(logged.rir),
-              }
-            : (drafts[key] ?? { weight: "", reps: "", rir: "" });
-
-          const ready = Boolean(draft.weight && draft.reps);
-
-          return (
-            <div key={setNumber} className="col-span-5 grid grid-cols-subgrid items-center">
-              <span className="tnum text-sm text-[var(--color-ink-faint)]">{setNumber}</span>
-              <NumberField
-                label={`Set ${setNumber} ağırlık`}
-                value={draft.weight}
-                onChange={(v) => updateDraft(key, { weight: v })}
-                disabled={done || locked}
-              />
-              <NumberField
-                label={`Set ${setNumber} tekrar`}
-                value={draft.reps}
-                onChange={(v) => updateDraft(key, { reps: v })}
-                disabled={done || locked}
-              />
-              <NumberField
-                label={`Set ${setNumber} RIR`}
-                value={draft.rir}
-                onChange={(v) => updateDraft(key, { rir: v })}
-                disabled={done || locked}
-              />
-              <button
-                type="button"
-                aria-label={`Set ${setNumber} tamamlandı`}
-                disabled={done || locked || !ready}
-                onClick={() => onSubmit(exercise, setNumber)}
-                className={`grid size-11 place-items-center rounded-[var(--radius-md)] border transition-colors ${
-                  done
-                    ? "border-transparent bg-[var(--color-accent)] text-[var(--color-ink)]"
-                    : "border-[var(--color-border-strong)] text-[var(--color-ink-faint)] hover:border-[var(--color-ink-faint)] disabled:opacity-35"
-                }`}
-                style={{ transitionDuration: "var(--dur-micro)" }}
-              >
-                <span className={done ? "animate-check" : undefined} aria-hidden>
-                  <svg
-                    width="15"
-                    height="15"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={done ? 3 : 2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M5 13l4 4L19 7" />
-                  </svg>
-                </span>
-              </button>
-            </div>
-          );
-        })}
-      </div>
-    </Section>
+    <section className="card flex min-h-[26rem] flex-col items-center justify-center gap-6 px-8 py-12 text-center">
+      {children}
+    </section>
   );
 }
 
-function NumberField({
+function Intro({
+  exerciseCount,
+  setCount,
+  pending,
+  onStart,
+}: {
+  exerciseCount: number;
+  setCount: number;
+  pending: boolean;
+  onStart: () => void;
+}) {
+  return (
+    <Stage>
+      <p className="label">Bugün</p>
+      <p className="display text-3xl">
+        {exerciseCount} hareket · {setCount} set
+      </p>
+      <p className="max-w-[38ch] text-sm text-[var(--color-ink-muted)]">
+        Setler sırayla gelecek. Ağırlıklar geçmişine ve gücüne göre önceden
+        dolu; onayla ya da düzelt.
+      </p>
+      <button className="btn btn-primary px-8 py-3.5 text-base" disabled={pending} onClick={onStart}>
+        {pending ? "Başlatılıyor…" : "Antrenmanı başlat"}
+      </button>
+    </Stage>
+  );
+}
+
+function RestStage({
+  remaining,
+  progress,
+  next,
+  onSkip,
+}: {
+  remaining: number;
+  progress: number;
+  next: Step | undefined;
+  onSkip: () => void;
+}) {
+  const circumference = 2 * Math.PI * 46;
+  return (
+    <Stage>
+      <p className="label">Dinlenme</p>
+
+      <div className="relative grid size-[15rem] place-items-center">
+        <svg viewBox="0 0 100 100" className="absolute inset-0 -rotate-90" aria-hidden>
+          <circle cx="50" cy="50" r="46" fill="none" stroke="var(--color-border)" strokeWidth="3" />
+          <circle
+            cx="50"
+            cy="50"
+            r="46"
+            fill="none"
+            stroke="var(--color-accent-deep)"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeDasharray={`${progress * circumference} ${circumference}`}
+          />
+        </svg>
+        {/* Sayaç ekranın ortasında ve büyük — akışın o anki tek işi beklemek. */}
+        <p className="figure tnum text-[4.5rem]" role="timer">
+          {formatClock(remaining)}
+        </p>
+      </div>
+
+      {next ? (
+        <div>
+          <p className="label">Sırada</p>
+          <p className="mt-1 text-md font-medium">{next.exercise.name}</p>
+          <p className="tnum mt-0.5 text-sm text-[var(--color-ink-muted)]">
+            Set {next.setNumber} / {next.exercise.target_sets}
+          </p>
+        </div>
+      ) : (
+        <p className="text-sm text-[var(--color-ink-muted)]">Son set tamamlandı.</p>
+      )}
+
+      <button className="btn btn-ghost" onClick={onSkip}>
+        Dinlenmeyi atla
+      </button>
+    </Stage>
+  );
+}
+
+/**
+ * Motorun kararının kısa adı.
+ *
+ * Motorun tam mesajı üç satır olabiliyor ("İlk kez yapıyorsun. Boyun, kilon
+ * ve diğer hareketlerdeki gücüne göre…"). Akış ekranında o kadar metin
+ * okunmuyor; kısa etiket ne olduğunu söylüyor, gerekçenin tamamı "?"
+ * arkasında duruyor.
+ */
+const KIND_LABEL: Record<string, string> = {
+  establish_baseline: "Tahmini başlangıç",
+  add_weight: "Ağırlık artışı",
+  add_reps: "Bir tekrar daha",
+  hold: "Aynı ağırlıkta kal",
+  deload: "Deload",
+};
+
+function SetStage({
+  step,
+  values,
+  pending,
+  onChange,
+  onSubmit,
+}: {
+  step: Step;
+  values: Draft;
+  pending: boolean;
+  onChange: (patch: Partial<Draft>) => void;
+  onSubmit: () => void;
+}) {
+  const { exercise, setNumber } = step;
+  const suggestion = exercise.progression;
+  const ready = values.reps.trim().length > 0;
+
+  return (
+    <Stage>
+      <div>
+        <p className="label">
+          Set {setNumber} / {exercise.target_sets}
+        </p>
+        {/* 3xl deneyip geri alındı: sıkışık display yüzü o puntoda ekranı
+            domine ediyor ve alanları alta itiyordu. Odak sayılarda olmalı. */}
+        <h2 className="display mt-2 text-xl lg:text-2xl">{exercise.name}</h2>
+      </div>
+
+      <form
+        className="flex flex-col items-center gap-6"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (ready && !pending) onSubmit();
+        }}
+      >
+        {/* Alanlar önerilen değerlerle DOLU geliyor; hedefi ayrıca büyük
+            yazmak aynı bilgiyi iki kez göstermek olurdu. Alanların kendisi
+            hedef. */}
+        <div className="flex items-end gap-3">
+          <Field
+            label="kg"
+            value={values.weight}
+            onChange={(v) => onChange({ weight: v })}
+            autoFocus
+          />
+          <Field label="Tekrar" value={values.reps} onChange={(v) => onChange({ reps: v })} />
+          <Field label="RIR" value={values.rir} onChange={(v) => onChange({ rir: v })} />
+        </div>
+
+        {suggestion && (
+          <div className="flex flex-col items-center gap-1.5">
+            <span className="flex items-center gap-2">
+              <span className="label">{KIND_LABEL[suggestion.kind] ?? "Hedef"}</span>
+              <InfoTip label="Bu hedef nasıl belirlendi">
+                {suggestion.message}
+                {suggestion.warnings.length > 0 && (
+                  <span className="mt-2 block" style={{ color: "var(--color-warning)" }}>
+                    {suggestion.warnings.join(" ")}
+                  </span>
+                )}
+              </InfoTip>
+            </span>
+            {exercise.last_session_summary && (
+              <p className="tnum text-xs text-[var(--color-ink-faint)]">
+                Geçen sefer: {exercise.last_session_summary}
+              </p>
+            )}
+            {suggestion.warnings.length > 0 && (
+              <p className="max-w-[40ch] text-xs" style={{ color: "var(--color-warning)" }}>
+                {suggestion.warnings[0]}
+              </p>
+            )}
+          </div>
+        )}
+
+        <button
+          type="submit"
+          className="btn btn-primary px-8 py-3.5 text-base"
+          disabled={!ready || pending}
+        >
+          {pending ? "Kaydediliyor…" : "Seti kaydet"}
+        </button>
+      </form>
+    </Stage>
+  );
+}
+
+function AllDoneStage({ pending, onFinish }: { pending: boolean; onFinish: () => void }) {
+  return (
+    <Stage>
+      <span
+        aria-hidden
+        className="animate-check grid size-14 place-items-center rounded-full"
+        style={{ background: "var(--color-accent)" }}
+      >
+        <svg
+          width="30"
+          height="30"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="var(--color-ink)"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M5 13l4 4L19 7" />
+        </svg>
+      </span>
+      <p className="display text-3xl">Bütün setler tamam</p>
+      <button
+        className="btn btn-primary px-8 py-3.5 text-base"
+        disabled={pending}
+        onClick={onFinish}
+      >
+        {pending ? "Kapatılıyor…" : "Antrenmanı bitir"}
+      </button>
+    </Stage>
+  );
+}
+
+function Field({
   label,
   value,
   onChange,
-  disabled,
+  autoFocus,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
-  disabled: boolean;
+  autoFocus?: boolean;
 }) {
   return (
-    <label className="min-w-0">
-      <span className="sr-only">{label}</span>
+    <label className="flex flex-col items-center gap-1.5">
+      <span className="label">{label}</span>
       <input
         // inputMode="decimal": sayısal klavye açar ama virgül de yazılabilir.
         // type="number" kullanılmıyor — iOS'ta ok tuşları alanı daraltıyor.
         inputMode="decimal"
         value={value}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.value)}
-        // Kaydedilmiş set: dolu yüzey + tam okunur metin. Değer artık veri,
-        // girdi değil — soluklaştırmak onu okunmaz yapardı.
-        // Seans başlamamış: yalnızca kenarlık soluklaşıyor, kutu dolmuyor;
-        // dolgulu gri kutular sayfayı ağır gri bloklara çeviriyordu.
-        className="field tnum h-11 w-full text-center disabled:border-[var(--color-border)] disabled:bg-transparent disabled:text-[var(--color-ink-muted)]"
+        autoFocus={autoFocus}
+        onChange={(event) => onChange(event.target.value)}
+        className="field figure h-16 w-[6.5rem] text-center text-xl"
       />
     </label>
+  );
+}
+
+/* --- İsteğe bağlı tam program --------------------------------------------- */
+
+function OtherExercises({
+  steps,
+  cursor,
+  open,
+  onToggle,
+  findLogged,
+  onJump,
+}: {
+  steps: Step[];
+  cursor: number;
+  open: boolean;
+  onToggle: () => void;
+  findLogged: (exerciseId: string, setNumber: number) => WorkoutSet | undefined;
+  onJump: (index: number) => void;
+}) {
+  // Hareket başına grupla: liste set değil hareket düzeyinde okunuyor.
+  const byExercise = new Map<number, { exercise: PlannedExercise; firstStep: number }>();
+  steps.forEach((step, index) => {
+    if (!byExercise.has(step.exerciseIndex)) {
+      byExercise.set(step.exerciseIndex, { exercise: step.exercise, firstStep: index });
+    }
+  });
+
+  const current = steps[cursor]?.exerciseIndex;
+
+  return (
+    <Section bare>
+      <button className="btn btn-quiet -ml-2.5" onClick={onToggle} aria-expanded={open}>
+        {open ? "Diğer hareketleri gizle" : "Diğer hareketleri gör"}
+      </button>
+
+      {open && (
+        <ul className="mt-3 divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
+          {[...byExercise.entries()].map(([exerciseIndex, { exercise, firstStep }]) => {
+            const done = Array.from({ length: exercise.target_sets }, (_, i) =>
+              findLogged(exercise.exercise_id, i + 1),
+            ).filter(Boolean).length;
+            const isCurrent = exerciseIndex === current;
+
+            return (
+              <li key={exercise.program_exercise_id}>
+                <button
+                  onClick={() => onJump(firstStep)}
+                  className="flex w-full items-center gap-4 py-3 text-left transition-colors hover:bg-[var(--color-surface-raised)]"
+                  style={{ transitionDuration: "var(--dur-micro)" }}
+                >
+                  <span
+                    aria-hidden
+                    className="h-6 w-[3px] shrink-0 rounded-full"
+                    style={{
+                      background: isCurrent ? "var(--color-accent-deep)" : "transparent",
+                    }}
+                  />
+                  <span className={`min-w-0 flex-1 truncate text-sm ${isCurrent ? "font-medium" : ""}`}>
+                    {exercise.name}
+                  </span>
+                  <span className="tnum shrink-0 text-xs text-[var(--color-ink-muted)]">
+                    {done} / {exercise.target_sets} set
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Section>
   );
 }
 

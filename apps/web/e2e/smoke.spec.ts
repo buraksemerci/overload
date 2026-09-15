@@ -280,35 +280,93 @@ test.describe("antrenman modu", () => {
     );
 
     await page.goto("/workout");
-    await expect(page.getByText("Plate Loaded Chest Press")).toBeVisible();
+
+    // Başlamadan önce sahne giriş ekranı: hareket adları değil, günün özeti.
+    // Akış tek adımlı olduğu için hareket listesi varsayılan olarak kapalı.
+    await expect(page.getByText("1 hareket · 2 set")).toBeVisible();
 
     await page.getByRole("button", { name: "Antrenmanı başlat" }).click();
 
-    // Motorun mesajı antrenman modunda da görünmeli.
+    // Sahne ilk sete geçiyor: hangi hareket, kaçıncı set, motorun hedefi.
+    await expect(
+      page.getByRole("heading", { name: "Plate Loaded Chest Press", level: 2 }),
+    ).toBeVisible();
+    await expect(page.getByText("Set 1 / 2")).toBeVisible();
+
+    // Motorun kararı KISA etiketle duyuruluyor; gerekçenin tamamı "?"
+    // arkasında. Tam mesaj üç satır olabiliyor ve akış ekranında o kadar metin
+    // okunmuyor — ama gizlenmiş değil, bir dokunuş uzakta.
+    await expect(page.getByText("Ağırlık artışı")).toBeVisible();
+    await expect(page.getByText(/hedef aralığın üstündesin/)).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Bu hedef nasıl belirlendi" }).click();
     await expect(page.getByText(/hedef aralığın üstündesin/)).toBeVisible();
 
-    // Alanlar erişilebilir adla bulunuyor, yer tutucuyla değil: masaüstü
-    // düzeninde "kg / tekrar / RIR" sütun başlığı olarak bir kez yazılıyor,
-    // her satırda tekrarlanmıyor. Yer tutucu bazlı seçiciler bu yüzden
-    // kırılgan — ve yer tutucu zaten erişilebilir ad sayılmıyor.
-    //
-    // Virgülle yazılıyor: Türkçe klavyede doğal olan bu, istemci noktaya
-    // normalize edip göndermeli.
-    await page.getByLabel("Set 1 ağırlık").fill("42,5");
-    await page.getByLabel("Set 1 tekrar").fill("5");
-    await page.getByLabel("Set 1 RIR").fill("1");
+    // Geçen seansın özeti kısa olduğu için doğrudan görünür kalıyor.
+    await expect(page.getByText("Geçen sefer: 40kg x 6 RIR1")).toBeVisible();
 
-    await page.getByRole("button", { name: "Set 1 tamamlandı" }).click();
+    // ALANLAR ÖNCEDEN DOLU. Kullanıcının sorusu "kaç kilo kaldırmalıyım" ve
+    // cevabı alana yazılmış hâlde geliyor — işi onaylamak, sıfırdan karar
+    // vermek değil. Öneri 42.50 kg x 5; ağırlık Türkçe biçimde virgüllü.
+    await expect(page.getByLabel("kg")).toHaveValue("42,5");
+    await expect(page.getByLabel("Tekrar")).toHaveValue("5");
+    await expect(page.getByLabel("RIR")).toHaveValue("");
+
+    // Virgülle yazılan değer noktaya normalize edilip gönderilmeli.
+    await page.getByLabel("kg").fill("45,5");
+    await page.getByLabel("RIR").fill("1");
+    await page.getByRole("button", { name: "Seti kaydet" }).click();
 
     await expect.poll(() => loggedBody).not.toBeNull();
-    expect(loggedBody).toMatchObject({ weight_kg: 42.5, reps: 5, rir: 1, set_number: 1 });
+    expect(loggedBody).toMatchObject({ weight_kg: 45.5, reps: 5, rir: 1, set_number: 1 });
 
-    // Dinlenme sayacı otomatik başlamalı.
+    // Set kaydedilince dinlenme sayacı ortada büyük görünüyor ve sıradaki set
+    // adıyla birlikte duyuruluyor.
     await expect(page.getByRole("timer")).toBeVisible();
+    await expect(page.getByText("Set 2 / 2")).toBeVisible();
   });
 
-  test("set girilmeden tamamlama butonu kapalı", async ({ page }) => {
+  test("tekrar alanı boşsa set kaydedilemez", async ({ page }) => {
+    // Alanlar önceden dolu geldiği için düğme açık başlıyor; korumanın
+    // çalıştığını görmek için alanı boşaltmak gerekiyor.
+    await page.route("http://localhost:8000/workouts/sessions", (route) =>
+      route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: "44444444-4444-4444-4444-444444444444",
+          program_day_id: null,
+          started_at: new Date().toISOString(),
+          completed_at: null,
+          notes: null,
+          is_deload: false,
+          sets: [],
+        }),
+      }),
+    );
+
     await page.goto("/workout");
-    await expect(page.getByRole("button", { name: "Set 1 tamamlandı" })).toBeDisabled();
+    await page.getByRole("button", { name: "Antrenmanı başlat" }).click();
+
+    const save = page.getByRole("button", { name: "Seti kaydet" });
+    await expect(save).toBeEnabled();
+
+    await page.getByLabel("Tekrar").fill("");
+    await expect(save).toBeDisabled();
+  });
+
+  test("diğer hareketler isteğe bağlı olarak açılıyor", async ({ page }) => {
+    await page.goto("/workout");
+
+    // Varsayılan durum odaklanmış tek adım; bütün program gizli.
+    await expect(page.getByText("Plate Loaded Chest Press")).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Diğer hareketleri gör" }).click();
+
+    // Satırın kendisi hedefleniyor: "0 / 2 set" metni üstteki ilerleme
+    // çubuğunda da geçiyor, düz metin seçicisi iki öğeye birden uyuyor.
+    await expect(
+      page.getByRole("button", { name: /Plate Loaded Chest Press\s+0 \/ 2 set/ }),
+    ).toBeVisible();
   });
 });

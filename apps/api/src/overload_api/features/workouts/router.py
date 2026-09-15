@@ -709,3 +709,99 @@ async def list_records(db: DbSession, user: CurrentUser) -> list[PersonalRecord]
         .limit(100)
     )
     return list(rows.scalars().all())
+
+
+# --- Rekorlar: hareket başına güncel en iyi --------------------------------
+#
+# `/records` en son 100 rekor SATIRINI döndürüyor. `personal_record` tablosu
+# her yeni rekoru yeni satır olarak tutuyor (PR grafiği zaman serisi
+# istiyor), yani o liste aynı hareketin aynı türündeki eski rekorlarını da
+# içeriyor. İlerleme ekranı ondan ilk 20'yi alıp gösteriyordu; sonuç aynı
+# etiketin tekrar tekrar sıralandığı bir listeydi:
+#
+#     En ağır set        80,0 kg x 8
+#     En ağır set        77,5 kg x 8
+#     Tahmini 1RM        96,0 kg
+#
+# Hangi harekete ait olduğu da yazmıyordu — `RecordOut` yalnızca
+# `exercise_id` taşıyor. Kullanıcı için anlamlı olan "şu an elimdeki en iyi",
+# hareket adıyla.
+
+
+class BestRecordOut(BaseModel):
+    type: PRType
+    value: Decimal
+    reps: int | None
+    achieved_at: datetime
+
+
+class ExerciseRecordsOut(BaseModel):
+    exercise_id: uuid.UUID
+    name: str
+    records: list[BestRecordOut]
+    #: En taze başarının tarihi. Sıralama buna göre: kullanıcı en son neyi
+    #: kırdığını listenin başında görmeli.
+    last_achieved_at: datetime
+
+
+#: Dört rekor türünde de BÜYÜK olan iyi. `max_weight`'te eşitlik tekrar
+#: sayısıyla bozuluyor: "100kg x 1" ile "100kg x 8" aynı rekor değil
+#: (bkz. `PersonalRecord.reps` yorumu).
+def _record_key(record: PersonalRecord) -> tuple[Decimal, int]:
+    return (record.value, record.reps or 0)
+
+
+#: Ekranda türlerin sırası. Sözlük sırası veriye bağlı olduğu için sabit bir
+#: sıra gerekiyor; yoksa aynı ekranda hareketten harekete yer değiştiriyorlar.
+_PR_ORDER = [
+    PRType.max_weight,
+    PRType.estimated_1rm,
+    PRType.max_reps,
+    PRType.session_volume,
+]
+
+
+@router.get("/records/best", response_model=list[ExerciseRecordsOut])
+async def best_records(db: DbSession, user: CurrentUser) -> list[ExerciseRecordsOut]:
+    """Hareket başına, tür başına güncel en iyi rekor."""
+    rows = (
+        await db.execute(
+            select(PersonalRecord, Exercise.name)
+            .join(Exercise, Exercise.id == PersonalRecord.exercise_id)
+            .where(PersonalRecord.user_id == user.id)
+            .order_by(PersonalRecord.achieved_at.asc())
+        )
+    ).all()
+
+    # (hareket, tür) -> en iyi satır. Eşit değerde ÖNCE kırılan kalıyor:
+    # rekorun kırıldığı tarih, en son tekrarlandığı tarih değil. Sorgu
+    # `achieved_at` artan sırada geldiği için ilk gelen zaten en erken.
+    best: dict[tuple[uuid.UUID, PRType], PersonalRecord] = {}
+    names: dict[uuid.UUID, str] = {}
+
+    for record, name in rows:
+        names[record.exercise_id] = name
+        key = (record.exercise_id, record.type)
+        current = best.get(key)
+        if current is None or _record_key(record) > _record_key(current):
+            best[key] = record
+
+    by_exercise: dict[uuid.UUID, list[PersonalRecord]] = {}
+    for (exercise_id, _type), record in best.items():
+        by_exercise.setdefault(exercise_id, []).append(record)
+
+    result = [
+        ExerciseRecordsOut(
+            exercise_id=exercise_id,
+            name=names[exercise_id],
+            records=[
+                BestRecordOut.model_validate(r, from_attributes=True)
+                for r in sorted(records, key=lambda r: _PR_ORDER.index(r.type))
+            ],
+            last_achieved_at=max(r.achieved_at for r in records),
+        )
+        for exercise_id, records in by_exercise.items()
+    ]
+    result.sort(key=lambda row: row.last_achieved_at, reverse=True)
+    return result
+

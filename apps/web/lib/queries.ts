@@ -191,6 +191,9 @@ export interface StrengthStandard {
   level: string;
   level_label: string;
   next_level: string | null;
+  /** Bir sonraki seviyenin Türkçe adı — etiket backend'de, ikinci bir
+   *  kopya tutulmuyor. */
+  next_level_label: string | null;
   next_level_kg: string | null;
   progress_to_next: number;
 }
@@ -379,6 +382,35 @@ export function useConsistency(days = 365): UseQueryResult<ConsistencyDay[]> {
   return useQuery({
     queryKey: keys.consistency(days),
     queryFn: () => api.get<ConsistencyDay[]>(`/progress/consistency?days=${days}`),
+  });
+}
+
+export interface BestRecord {
+  type: string;
+  value: string;
+  reps: number | null;
+  achieved_at: string;
+}
+
+export interface ExerciseRecords {
+  exercise_id: string;
+  name: string;
+  records: BestRecord[];
+  last_achieved_at: string;
+}
+
+/**
+ * Hareket başına GÜNCEL en iyi rekorlar.
+ *
+ * `useRecords` ham satırları döndürüyor ve `personal_record` her yeni rekoru
+ * yeni satır olarak tutuyor — yani o listede aynı hareketin eski rekorları
+ * da var. İlerleme ekranı ondan ilk 20'yi gösteriyordu ve sonuç aynı
+ * etiketin tekrar tekrar sıralandığı bir listeydi.
+ */
+export function useBestRecords(): UseQueryResult<ExerciseRecords[]> {
+  return useQuery({
+    queryKey: [...keys.records, "best"],
+    queryFn: () => api.get<ExerciseRecords[]>("/workouts/records/best"),
   });
 }
 

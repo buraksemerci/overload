@@ -38,6 +38,7 @@ class StandardOut(BaseModel):
     level: std.StrengthLevel
     level_label: str
     next_level: std.StrengthLevel | None
+    next_level_label: str | None
     next_level_kg: Decimal | None
     progress_to_next: float
 

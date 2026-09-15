@@ -86,6 +86,10 @@ class StandardResult:
     level_label: str
     #: Bir sonraki seviyeye ulaşmak için gereken 1RM. Elit seviyede None.
     next_level: StrengthLevel | None
+    #: Bir sonraki seviyenin Türkçe adı. Etiketler backend'de duruyor;
+    #: `next_level` ham slug olduğu için ekran onu kendi haritasıyla
+    #: çevirmek zorunda kalıyordu — aynı sözlüğün ikinci kopyası.
+    next_level_label: str | None
     next_level_kg: Decimal | None
     #: Mevcut seviye ile bir sonraki arasındaki ilerleme (0.0-1.0).
     progress_to_next: float
@@ -138,6 +142,7 @@ def classify(
         level=level,
         level_label=LEVEL_LABEL[level],
         next_level=next_level,
+        next_level_label=LEVEL_LABEL[next_level] if next_level else None,
         next_level_kg=next_kg,
         progress_to_next=round(progress, 3),
     )

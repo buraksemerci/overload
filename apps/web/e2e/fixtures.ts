@@ -95,6 +95,7 @@ export async function mockApi(page: Page): Promise<void> {
   await page.route(`${API}/workouts/streak`, (route) => json(route, STREAK));
   await page.route(`${API}/workouts/muscle-volume**`, (route) => json(route, MUSCLE_VOLUME));
   await page.route(`${API}/workouts/records`, (route) => json(route, []));
+  await page.route(`${API}/workouts/records/best`, (route) => json(route, []));
   await page.route(`${API}/workouts/sessions**`, (route) => json(route, []));
   await page.route(`${API}/workouts/history**`, (route) => json(route, []));
   // Boş liste DEĞİL: aktif program rozeti ("AKTİF") yalnızca aktif bir
@@ -133,6 +134,7 @@ export async function mockApi(page: Page): Promise<void> {
           level: "intermediate",
           level_label: "Orta",
           next_level: "advanced",
+          next_level_label: "İleri",
           next_level_kg: "140.00",
           progress_to_next: 0.0,
         },

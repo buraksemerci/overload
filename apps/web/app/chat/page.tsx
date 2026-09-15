@@ -202,7 +202,7 @@ export default function ChatPage() {
                         style={{
                           color:
                             state === "approved"
-                              ? "var(--color-success)"
+                              ? "var(--color-accent-deep)"
                               : "var(--color-ink-faint)",
                         }}
                       >

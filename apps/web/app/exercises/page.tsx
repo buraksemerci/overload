@@ -46,7 +46,7 @@ export default function ExercisesPage() {
               onClick={() => setEquipment(option.value)}
               className={`rounded-[3px] px-2 py-1 text-2xs ${
                 equipment === option.value
-                  ? "bg-[var(--color-accent)] text-white"
+                  ? "bg-[var(--color-accent)] text-[var(--color-ink)]"
                   : "border border-[var(--color-border-strong)] text-[var(--color-ink-muted)]"
               }`}
             >
@@ -97,7 +97,7 @@ export default function ExercisesPage() {
                 </span>
               </div>
               {exercise.is_custom && (
-                <p className="mt-1.5 text-2xs" style={{ color: "var(--color-success)" }}>
+                <p className="mt-1.5 text-2xs" style={{ color: "var(--color-accent-deep)" }}>
                   senin eklediğin
                 </p>
               )}

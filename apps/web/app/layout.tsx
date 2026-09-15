@@ -1,16 +1,31 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Big_Shoulders, Geist } from "next/font/google";
 import { AppShell } from "@/components/AppShell";
 import { AuthGate } from "@/components/AuthGate";
 import { Providers } from "./providers";
 import "./globals.css";
 
-// Tek grotesk aile, ayrı display font yok (Bölüm 7). `display: swap` ile
-// metin font inerken bile okunur kalıyor — salonda zayıf bağlantıda önemli.
-const inter = Inter({
-  subsets: ["latin", "latin-ext"], // latin-ext: Türkçe ş/ğ/ı/İ
+// İki aile: sıkışık endüstriyel bir display + temiz bir arayüz groteski.
+//
+// Inter kaldırıldı. Teknik bir kusuru yok ama her modelin varsayılanı olduğu
+// için kullanıldığı her yerde "üretilmiş" hissi veriyor.
+//
+// `latin-ext` alt kümesi ZORUNLU: Türkçe ş/ğ/ı/İ/ö/ü/ç orada. Bu alt küme
+// olmadan başlıklar kutu karakterlerle doluyor.
+// `display: swap` — font inerken metin okunur kalıyor.
+
+// İkisi de değişken font: tek dosya bütün ağırlıkları taşıyor, ayrı ayrı
+// ağırlık istemek gereksiz istek demek olurdu.
+const display = Big_Shoulders({
+  subsets: ["latin", "latin-ext"],
   display: "swap",
-  variable: "--font-inter",
+  variable: "--font-big-shoulders",
+});
+
+const sans = Geist({
+  subsets: ["latin", "latin-ext"],
+  display: "swap",
+  variable: "--font-geist",
 });
 
 export const metadata: Metadata = {
@@ -18,11 +33,12 @@ export const metadata: Metadata = {
   description: "Progresif overload merkezli antrenman, beslenme ve sağlık takibi.",
   applicationName: "overload",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, title: "overload", statusBarStyle: "black-translucent" },
+  appleWebApp: { capable: true, title: "overload", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#17171A",
+  // Açık tema zemini (--color-ground). Tarayıcı arayüzü sayfayla aynı renkte.
+  themeColor: "#f8f9f3",
   // Salonda tek elle kullanılacak: yanlışlıkla yakınlaştırma sinir bozucu,
   // ama tamamen engellemek erişilebilirliği kırar. maximumScale=5 ortası.
   width: "device-width",
@@ -33,7 +49,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="tr" className={inter.variable}>
+    <html lang="tr" className={`${sans.variable} ${display.variable}`}>
       <body className="min-h-dvh">
         <Providers>
           <AuthGate>

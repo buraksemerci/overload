@@ -145,7 +145,7 @@ export default function AccountPage() {
               {save.isPending ? "Kaydediliyor…" : "Kaydet"}
             </button>
             {saved && (
-              <span className="text-xs" style={{ color: "var(--color-success)" }}>
+              <span className="text-xs" style={{ color: "var(--color-accent-deep)" }}>
                 ✓ Kaydedildi
               </span>
             )}

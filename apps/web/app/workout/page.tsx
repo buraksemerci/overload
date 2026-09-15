@@ -301,7 +301,7 @@ export default function WorkoutPage() {
                     onClick={() => void submitSet(exercise, setNumber)}
                     className={`grid size-11 shrink-0 place-items-center rounded-[3px] border transition-colors ${
                       done
-                        ? "border-transparent bg-[var(--color-success)] text-white"
+                        ? "border-transparent bg-[var(--color-accent)] text-[var(--color-ink)]"
                         : "border-[var(--color-border-strong)] text-[var(--color-ink-muted)] disabled:opacity-40"
                     }`}
                   >

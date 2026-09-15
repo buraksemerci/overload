@@ -109,7 +109,8 @@ function Group({
                         borderColor: active
                           ? "transparent"
                           : "var(--color-border-strong)",
-                        color: active && level.value >= 3 ? "#fff" : "var(--color-ink-muted)",
+                        // Dolguların hepsi açık ton; üstüne beyaz değil ink yazılır.
+                        color: active ? "var(--color-ink)" : "var(--color-ink-muted)",
                       }}
                     >
                       {level.value}

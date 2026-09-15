@@ -29,12 +29,16 @@ function levelOf(volume: number, max: number): number {
   return 4;
 }
 
+// Ortak ısı ölçeği (globals.css). Önceden volt, kart yüzeyiyle yüzdelik
+// oranlarda karıştırılıyordu; volt %90 parlaklıkta olduğu için beş basamağın
+// tamamı %90-99 aralığına sıkışıyor ve 11 piksellik karelerde ayırt
+// edilemiyordu. Ölçek artık hem parlaklıkta hem doygunlukta ilerliyor.
 const LEVEL_BACKGROUND = [
-  "var(--color-surface-raised)",
-  "color-mix(in oklab, var(--color-accent) 25%, var(--color-surface))",
-  "color-mix(in oklab, var(--color-accent) 50%, var(--color-surface))",
-  "color-mix(in oklab, var(--color-accent) 75%, var(--color-surface))",
-  "var(--color-accent)",
+  "var(--color-heat-0)",
+  "var(--color-heat-1)",
+  "var(--color-heat-2)",
+  "var(--color-heat-3)",
+  "var(--color-heat-4)",
 ];
 
 export function ConsistencyGrid({

@@ -1,141 +1,407 @@
 "use client";
 
-/** Ana Panel (Bölüm 8, ekran 2): bugünkü antrenman, seri, hacim, mini kas haritası. */
+/**
+ * Panel.
+ *
+ * --------------------------------------------------------------------------
+ * SADELİK BÜTÇESİ — bu ekranın tek kuralı
+ * --------------------------------------------------------------------------
+ * Bir büyük kart, en fazla üç küçük gösterge. Başka hiçbir şey.
+ *
+ * Eski panel dört şeyi birden gösteriyordu: seri, haftalık hacim, bugünün
+ * hareket listesi ve mini kas haritası. Hepsi doğru veriydi ama hiçbiri
+ * "şimdi ne yapayım" sorusuna cevap vermiyordu — kullanıcı dört bloğu okuyup
+ * kararı kendi çıkarmak zorundaydı.
+ *
+ * Şimdi büyük kart o kararı veriyor, göstergeler yalnızca bağlam.
+ * Kas haritası, tutarlılık ızgarası, rekor listesi kendi ekranlarında kalıyor;
+ * detay isteyen kenar çubuğundan gidiyor.
+ *
+ * --------------------------------------------------------------------------
+ * DURUMA GÖRE, SAATE GÖRE DEĞİL
+ * --------------------------------------------------------------------------
+ * Büyük kart neyi göstereceğini saatten değil durumdan çıkarıyor. Saat tek
+ * başına yanıltıcı: vardiyalı çalışan ya da gece antrenman yapan biri için
+ * "akşam oldu, günü özetle" yanlış an. Saat yalnızca ikincil bir ipucu
+ * olarak kullanılıyor (sabah kilo sormak gibi).
+ */
 
 import Link from "next/link";
-import { MuscleMap } from "@/components/MuscleMap";
-import { ErrorBox, Empty, Loading, Stat, fmt } from "@/components/States";
-import { useMuscleVolume, useStreak, useToday } from "@/lib/queries";
-import type { MuscleVolume } from "@overload/shared-types";
+import { ErrorBox, Loading, fmt } from "@/components/States";
+import {
+  useNutritionDay,
+  useSessions,
+  useStreak,
+  useToday,
+  useWeightTrend,
+  type TodayWorkout,
+  type WorkoutSession,
+} from "@/lib/queries";
+
+// Next 16 rotaları tipliyor; `href` gerçekten var olan bir rota olmak zorunda.
+// Yanlış yazılmış bir rota derleme zamanında yakalanıyor.
+type Href = React.ComponentProps<typeof Link>["href"];
 
 export default function DashboardPage() {
   const today = useToday();
   const streak = useStreak();
-  const volume = useMuscleVolume(7);
+  const sessions = useSessions(8);
+  const nutrition = useNutritionDay(null, "maintain");
+  const weight = useWeightTrend(14);
 
   if (today.isLoading) return <Loading />;
-  if (today.isError) return <ErrorBox error={today.error} onRetry={() => void today.refetch()} />;
+  if (today.isError)
+    return <ErrorBox error={today.error} onRetry={() => void today.refetch()} />;
 
   const workout = today.data;
-  const volumes: MuscleVolume[] = (volume.data ?? []).map((row) => ({
-    slug: row.slug,
-    nameTr: row.name_tr,
-    svgId: row.svg_id,
-    region: row.region,
-    sets: row.sets,
-    target: row.target,
-  }));
+  const finishedToday =
+    (sessions.data ?? []).find((s) => s.completed_at !== null && isToday(s.started_at)) ??
+    null;
 
-  const weeklyVolumeSets = volumes.reduce((sum, v) => sum + v.sets, 0);
+  const target = nutrition.data?.target ?? null;
+  const remaining = nutrition.data?.remaining ?? null;
+  const latestWeight = weight.data?.at(-1) ?? null;
+  const weighedToday = latestWeight ? isToday(latestWeight.date) : false;
 
   return (
-    <div className="space-y-6">
-      <section>
-        <h1 className="text-2xl font-semibold tracking-tight">Bugün</h1>
-        <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
-          {workout?.day_label ?? "Aktif program yok"}
-        </p>
-      </section>
+    <div className="mx-auto max-w-[68rem]">
+      <Greeting />
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Stat
-          label="Seri"
-          value={streak.data?.intact_weeks ?? "—"}
-          unit="hafta kesintisiz"
-          tone={streak.data && streak.data.intact_weeks > 0 ? "accent" : undefined}
-        />
-        <Stat
-          label="Bu hafta"
-          value={streak.data ? streak.data.this_week_sessions : "—"}
-          unit={streak.data ? `/ ${streak.data.weekly_target} antrenman` : ""}
-        />
-        <Stat label="Haftalık hacim" value={fmt(weeklyVolumeSets, 1)} unit="efektif set" />
+      <div className="reveal mt-6" style={{ "--i": 1 } as React.CSSProperties}>
+        <PrimaryCard workout={workout} finishedToday={finishedToday} />
       </div>
 
-      {workout?.is_deload_suggested && (
-        <div className="card p-4" style={{ borderColor: "var(--color-warning)" }}>
-          <p className="text-sm">
-            <span style={{ color: "var(--color-warning)" }}>Deload önerisi:</span>{" "}
-            Birkaç haftadır kesintisiz çalışıyorsun. Bu hafta ağırlıkları %10 düşürüp
-            hacmi azaltmak, birikmiş yorgunluğu atıp bir sonraki bloğa taze girmeni sağlar.
-          </p>
-        </div>
-      )}
+      {/* Kolonlar BİLEREK eşit değil. Üç özdeş kutu yan yana dizmek en
+          tanınabilir "üretilmiş arayüz" deseni; ayrıca eşit genişlik, eşit
+          önem demek — oysa gün içinde en çok bakılan gösterge kalan makro.
+          Ortadaki kolon geniş olduğu için iki rakamı birden taşıyabiliyor. */}
+      <div
+        className="reveal mt-4 grid gap-4 lg:grid-cols-[1fr_1.5fr_1fr]"
+        style={{ "--i": 2 } as React.CSSProperties}
+      >
+        <StreakTile
+          weeks={streak.data?.intact_weeks}
+          thisWeek={streak.data?.this_week_sessions}
+          weeklyTarget={streak.data?.weekly_target}
+        />
 
-      <section className="card p-4">
-        {workout && workout.exercises.length > 0 ? (
-          <>
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <h2 className="text-base font-medium">Bugünkü antrenman</h2>
-                <p className="mt-1 truncate text-sm text-[var(--color-ink-muted)]">
-                  {workout.program_name} · {workout.exercises.length} hareket
-                </p>
-              </div>
-              <Link href="/workout" className="btn btn-primary shrink-0">
-                {workout.active_session_id ? "Devam et" : "Başla"}
-              </Link>
-            </div>
-
-            <ul className="mt-4 divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
-              {workout.exercises.map((exercise) => (
-                <li
-                  key={exercise.program_exercise_id}
-                  className="flex items-center justify-between gap-3 py-2.5"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm">{exercise.name}</p>
-                    <p className="tnum text-xs text-[var(--color-ink-faint)]">
-                      {exercise.target_sets}x{exercise.target_rep_min}
-                      {exercise.target_rep_min !== exercise.target_rep_max &&
-                        `-${exercise.target_rep_max}`}
-                    </p>
-                  </div>
-                  {/* Baseline önerisi hedefin kendisini tekrar ediyor (solda
-                      zaten "1x5" yazıyor); sadece somut bir öneri varken göster. */}
-                  {exercise.progression &&
-                    exercise.progression.kind !== "establish_baseline" && (
-                      <p className="tnum shrink-0 text-xs text-[var(--color-ink-muted)]">
-                        {exercise.progression.label}
-                      </p>
-                    )}
-                </li>
-              ))}
-            </ul>
-          </>
+        {target && remaining ? (
+          <MacroTile calories={remaining.calories} protein={remaining.protein_g} />
         ) : (
-          <Empty
-            title="Aktif program yok"
-            hint="Şablon kütüphanesinden bir program seç ya da asistana kendi programını kurdur."
-            action={
-              <Link href="/programs" className="btn btn-primary">
-                Programlara git
-              </Link>
-            }
+          <Tile
+            label="Beslenme"
+            value="—"
+            foot="Hedef için profilini tamamla"
+            href="/account"
           />
         )}
-      </section>
 
-      <section className="card p-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-medium">Haftalık kas hacmi</h2>
-          <Link
-            href="/muscle-map"
-            className="text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
-          >
-            Tam ekran →
-          </Link>
-        </div>
-        {volume.isLoading ? (
-          <Loading />
-        ) : volumes.length > 0 ? (
-          <MuscleMap volumes={volumes} interactive={false} className="mt-4" />
+        {latestWeight ? (
+          <Tile
+            label="Kilo"
+            value={fmt(latestWeight.weight_kg, 1)}
+            unit="kg"
+            foot={weighedToday ? "bugün ölçüldü" : "bugün ölçülmedi"}
+            href="/weight"
+          />
         ) : (
-          <p className="mt-4 text-center text-xs text-[var(--color-ink-faint)]">
-            Henüz tamamlanmış antrenman yok — ilk seansından sonra burası dolacak.
-          </p>
+          <Tile label="Kilo" value="—" foot="İlk ölçümünü gir" href="/weight" />
         )}
-      </section>
+      </div>
     </div>
+  );
+}
+
+/* --- Selamlama ------------------------------------------------------------ */
+
+function Greeting() {
+  const now = new Date();
+  const hour = now.getHours();
+  const part =
+    hour < 6 ? "İyi geceler" : hour < 12 ? "Günaydın" : hour < 18 ? "İyi günler" : "İyi akşamlar";
+
+  // Selamlama tek başına bilgi taşımıyor; tarih onu işe yarar hâle getiriyor.
+  const date = now.toLocaleDateString("tr-TR", {
+    day: "numeric",
+    month: "long",
+    weekday: "long",
+  });
+
+  return (
+    <div className="reveal" style={{ "--i": 0 } as React.CSSProperties}>
+      <h1 className="text-xl">{part}</h1>
+      <p className="mt-0.5 text-sm text-[var(--color-ink-faint)]">{date}</p>
+    </div>
+  );
+}
+
+/* --- Büyük kart ----------------------------------------------------------- */
+
+function PrimaryCard({
+  workout,
+  finishedToday,
+}: {
+  workout: TodayWorkout | undefined;
+  finishedToday: WorkoutSession | null;
+}) {
+  // 1. Yarım kalmış seans her şeyin önünde: kullanıcı salonun ortasında.
+  if (workout?.active_session_id) {
+    return (
+      <Hero
+        eyebrow="Devam ediyor"
+        title={workout.day_label ?? "Antrenman"}
+        note={`${workout.exercises.length} hareket planlı`}
+        action={{ href: "/workout", label: "Devam et" }}
+      />
+    );
+  }
+
+  // 2. Hiç aktif program yok — yeni kullanıcının düştüğü yer.
+  if (!workout || workout.program_name === null) {
+    return (
+      <Hero
+        eyebrow="Başlangıç"
+        title="Bir program seç"
+        note="Hazır şablonlardan birini başlat ya da asistana kendi programını kurdur."
+        action={{ href: "/programs", label: "Programlara git" }}
+      />
+    );
+  }
+
+  // 3. Program var ama bugün hareket yok — dinlenme günü.
+  //    Bunu "program yok" ile aynı kefeye koymak yanlıştı: kullanıcıyı zaten
+  //    sahip olduğu programı seçmeye yönlendiriyordu.
+  if (workout.exercises.length === 0) {
+    return (
+      <Hero
+        eyebrow={workout.program_name}
+        title="Dinlenme günü"
+        note="Bugün planlı antrenman yok. Toparlanma da programın parçası."
+        action={{ href: "/programs", label: "Programı gör", quiet: true }}
+        warn={workout.is_deload_suggested ? "Bu hafta deload önerilir" : undefined}
+      />
+    );
+  }
+
+  // 4. Bugün tamamlandı — muğlak bir tebrik cümlesi yerine ne yapıldığı.
+  if (finishedToday) {
+    const working = finishedToday.sets.filter((s) => !s.is_warmup);
+    const tonnage = working.reduce(
+      (sum, s) => sum + Number.parseFloat(s.weight_kg) * s.reps,
+      0,
+    );
+    return (
+      <Hero
+        eyebrow="Tamamlandı"
+        title={workout.day_label ?? "Antrenman"}
+        note={
+          tonnage > 0
+            ? `${working.length} set · ${fmt(tonnage, 0)} kg tonaj`
+            : `${working.length} set`
+        }
+        action={{ href: "/history", label: "Seansı gör", quiet: true }}
+        done
+      />
+    );
+  }
+
+  // 5. Varsayılan: bugün sırada olan antrenman.
+  return (
+    <Hero
+      eyebrow={workout.program_name ?? "Bugün"}
+      title={workout.day_label ?? "Antrenman"}
+      note={`${workout.exercises.length} hareket · ${totalSets(workout)} set`}
+      action={{ href: "/workout", label: "Antrenmanı başlat" }}
+      warn={workout.is_deload_suggested ? "Bu hafta deload önerilir" : undefined}
+    />
+  );
+}
+
+function Hero({
+  eyebrow,
+  title,
+  note,
+  action,
+  warn,
+  done,
+}: {
+  eyebrow: string;
+  title: string;
+  note: string;
+  action: { href: Href; label: string; quiet?: boolean };
+  warn?: string;
+  done?: boolean;
+}) {
+  return (
+    // Cömert dikey dolgu bilinçli. Bu kart ekranın tek karar noktası; ince bir
+    // şerit hâlinde durduğunda altındaki üç küçük kutuyla aynı ağırlığa
+    // düşüyor ve hiyerarşi kayboluyor. Yüksekliği veriyle değil boşlukla
+    // kazanıyor — sade kalması bu yüzden mümkün.
+    <section className="card px-8 py-10 lg:px-12 lg:py-16">
+      <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0">
+          {/* Tamamlandı işareti küçük bir volt madalyon.
+              İlk denemede kartın TAMAMINI soluk bir volt yıkamasıyla
+              doldurmuştum; ekranda çeyrek alan kaplıyordu ve "ekran başına bir
+              volt öğesi" kuralını açıkça ihlal ediyordu — vurgu olmaktan çıkıp
+              zemin rengine dönüşüyordu. Aynı bilgiyi 18px'lik bir madalyon
+              taşıyor. */}
+          <p className="flex items-center gap-2">
+            {done && (
+              <span
+                aria-hidden
+                className="grid size-[18px] shrink-0 place-items-center rounded-full"
+                style={{ background: "var(--color-accent)" }}
+              >
+                <svg
+                  width="11"
+                  height="11"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--color-ink)"
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M5 13l4 4L19 7" />
+                </svg>
+              </span>
+            )}
+            <span className="label">{eyebrow}</span>
+          </p>
+          {/* Ekranın tek odak noktası. Big Shoulders sıkışık bir yüz; aynı
+              optik ağırlığa ulaşmak için geniş bir gövde yazısından daha
+              büyük punto gerekiyor. */}
+          <h2 className="display mt-2.5 text-3xl leading-[1.02] lg:text-4xl">{title}</h2>
+          <p className="mt-4 max-w-[46ch] text-sm text-[var(--color-ink-muted)]">{note}</p>
+
+          {warn && (
+            <p className="mt-3 text-xs" style={{ color: "var(--color-warning)" }}>
+              {warn}
+            </p>
+          )}
+        </div>
+
+        <Link
+          href={action.href}
+          className={`${action.quiet ? "btn btn-ghost" : "btn btn-primary"} shrink-0 lg:px-6 lg:py-3 lg:text-base`}
+        >
+          {action.label}
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+/* --- Küçük göstergeler ---------------------------------------------------- */
+
+function Tile({
+  label,
+  value,
+  unit,
+  foot,
+  href,
+}: {
+  label: string;
+  value: string | number;
+  unit?: string;
+  foot?: string;
+  href: Href;
+}) {
+  return (
+    <Link
+      href={href}
+      className="card group flex flex-col justify-between p-5 transition-colors hover:bg-[var(--color-surface-raised)]"
+      style={{ transitionDuration: "var(--dur-micro)" }}
+    >
+      <p className="label">{label}</p>
+      <p className="mt-4 flex items-baseline gap-1.5">
+        <span className="figure text-3xl">{value}</span>
+        {unit && <span className="text-sm text-[var(--color-ink-muted)]">{unit}</span>}
+      </p>
+      {foot && <p className="mt-1 text-xs text-[var(--color-ink-faint)]">{foot}</p>}
+    </Link>
+  );
+}
+
+/** Geniş kolon: kalan kalori ve protein birlikte. Gün içinde en çok bakılan yer. */
+function MacroTile({ calories, protein }: { calories: string; protein: string }) {
+  return (
+    <Link
+      href="/nutrition"
+      className="card flex flex-col justify-between p-5 transition-colors hover:bg-[var(--color-surface-raised)]"
+      style={{ transitionDuration: "var(--dur-micro)" }}
+    >
+      <p className="label">Kalan</p>
+      <div className="mt-4 flex items-baseline gap-6">
+        <p className="flex items-baseline gap-1.5">
+          <span className="figure text-3xl">{fmt(calories, 0)}</span>
+          <span className="text-sm text-[var(--color-ink-muted)]">kcal</span>
+        </p>
+        {/* Ayırıcı çizgi: iki rakamı gruplamak yerine ayırıyor, çünkü
+            farklı birimler ve kullanıcı ikisine ayrı ayrı bakıyor. */}
+        <span aria-hidden className="h-7 w-px bg-[var(--color-border)]" />
+        <p className="flex items-baseline gap-1.5">
+          <span className="figure text-3xl">{fmt(protein, 0)}</span>
+          <span className="text-sm text-[var(--color-ink-muted)]">g protein</span>
+        </p>
+      </div>
+      <p className="mt-1 text-xs text-[var(--color-ink-faint)]">günlük hedefe kalan</p>
+    </Link>
+  );
+}
+
+function StreakTile({
+  weeks,
+  thisWeek,
+  weeklyTarget,
+}: {
+  weeks: number | undefined;
+  thisWeek: number | undefined;
+  weeklyTarget: number | undefined;
+}) {
+  // Seri varsa onu göster; yoksa bu haftanın doluluğu daha kullanışlı bir bilgi.
+  const hasStreak = (weeks ?? 0) > 0;
+
+  return (
+    <Link
+      href="/progress"
+      className="card flex flex-col justify-between p-5 transition-colors hover:bg-[var(--color-surface-raised)]"
+      style={{ transitionDuration: "var(--dur-micro)" }}
+    >
+      <p className="label">{hasStreak ? "Seri" : "Bu hafta"}</p>
+      <p className="mt-4 flex items-baseline gap-1.5">
+        <span className="figure text-3xl">
+          {hasStreak ? weeks : (thisWeek ?? "—")}
+        </span>
+        <span className="text-sm text-[var(--color-ink-muted)]">
+          {hasStreak ? "hafta" : weeklyTarget ? `/ ${weeklyTarget}` : ""}
+        </span>
+      </p>
+      <p className="mt-1 text-xs text-[var(--color-ink-faint)]">
+        {hasStreak
+          ? `bu hafta ${thisWeek ?? 0}/${weeklyTarget ?? "—"}`
+          : (thisWeek ?? 0) >= (weeklyTarget ?? Infinity)
+            ? "hedef tamamlandı"
+            : "planlanan antrenman"}
+      </p>
+    </Link>
+  );
+}
+
+/* --- Yardımcılar ---------------------------------------------------------- */
+
+function totalSets(workout: TodayWorkout): number {
+  return workout.exercises.reduce((sum, e) => sum + e.target_sets, 0);
+}
+
+/** ISO tarih/zaman damgasının kullanıcının yerel gününe denk gelip gelmediği. */
+function isToday(iso: string): boolean {
+  const d = new Date(iso);
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
   );
 }

@@ -1,77 +1,163 @@
 @import "tailwindcss";
 
 /* ============================================================================
-   Tasarım dili — "Az ve Öz" (Bölüm 7)
+   TASARIM SİSTEMİ
 
-   Tek vurgu rengi var ve az kullanılıyor. Çivit mavisi SADECE birincil
-   aksiyonlarda ve aktif/tamamlandı durumlarında görünür; her yerde kullanılırsa
-   vurgu olmaktan çıkar. Kırmızı sadece gerçek hata için — "dikkat" demek
-   istediğimizde uyarı sarısı var.
+   Tür:      uygulama arayüzü (veri yoğun değil — bkz. "sadelik bütçesi")
+   Ton:      atletik + ölçülü. Referanslar: Apple'ın kısıtlılığı, BetterMe'nin havası
+   Çapa renk: volt/lime, OKLCH hue 118
+   İskelet:  masaüstü öncelikli, sol kenar çubuğu, duruma göre değişen tek kart
+
+   --------------------------------------------------------------------------
+   ÜÇ KURAL — bunlar ihlal edilirse tasarım dağılır
+   --------------------------------------------------------------------------
+   1. VOLT SADECE DOLGU. `--color-accent` 90% parlaklıkta; kırık beyaz zemin
+      üzerinde kontrastı ~1.3:1. Metin rengi ya da kenarlık OLARAK KULLANILAMAZ.
+      Dolgu olarak kullanılır ve üstündeki yazı `--color-ink` olur. Görünür
+      olması gereken ince işaretler (odak halkası, bağlantı, küçük ikon) için
+      `--color-accent-deep` var — aynı hue'nun okunabilir koyu hâli.
+
+   2. EKRAN BAŞINA BİR VOLT ÖĞESİ. O ekranın tek birincil aksiyonu, ya da bir
+      başarı anı. İkiden fazla volt gören ekran vurgusunu kaybeder.
+
+   3. AYRI BİR "BAŞARI YEŞİLİ" YOK. Volt zaten lime-yeşil; yanına ikinci bir
+      yeşil koymak ikisini de ayırt edilemez yapıyordu. Set tamamlandı, hedef
+      tutturuldu, rekor kırıldı — hepsi volt. Kehribar uyarı, kırmızı gerçek
+      hata için ayrılmış durumda.
+
+   --------------------------------------------------------------------------
+   Neden OKLCH
+   --------------------------------------------------------------------------
+   hsl() ve rgb() parlaklık konusunda yalan söylüyor: hsl(60 100% 50%) ile
+   hsl(240 100% 50%) aynı "lightness" değerine sahip ama sarı, maviden kat kat
+   parlak görünüyor. OKLCH algısal olarak düzgün, yani L değerini sabit tutup
+   hue değiştirdiğimizde parlaklık gerçekten sabit kalıyor. Palet basamakları
+   bu yüzden tutarlı.
+
+   Nötrler saf gri DEĞİL — hepsinde çapa hue'sundan eser miktarda (0.006-0.014)
+   kroma var. Sıcak bir aksanın yanında soğuk gri kullanmak gözü rahatsız
+   ediyor, ama kimse sebebini adlandıramıyor. Bu hafif boyama sayfayı her
+   modelin ürettiği o nötr griden de ayırıyor.
    ============================================================================ */
 
 @theme {
-  /* --- Zemin ve yüzeyler --- */
-  --color-ground: #17171a;
-  --color-surface: #1f1f23;
-  --color-surface-raised: #26262b;
-  --color-border: #2e2e34;
-  --color-border-strong: #3a3a42;
+  /* --- Yüzeyler: açıktan koyuya ---
+     Saf beyaz (#fff) bilinçli olarak yok; kırık beyaz göz yormuyor ve
+     üstündeki beyaz kartlar ayırt edilebiliyor. */
+  --color-ground: oklch(97.5% 0.006 115); /* sayfa zemini */
+  --color-surface: oklch(99.2% 0.004 115); /* kart — zeminden AÇIK */
+  --color-surface-raised: oklch(95% 0.009 115); /* içe gömülü alan, hover */
+  --color-border: oklch(90% 0.008 115); /* ince çizgi */
+  --color-border-strong: oklch(80% 0.011 115); /* girdi kenarı, ayırıcı */
 
-  /* --- Metin --- */
-  --color-ink: #f2f2f0;
-  --color-ink-muted: #9a9aa2;
-  --color-ink-faint: #6b6b73;
+  /* --- Metin ---
+     Saf siyah yok: 21% parlaklık kağıt üzerinde daha yumuşak okunuyor ve
+     çapa hue'sundan gelen eser kroma metni sayfayla aynı aileye sokuyor. */
+  --color-ink: oklch(21% 0.014 115); /* ana metin */
+  --color-ink-muted: oklch(46% 0.011 115); /* ikincil metin, etiket */
+  --color-ink-faint: oklch(60% 0.010 115); /* ipucu, pasif */
 
-  /* --- Tek vurgu: çivit mavisi --- */
-  --color-accent: #6e62e5;
-  --color-accent-hover: #7f74ea;
-  --color-accent-dim: #6e62e51a;
+  /* --- Volt ---
+     Kural 1'i oku. Bu renk metin taşıyamaz. */
+  --color-accent: oklch(90% 0.19 118); /* dolgu */
+  --color-accent-hover: oklch(86% 0.19 118); /* dolgu, hover */
+  --color-accent-deep: oklch(56% 0.14 118); /* GÖRÜNÜR: odak, bağlantı, işaret */
+  --color-accent-wash: oklch(96.5% 0.05 118); /* çok soluk zemin yıkaması */
 
-  /* --- İkincil durumlar --- */
-  --color-success: #4a9b6e;
-  --color-warning: #c9974c;
-  --color-danger: #c9544c; /* SADECE gerçek hatalar */
+  /* --- İkincil durumlar ---
+     `success` YOK, bilinçli. Kural 3. */
+  --color-warning: oklch(72% 0.15 70); /* kehribar — "dikkat", hata değil */
+  --color-danger: oklch(55% 0.19 25); /* SADECE gerçek hatalar */
 
-  /* --- Tipografi: tek grotesk aile, ayrı display font yok --- */
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
-    Roboto, "Helvetica Neue", sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+  /* --- Isı ölçeği ---
+     TEK bir ölçek, iki yerde kullanılıyor: kas haritası ve tutarlılık ızgarası.
+     İkisi de ısı haritası; ayrı ölçekler kurmak aynı rengin iki ekranda farklı
+     şey anlatması demek olurdu.
 
-  /* --- Disiplinli tip skalası (1.200 minor third) --- */
-  --text-2xs: 0.6875rem; /* 11px — rozet, etiket */
-  --text-xs: 0.75rem; /* 12px */
-  --text-sm: 0.8125rem; /* 13px — gövde metni varsayılanı */
-  --text-base: 0.9375rem; /* 15px */
-  --text-lg: 1.125rem; /* 18px */
-  --text-xl: 1.375rem; /* 22px */
-  --text-2xl: 1.75rem; /* 28px — sayfa başlığı, en büyüğü */
+     Ölçek hem parlaklık hem doygunlukta ilerliyor. Yalnızca doygunluk
+     artırmak yetmiyordu: volt zaten %90 parlaklıkta, ondan açık zeminde
+     beş basamak çıkarmaya çalışınca basamaklar birbirine yapışıyor ve 11
+     piksellik karelerde ayırt edilemiyordu. İki eksen birlikte değişince
+     hem renkli hem gri ekranda okunuyor.
 
-  /* --- Boşluk ---
-     `--spacing` BİLEREK ezilmiyor; Tailwind varsayılanı 0.25rem kalıyor.
+     Tek hue olduğu için renk körlüğünde de sıralama korunuyor. */
+  --color-heat-0: oklch(94.5% 0.006 115); /* hiç */
+  --color-heat-1: oklch(94% 0.07 118);
+  --color-heat-2: oklch(92% 0.12 118);
+  --color-heat-3: oklch(89% 0.17 118);
+  --color-heat-4: oklch(85% 0.20 118); /* zirve */
+  --color-heat-over: oklch(72% 0.15 70); /* hedefin belirgin üstü — kehribar */
 
-     Bir ara burayı 0.5rem yapmıştım ("8px grid" diye). Yanlıştı: Tailwind v4'te
-     `--spacing` tüm ölçeğin taban birimi, yani her yardımcıyı ikiye katlıyor —
-     `h-11` 44px yerine 88px, `px-3` 12px yerine 24px oluyordu. Dokunma
-     hedefleri iki katına çıkmıştı ve giriş alanları devleşmişti.
+  /* --- Tipografi: iki aile ---
+     Inter BİLİNÇLİ olarak yok. Her modelin varsayılanı olduğu için kullanılan
+     her yerde "üretilmiş" hissi veriyor.
 
-     8px grid bu tabanı değiştirmekle değil, ÇİFT sayılı yardımcıları
-     kullanmakla sağlanır: p-2 = 8px, p-4 = 16px, gap-6 = 24px.
-     Dokunma hedefleri için h-11 / size-11 = 44px (iOS asgari boyutu). */
+     Big Shoulders Display: sıkışık endüstriyel grotesk. Spor için seçildi ama
+     pratik bir faydası da var — büyük sayılar dar kartlara sığıyor.
+     Geist: modern grotesk, tabular rakamları var, veri için doğru seçim. */
+  --font-display: var(--font-big-shoulders), "Arial Narrow", sans-serif;
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
 
-  /* --- Küçük, sabit köşe yarıçapı: sıfır değil, aşırı yuvarlak değil --- */
-  --radius-sm: 3px;
-  --radius-md: 5px;
-  --radius-lg: 7px;
+  /* --- Tip ölçeği: 1.25 (majör üçlü) ---
+     Bir sayfada en fazla beş boy. Daha fazla hiyerarşi gerekirse ağırlık ve
+     renk kullanılır, altıncı bir boy değil. */
+  --text-2xs: 0.6875rem; /* 11px — rozet */
+  --text-xs: 0.8rem; /* 12.8px */
+  --text-sm: 0.875rem; /* 14px — arayüz varsayılanı */
+  --text-base: 1rem; /* 16px — gövde tabanı, altına düşmüyor */
+  --text-md: 1.25rem; /* 20px */
+  --text-lg: 1.5625rem; /* 25px */
+  --text-xl: 1.9531rem; /* 31px */
+  --text-2xl: 2.4414rem; /* 39px */
+  --text-3xl: 3.0518rem; /* 49px */
+  --text-4xl: 3.8147rem; /* 61px — panelin büyük sayısı */
+
+  /* --- Köşe yarıçapı ---
+     Eski tasarımda 3/5/7px vardı — koyu temada keskinlik teknik duruyordu.
+     Açık temada bu kadar keskin köşe sert görünüyor; cömert yarıçap kağıt
+     hissini güçlendiriyor. */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  /* --- Hareket ---
+     Üstel ease-out: öğeler yerine yavaşlayarak oturuyor. Tarayıcı
+     varsayılanları (`ease`, `ease-in-out`) işlenmemiş duruyor.
+
+     Yay fiziğinde taşma (bounce/overshoot) BİLİNÇLİ olarak yok — tarihi
+     kalmış ve şablon hissi veriyor. Apple'ın kendi geçişleri de taşmıyor.
+     Bu yüzden bir animasyon kütüphanesine de ihtiyaç kalmadı. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); /* giren */
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0); /* çıkan */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1); /* durum değişimi */
+
+  --dur-micro: 120ms; /* basma, geçiş rengi */
+  --dur-short: 220ms; /* hover, tooltip, menü */
+  --dur-long: 420ms; /* modal, çekmece, sayfa açılışı */
+}
+
+/* --- Katman sırası: altı isimli seviye, serbest sayı yok --- */
+:root {
+  --z-base: 1;
+  --z-raised: 10;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-modal: 400;
+  --z-toast: 500;
+  --z-tooltip: 600;
 }
 
 @layer base {
-  * {
-    border-color: var(--color-border);
-  }
-
   html {
     background: var(--color-ground);
-    color-scheme: dark;
+    /* Açık tema tek tema. Koyu sonradan eklenirse hue sabit kalır,
+       yalnızca parlaklık ve kroma değişir. */
+    color-scheme: light;
+    /* Taşan dekoratif öğeler sayfayı yatay kaydırtmasın.
+       `clip` kullanılıyor, `hidden` değil: hidden yeni bir kaydırma bağlamı
+       yaratıp `position: sticky`'yi bozuyor. */
+    overflow-x: clip;
   }
 
   body {
@@ -79,35 +165,108 @@
     color: var(--color-ink);
     font-family: var(--font-sans);
     font-size: var(--text-sm);
-    line-height: 1.5;
-    /* Sayısal veri hizalansın — set/tekrar/ağırlık tabloları için kritik */
+    line-height: 1.55;
+    /* Set/tekrar/ağırlık tabloları hizalı olsun */
     font-variant-numeric: tabular-nums;
     -webkit-font-smoothing: antialiased;
+    overflow-x: clip;
   }
 
-  /* Sayı gösteren her yerde tabular hizalama */
+  /* Display fontu KİMLİK anlarına ayrılmış: sayfa başlığı, büyük sayılar ve
+     `.display` ile açıkça işaretlenen yerler.
+     Bölüm başlıkları gövde ailesinde kalıyor.
+
+     Sebebi Big Shoulders'ın sıkışık olması: 16px'te Geist'ten belirgin biçimde
+     küçük ve zayıf görünüyor. Her başlığa uygulandığında bölüm başlıkları
+     gövde metninin altına düşüyordu — hiyerarşi tersine dönüyordu. Sıkışık bir
+     yüz ancak büyük puntoda hak ettiği ağırlığa ulaşıyor. */
+  h1,
+  .display {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.08;
+  }
+
+  /* Bölüm başlıkları: gövde ailesi, 600. Gövde 400 olduğu için aradaki fark
+     yapıyı taşımaya yetiyor. */
+  h2,
+  h3 {
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    line-height: 1.3;
+  }
+
+  /* Büyük sayılar — panel, rekorlar, güç standartları */
+  .figure {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    line-height: 0.95;
+  }
+
+  /* Küçük büyük harfli etiket. İzleme gevşek, boy küçük. */
+  .label {
+    font-size: var(--text-2xs);
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+  }
+
   .tnum {
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum";
   }
 
-  /* Klavye odağı görünür kalsın; fare tıklamasında görünmesin */
+  /* İnce kaydırma çubuğu. Kenar çubuğu kısa ekranlarda kayabiliyor; varsayılan
+     kalın çubuk orada gereksiz bir görsel ağırlık oluyor. */
+  .scroll-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-strong) transparent;
+  }
+  .scroll-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+  .scroll-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scroll-thin::-webkit-scrollbar-thumb {
+    background: var(--color-border-strong);
+    border-radius: 3px;
+  }
+
+  /* Klavye odağı görünür, fare tıklamasında değil.
+     Halka `accent-deep` — volt bu boyutta görünmez. */
   :focus-visible {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--color-accent-deep);
     outline-offset: 2px;
+    border-radius: var(--radius-sm);
   }
 
   ::selection {
-    background: var(--color-accent-dim);
+    background: var(--color-accent);
+    color: var(--color-ink);
   }
 }
 
 @layer components {
-  /* Kart: tek seviye yükseklik, gölge yok — düz yüzey + ince kenarlık */
+  /* Kart: zeminden AÇIK yüzey + ince çizgi. Gölge yok.
+     Açık temada derinlik gölgeyle değil, yüzey farkı ve çizgiyle kuruluyor —
+     gölge yığmak kartları yüzen plastik parçalara çeviriyor. */
   .card {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
+  }
+
+  /* Yalnızca gerçekten yükselmiş yüzeyler için (menü, modal). Tek gölge. */
+  .card-raised {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 1px 2px oklch(21% 0.014 115 / 0.05);
   }
 
   .btn {
@@ -115,17 +274,30 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    border-radius: var(--radius-sm);
-    padding: 0.5rem 0.875rem;
+    border-radius: var(--radius-md);
+    padding: 0.625rem 1rem;
     font-size: var(--text-sm);
     font-weight: 500;
-    /* Sadece kullanıcı aksiyonuna cevap — dekoratif geçiş yok */
-    transition: background-color 120ms ease, border-color 120ms ease;
+    white-space: nowrap;
+    /* Yalnızca transform ve renk — layout tetikleyen özellik yok */
+    transition:
+      background-color var(--dur-micro) var(--ease-out),
+      border-color var(--dur-micro) var(--ease-out),
+      transform var(--dur-micro) var(--ease-out);
+  }
+  .btn:active {
+    transform: translateY(1px);
+  }
+  .btn:disabled {
+    opacity: 0.4;
+    pointer-events: none;
   }
 
+  /* Birincil: volt dolgu, ink yazı. Kural 1'in tek doğru uygulaması. */
   .btn-primary {
     background: var(--color-accent);
-    color: #fff;
+    color: var(--color-ink);
+    font-weight: 600;
   }
   .btn-primary:hover {
     background: var(--color-accent-hover);
@@ -139,35 +311,90 @@
   .btn-ghost:hover {
     background: var(--color-surface-raised);
   }
+
+  /* Metin düğmesi — üçüncül aksiyonlar için, görsel ağırlığı en az */
+  .btn-quiet {
+    background: transparent;
+    color: var(--color-ink-muted);
+    padding: 0.5rem 0.625rem;
+  }
+  .btn-quiet:hover {
+    background: var(--color-surface-raised);
+    color: var(--color-ink);
+  }
+
+  /* Girdi alanı */
+  .field {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    padding: 0.625rem 0.75rem;
+    font-size: var(--text-sm);
+    color: var(--color-ink);
+    transition: border-color var(--dur-micro) var(--ease-out);
+  }
+  .field:hover {
+    border-color: var(--color-ink-faint);
+  }
+  .field::placeholder {
+    color: var(--color-ink-faint);
+  }
 }
 
-/* Set tamamlandığında tek seferlik onay animasyonu (Bölüm 7: hareket ilkesi).
-   Sayfa yüklenirken çalışan dekoratif bir efekt YOK. */
-@keyframes check-pop {
-  0% {
-    transform: scale(0.8);
+/* --- Sayfa açılışı: TEK sıralı hareket ---
+   Kademe DOM sırasına göre CSS değişkeniyle, JS ile değil. Toplam kademe
+   500ms'i geçmiyor; ötesinde sayfa yerine oturmuyor gibi duruyor. */
+.reveal {
+  opacity: 0;
+  transform: translateY(6px);
+  animation: reveal var(--dur-long) var(--ease-out) forwards;
+  animation-delay: calc(var(--i, 0) * 55ms);
+}
+
+@keyframes reveal {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Set tamamlandığında tek seferlik onay. Taşma yok — ölçek 1'e oturuyor. */
+@keyframes check-in {
+  from {
+    transform: scale(0.85);
     opacity: 0;
   }
-  60% {
-    transform: scale(1.08);
-    opacity: 1;
-  }
-  100% {
+  to {
     transform: scale(1);
     opacity: 1;
   }
 }
 
 .animate-check {
-  animation: check-pop 180ms ease-out;
+  animation: check-in var(--dur-short) var(--ease-out);
 }
 
-/* Hareket azaltma tercihi olan kullanıcıda animasyonu kapat */
+/* Hareket azaltma tercihi: uzamsal hareket tamamen kalkıyor, yalnızca
+   opaklık geçişi kalıyor. İşlevsel hareket (ilerleme çubuğu, iskelet)
+   çalışmaya devam ediyor, sadece yavaşlıyor. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
+    animation-duration: 150ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 150ms !important;
+  }
+
+  .reveal {
+    animation: reveal-reduced 150ms linear forwards;
+    animation-delay: 0ms;
+  }
+
+  @keyframes reveal-reduced {
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
 }

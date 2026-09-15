@@ -71,7 +71,11 @@ export default function SupplementsPage() {
                     className="grid size-11 place-items-center rounded-[3px] border transition-colors"
                     style={
                       row.taken === true
-                        ? { background: "var(--color-success)", borderColor: "transparent", color: "#fff" }
+                        ? {
+                            background: "var(--color-accent)",
+                            borderColor: "transparent",
+                            color: "var(--color-ink)",
+                          }
                         : { borderColor: "var(--color-border-strong)", color: "var(--color-ink-muted)" }
                     }
                   >

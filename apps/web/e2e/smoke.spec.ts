@@ -17,7 +17,8 @@ test.describe("oturum kontrolü", () => {
 
   test("giriş sayfasında gezinme çubuğu gösterilmez", async ({ page }) => {
     await page.goto("/login");
-    await expect(page.getByRole("navigation", { name: "Mobil gezinme" })).toHaveCount(0);
+    await expect(page.getByRole("navigation", { name: "Ana gezinme" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Hesap menüsü" })).toHaveCount(0);
   });
 
   test("kayıt ve giriş arasında geçiş yapılabilir", async ({ page }) => {
@@ -57,19 +58,31 @@ test.describe("oturum açıkken", () => {
     await mockApi(page);
   });
 
-  test("ana panel bugünkü antrenmanı ve seriyi gösterir", async ({ page }) => {
+  test("ana panel bugünün antrenmanını tek bir kartta gösterir", async ({ page }) => {
     await page.goto("/");
 
-    // `exact` şart: "Bugün" aynı zamanda "Bugünkü antrenman" başlığına da uyuyor.
-    await expect(page.getByRole("heading", { name: "Bugün", exact: true })).toBeVisible();
-    await expect(page.getByText("Pazartesi — Göğüs / Omuz / Triceps")).toBeVisible();
-    await expect(page.getByText("Plate Loaded Chest Press")).toBeVisible();
+    // Büyük kart: günün adı ve tek birincil aksiyon.
+    await expect(
+      page.getByRole("heading", { name: "Pazartesi — Göğüs / Omuz / Triceps", level: 2 }),
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Antrenmanı başlat" })).toBeVisible();
 
-    // Motorun önerisi panelde görünmeli.
-    await expect(page.getByText("42.5kg x 5")).toBeVisible();
+    // Bağlam göstergeleri: seri ve kalan makro.
+    await expect(page.getByText("bu hafta 2/5")).toBeVisible();
+    await expect(page.getByText("g protein")).toBeVisible();
+  });
 
-    // Seri programa göre sayılıyor: "3 hafta kesintisiz".
-    await expect(page.getByText("hafta kesintisiz")).toBeVisible();
+  test("panel hareket listesini ve kas haritasını GÖSTERMEZ", async ({ page }) => {
+    await page.goto("/");
+
+    // Bu test bir tasarım kararını kilitliyor: panelin sadelik bütçesi bir
+    // büyük kart + en fazla üç gösterge. Eski panel bunlara ek olarak bugünün
+    // hareket listesini, haftalık hacmi ve mini kas haritasını da gösteriyordu;
+    // hepsi doğru veriydi ama hiçbiri "şimdi ne yapayım" sorusuna cevap
+    // vermiyordu. Detay kendi ekranlarında duruyor.
+    await expect(page.getByText("Plate Loaded Chest Press")).toHaveCount(0);
+    await expect(page.getByText("Haftalık kas hacmi")).toHaveCount(0);
+    await expect(page.getByRole("img", { name: /vücut kas hacmi haritası/ })).toHaveCount(0);
   });
 
   test("aktif program yoksa yönlendirici boş durum gösterilir", async ({ page }) => {
@@ -89,13 +102,32 @@ test.describe("oturum açıkken", () => {
     );
 
     await page.goto("/");
-    // "Aktif program yok" iki yerde görünüyor: başlık altındaki alt metin ve
-    // boş durum kartı. Kartın kendisini ve eylemini doğruluyoruz.
-    await expect(page.getByText("Aktif program yok").last()).toBeVisible();
-    await expect(
-      page.getByText(/Şablon kütüphanesinden bir program seç/),
-    ).toBeVisible();
+    // Yeni kullanıcının düştüğü yer: ne yapacağını söyleyen tek bir kart.
+    await expect(page.getByRole("heading", { name: "Bir program seç", level: 2 })).toBeVisible();
     await expect(page.getByRole("link", { name: "Programlara git" })).toBeVisible();
+  });
+
+  test("program var ama bugün hareket yoksa dinlenme günü gösterilir", async ({ page }) => {
+    await page.route("http://localhost:8000/workouts/today", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          program_name: "Test Programı",
+          program_day_id: null,
+          day_label: null,
+          exercises: [],
+          active_session_id: null,
+          is_deload_suggested: false,
+        }),
+      }),
+    );
+
+    await page.goto("/");
+    // "Program yok" ile "bugün hareket yok" AYRI durumlar. İkisini birleştirmek
+    // kullanıcıyı zaten sahip olduğu programı seçmeye yönlendiriyordu.
+    await expect(page.getByRole("heading", { name: "Dinlenme günü", level: 2 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Bir program seç" })).toHaveCount(0);
   });
 
   test("deload önerisi görünür olur", async ({ page }) => {
@@ -107,7 +139,24 @@ test.describe("oturum açıkken", () => {
           program_name: "Test",
           program_day_id: null,
           day_label: "Gün 1",
-          exercises: [],
+          // Antrenman günü: deload uyarısı asıl burada görünmeli.
+          exercises: [
+            {
+              program_exercise_id: "pe-1",
+              exercise_id: "ex-1",
+              name: "Squat",
+              equipment: "barbell",
+              order_index: 0,
+              target_sets: 3,
+              target_rep_min: 5,
+              target_rep_max: 5,
+              technique: "straight",
+              superset_group: null,
+              rest_seconds: 180,
+              progression: null,
+              last_session_summary: null,
+            },
+          ],
           active_session_id: null,
           is_deload_suggested: true,
         }),
@@ -115,22 +164,37 @@ test.describe("oturum açıkken", () => {
     );
 
     await page.goto("/");
-    await expect(page.getByText("Deload önerisi:")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Gün 1", level: 2 })).toBeVisible();
+    await expect(page.getByText("Bu hafta deload önerilir")).toBeVisible();
   });
 
   test("ekranlar arasında gezinilebilir", async ({ page }) => {
     await page.goto("/");
 
-    // İki gezinme çubuğu da DOM'da: mobil olan `sm:hidden`, masaüstü olan
-    // `hidden sm:flex`. Hangisinin görünür olduğu viewport'a bağlı, bu yüzden
-    // rol+ad ile bulup görünür olanı filtreliyoruz.
-    for (const name of ["Beslenme", "İlerleme", "Asistan"] as const) {
-      await page
-        .getByRole("link", { name, exact: true })
-        .filter({ visible: true })
-        .first()
-        .click();
-      await expect(page.getByRole("heading", { name, level: 1 })).toBeVisible();
+    // Kenar çubuğu etiketleri sayfa başlıklarıyla birebir aynı DEĞİL: menüde
+    // gruplar var ("BESLENME" bir başlık, altındaki bağlantı "Günlük"), o
+    // yüzden eşleme açıkça yazılıyor.
+    //
+    // Masaüstünde kenar çubuğu kalıcı; telefonda çekmece olarak açılıyor.
+    // Masaüstü çubuğu `md` altında `display:none` olduğu için erişilebilirlik
+    // ağacından düşüyor ve rol sorgusu iki öğeye birden uymuyor.
+    // Mobil olup olmadığı viewport'tan KESİN olarak biliniyor.
+    // Önce `isVisible()` ile sorulıyordu; o çağrı beklemiyor, yani sayfa
+    // hidrasyonu tamamlanmadan çağrıldığında düğmeyi bulamıyor ve menü hiç
+    // açılmıyordu. `.click()` ise kendisi bekliyor.
+    const isMobile = (page.viewportSize()?.width ?? 1280) < 768;
+    const openMenuIfNeeded = async () => {
+      if (isMobile) await page.getByRole("button", { name: "Menüyü aç" }).click();
+    };
+
+    for (const [navLabel, heading] of [
+      ["Günlük", "Beslenme"],
+      ["İlerleme", "İlerleme"],
+      ["Sohbet", "Asistan"],
+    ] as const) {
+      await openMenuIfNeeded();
+      await page.getByRole("link", { name: navLabel, exact: true }).click();
+      await expect(page.getByRole("heading", { name: heading, level: 1 })).toBeVisible();
     }
   });
 

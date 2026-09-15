@@ -66,12 +66,12 @@ const SILHOUETTE =
  * Kırmızı BİLİNÇLİ olarak kullanılmıyor; fazla hacim bir hata değil, bir uyarı.
  */
 function volumeColor(sets: number, target: number): string {
-  if (sets <= 0) return "var(--color-surface-raised)";
+  if (sets <= 0) return "var(--color-heat-0)";
   const ratio = sets / Math.max(target, 1);
-  if (ratio < 0.5) return "color-mix(in oklab, var(--color-accent) 25%, var(--color-surface))";
-  if (ratio < 1) return "color-mix(in oklab, var(--color-accent) 55%, var(--color-surface))";
-  if (ratio <= 1.5) return "var(--color-accent)";
-  return "var(--color-warning)";
+  if (ratio < 0.5) return "var(--color-heat-1)";
+  if (ratio < 1) return "var(--color-heat-2)";
+  if (ratio <= 1.5) return "var(--color-heat-4)";
+  return "var(--color-heat-over)";
 }
 
 interface Props {
@@ -172,12 +172,13 @@ export function MuscleMap({ volumes, interactive = true, className }: Props) {
 }
 
 function Legend() {
+  // `volumeColor` ile AYNI basamaklar; ikisi ayrışırsa açıklama yanlış olur.
   const steps: Array<[string, string]> = [
-    ["Çalışılmadı", "var(--color-surface-raised)"],
-    ["Eksik", "color-mix(in oklab, var(--color-accent) 25%, var(--color-surface))"],
-    ["Yolda", "color-mix(in oklab, var(--color-accent) 55%, var(--color-surface))"],
-    ["Hedefte", "var(--color-accent)"],
-    ["Fazla", "var(--color-warning)"],
+    ["Çalışılmadı", "var(--color-heat-0)"],
+    ["Eksik", "var(--color-heat-1)"],
+    ["Yolda", "var(--color-heat-2)"],
+    ["Hedefte", "var(--color-heat-4)"],
+    ["Fazla", "var(--color-heat-over)"],
   ];
   return (
     <ul className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">

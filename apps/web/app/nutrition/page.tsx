@@ -108,7 +108,7 @@ export default function NutritionPage() {
                 onClick={() => setGoal(option.value)}
                 className={`rounded-[3px] px-2 py-1 text-2xs ${
                   goal === option.value
-                    ? "bg-[var(--color-accent)] text-white"
+                    ? "bg-[var(--color-accent)] text-[var(--color-ink)]"
                     : "border border-[var(--color-border-strong)] text-[var(--color-ink-muted)]"
                 }`}
               >
@@ -418,7 +418,7 @@ function MacroCell({
     ratio > 1.1
       ? "var(--color-warning)"
       : ratio >= 0.9
-        ? "var(--color-success)"
+        ? "var(--color-accent-deep)"
         : "var(--color-ink)";
 
   return (

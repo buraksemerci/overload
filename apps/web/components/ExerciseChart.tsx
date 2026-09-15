@@ -72,7 +72,7 @@ export function ExerciseChart({ exerciseId }: { exerciseId: string }) {
               onClick={() => setMetric(option.key)}
               className={`rounded-[3px] px-2 py-1 text-2xs ${
                 metric === option.key
-                  ? "bg-[var(--color-accent)] text-white"
+                  ? "bg-[var(--color-accent)] text-[var(--color-ink)]"
                   : "border border-[var(--color-border-strong)] text-[var(--color-ink-muted)]"
               }`}
             >
@@ -85,7 +85,7 @@ export function ExerciseChart({ exerciseId }: { exerciseId: string }) {
           style={{
             color:
               change > 0
-                ? "var(--color-success)"
+                ? "var(--color-accent-deep)"
                 : change < 0
                   ? "var(--color-warning)"
                   : "var(--color-ink-muted)",

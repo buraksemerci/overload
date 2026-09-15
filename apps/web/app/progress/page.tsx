@@ -14,11 +14,16 @@ import {
   useStrengthStandards,
 } from "@/lib/queries";
 
+// Seviyeler SIRALI, bu yüzden renkler de sıralı: soluktan güçlüye.
+// Önceden "intermediate" volt, "advanced" ise success rengiydi; açık temada
+// ikisi de metin olarak okunmuyordu (volt %90 parlaklıkta) ve aralarındaki
+// sıra da belli olmuyordu. Volt yalnızca "advanced"ta çıkıyor — kazanılmış bir
+// eşik olduğu için anlamlı.
 const LEVEL_COLOR: Record<string, string> = {
   untrained: "var(--color-ink-faint)",
   novice: "var(--color-ink-muted)",
-  intermediate: "var(--color-accent)",
-  advanced: "var(--color-success)",
+  intermediate: "var(--color-ink)",
+  advanced: "var(--color-accent-deep)",
   elite: "var(--color-warning)",
 };
 

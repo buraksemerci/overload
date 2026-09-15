@@ -61,16 +61,17 @@ export function Stat({
   label: string;
   value: string | number;
   unit?: string;
-  tone?: "accent" | "success" | "warning";
+  // "success" tonu KALDIRILDI: volt zaten başarı rengi, yanına ikinci bir
+  // yeşil koymak ikisini de ayırt edilemez yapıyordu.
+  tone?: "accent" | "warning";
 }) {
+  // `--color-accent` DEĞİL: volt metin olarak okunmuyor, koyu varyantı gerekiyor.
   const color =
     tone === "accent"
-      ? "var(--color-accent)"
-      : tone === "success"
-        ? "var(--color-success)"
-        : tone === "warning"
-          ? "var(--color-warning)"
-          : "var(--color-ink)";
+      ? "var(--color-accent-deep)"
+      : tone === "warning"
+        ? "var(--color-warning)"
+        : "var(--color-ink)";
   return (
     <div className="card p-4">
       <p className="text-xs text-[var(--color-ink-muted)]">{label}</p>

@@ -15,6 +15,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from overload_api.db.models.body import BodyWeightLog
 from overload_api.db.models.exercise import (
     Exercise,
     ExerciseMuscleMap,
@@ -22,6 +23,7 @@ from overload_api.db.models.exercise import (
     MuscleRole,
 )
 from overload_api.db.models.program import Program, ProgramDay, ProgramExercise
+from overload_api.db.models.user import Sex, User
 from overload_api.db.models.workout import PersonalRecord, PRType, SetLog, WorkoutSession
 from overload_api.services.progression import (
     ExerciseTarget,
@@ -31,6 +33,9 @@ from overload_api.services.progression import (
     should_suggest_deload_week,
     suggest_next_target,
 )
+from overload_api.services.starting_weight import estimate as estimate_starting_weight
+from overload_api.services.starting_weight import infer_level
+from overload_api.services.strength_standards import TRACKED_LIFTS, StrengthLevel
 
 
 def should_suggest_deload(intact_weeks: int) -> bool:
@@ -262,12 +267,97 @@ async def load_history(
     return performances
 
 
+@dataclass(frozen=True, slots=True)
+class StrengthContext:
+    """Başlangıç ağırlığı tahmini için gereken kullanıcı bilgisi.
+
+    Hareket başına değil BİR KEZ yükleniyor. Bugünün antrenmanı sekiz hareket
+    içerebiliyor; her biri için kilo kaydını ve dört çapa hareketin geçmişini
+    yeniden sorgulamak aynı veriyi sekiz kez çekmek olurdu.
+    """
+
+    bodyweight_kg: Decimal | None
+    sex: Sex
+    level: StrengthLevel
+
+
+async def load_strength_context(session: AsyncSession, user: User) -> StrengthContext:
+    """Kilo kaydı + çapa hareketlerdeki en iyi performanstan seviye çıkarır."""
+    bodyweight = (
+        await session.execute(
+            select(BodyWeightLog.weight_kg)
+            .where(BodyWeightLog.user_id == user.id)
+            .order_by(BodyWeightLog.date.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+
+    if bodyweight is None or bodyweight <= 0:
+        # Kilo yoksa seviye de çıkarılamaz; tahmin üretilmeyecek.
+        return StrengthContext(bodyweight_kg=None, sex=user.sex, level=StrengthLevel.untrained)
+
+    # Çapa hareketlerde en iyi tahmini 1RM -> vücut ağırlığına oran.
+    rows = (
+        await session.execute(
+            select(Exercise.search_name, SetLog.weight_kg, SetLog.reps)
+            .join(SetLog, SetLog.exercise_id == Exercise.id)
+            .where(
+                SetLog.user_id == user.id,
+                SetLog.is_warmup.is_(False),
+                Exercise.search_name.in_(TRACKED_LIFTS.keys()),
+            )
+        )
+    ).all()
+
+    best: dict[str, Decimal] = {}
+    for search_name, weight, reps in rows:
+        one_rm = weight * (Decimal(1) + Decimal(reps) / Decimal(30))
+        if one_rm > best.get(search_name, Decimal(0)):
+            best[search_name] = one_rm
+
+    ratios = {lift: value / bodyweight for lift, value in best.items()}
+    return StrengthContext(
+        bodyweight_kg=bodyweight,
+        sex=user.sex,
+        level=infer_level(best_ratios=ratios, sex=user.sex),
+    )
+
+
+def _estimate_start(
+    exercise: Exercise, target: ExerciseTarget, context: StrengthContext | None
+) -> Decimal | None:
+    """Hareketin kas eşlemesinden tahmini başlangıç ağırlığı."""
+    if context is None:
+        return None
+
+    primary = next(
+        (m.muscle_group.slug for m in exercise.muscle_map if m.role is MuscleRole.primary),
+        None,
+    )
+    # İzolasyon tanımı veritabanında saklanmıyor, eşlemeden çıkarılıyor:
+    # ikincil kası olmayan hareket tek bir kası çalıştırıyor demektir.
+    is_isolation = not any(m.role is MuscleRole.secondary for m in exercise.muscle_map)
+
+    return estimate_starting_weight(
+        primary_muscle=primary,
+        equipment=exercise.equipment,
+        is_isolation=is_isolation,
+        # Aralığın ÜST sınırı: ilk seansta ağırlığı düşük, tekrarı yüksek
+        # tutmak daha güvenli bir referans veriyor.
+        target_reps=target.rep_max,
+        bodyweight_kg=context.bodyweight_kg,
+        sex=context.sex,
+        level=context.level,
+    )
+
+
 async def progression_for_exercise(
     session: AsyncSession,
     user_id: uuid.UUID,
     exercise_id: uuid.UUID,
     *,
     program_exercise_id: uuid.UUID | None = None,
+    context: StrengthContext | None = None,
 ) -> ProgressionSuggestion | None:
     """Hareketin bir sonraki hedefini hesaplar.
 
@@ -322,7 +412,9 @@ async def progression_for_exercise(
         target = ExerciseTarget(sets=3, rep_min=8, rep_max=12, equipment=exercise.equipment)
 
     history = await load_history(session, user_id, exercise_id)
-    return suggest_next_target(target, history)
+    return suggest_next_target(
+        target, history, estimated_start=_estimate_start(exercise, target, context)
+    )
 
 
 async def detect_new_records(

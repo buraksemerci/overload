@@ -237,13 +237,19 @@ async def todays_workout(db: DbSession, user: CurrentUser) -> TodayOut:
 
     day = program.days[next_index]
 
+    # Güç bağlamı (kilo, cinsiyet, seviye) BİR KEZ yükleniyor: ilk kez yapılan
+    # hareketlerde başlangıç ağırlığı tahmini için gerekiyor ve gün sekiz
+    # hareket içerebiliyor. Hareket başına yüklemek aynı veriyi sekiz kez
+    # çekmek olurdu.
+    strength = await service.load_strength_context(db, user)
+
     planned: list[PlannedExerciseOut] = []
     for px in day.exercises:
         exercise = px.exercise
         # Satır kimliği ZORUNLU olarak geçiliyor: 5/3/1 gibi programlarda aynı
         # hareket bir günde birden çok kez, farklı hedeflerle geçiyor.
         suggestion = await service.progression_for_exercise(
-            db, user.id, px.exercise_id, program_exercise_id=px.id
+            db, user.id, px.exercise_id, program_exercise_id=px.id, context=strength
         )
         planned.append(
             PlannedExerciseOut(

@@ -303,10 +303,18 @@ def detect_plateau(
 def suggest_next_target(
     target: ExerciseTarget,
     history: list[SessionPerformance],
+    *,
+    estimated_start: Decimal | None = None,
 ) -> ProgressionSuggestion:
     """Bir hareket için bir sonraki seansın somut hedefini üretir.
 
     `history` eskiden yeniye sıralı olmalı; son eleman en güncel seans.
+
+    `estimated_start`: geçmiş YOKKEN kullanılacak tahmini başlangıç ağırlığı.
+    Motor saf kalsın diye burada hesaplanmıyor — vücut ağırlığı, cinsiyet ve
+    seviye gerektirdiği için servis katmanında üretilip buraya geçiliyor
+    (bkz. `services/starting_weight.py`). None ise eski davranış: kullanıcıya
+    ağırlığı kendisinin seçmesi söyleniyor.
     """
     sessions = [s for s in history if s.working_sets]
 
@@ -319,6 +327,28 @@ def suggest_next_target(
             if target.rep_min == target.rep_max
             else f"{target.rep_min}-{target.rep_max}"
         )
+
+        # Tahmin varsa somut bir hedef veriliyor: kullanıcının sorusu
+        # "kaç kilo kaldırmalıyım" ve buna bir sayıyla cevap vermek,
+        # "kendine uygun bir ağırlık seç" demekten kat kat kullanışlı.
+        if estimated_start is not None and estimated_start > 0:
+            option = TargetOption(
+                kind=SuggestionKind.establish_baseline,
+                weight_kg=estimated_start,
+                reps=target.rep_max,
+                label=_fmt_effort(estimated_start, target.rep_max),
+            )
+            return ProgressionSuggestion(
+                primary=option,
+                message=(
+                    f"İlk kez yapıyorsun. Boyun, kilon ve diğer hareketlerdeki gücüne "
+                    f"göre {fmt_weight(estimated_start)}kg ile başlamanı öneriyorum — "
+                    f"{target.rep_max} tekrar hedefle. Bu bir TAHMİN ve bilerek düşük "
+                    f"tutuluyor; hafif geldiyse ağırlığı artır, bir sonraki seansta "
+                    f"gerçek verinden devam edeceğiz."
+                ),
+            )
+
         option = TargetOption(
             kind=SuggestionKind.establish_baseline,
             weight_kg=Decimal(0),

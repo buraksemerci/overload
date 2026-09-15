@@ -4,6 +4,7 @@
 
 import { useState } from "react";
 import { MuscleMap } from "@/components/MuscleMap";
+import { PageHeader } from "@/components/Layout";
 import { ErrorBox, Empty, Loading, fmt } from "@/components/States";
 import { useMuscleVolume } from "@/lib/queries";
 import type { MuscleVolume } from "@overload/shared-types";
@@ -36,21 +37,29 @@ export default function MuscleMapPage() {
   const overtrained = scaled.filter((m) => m.sets > m.target * 1.5);
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Kas Haritası</h1>
-        <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
-          Efektif set hacmi. Birincil kaslar 1.0, ikincil kaslar 0.5 set sayılır;
-          tek taraflı hareketler iki katı.
-        </p>
-      </header>
+    <div className="mx-auto flex max-w-[68rem] flex-col gap-6">
+      <PageHeader
+        title="Kas Haritası"
+        info={
+          <>
+            Efektif set hacmi gösteriliyor. Birincil kaslar 1.0, ikincil kaslar
+            0.5 set sayılıyor; tek taraflı hareketler iki katı. Hipertrofi
+            literatüründe yaygın olan bu ağırlıklandırma, &ldquo;bench press
+            biceps çalıştırmaz ama triceps&apos;i yarım sayar&rdquo; sezgisini
+            sayısallaştırıyor. Isınma setleri sayılmıyor.
+          </>
+        }
+      />
 
-      <div className="flex gap-1">
+      {/* Görünüm seçicisi, aksiyon değil — bkz. `.seg` (globals.css). */}
+      <div className="seg" role="group" aria-label="Zaman aralığı">
         {RANGES.map((range) => (
           <button
             key={range.days}
+            type="button"
+            aria-pressed={days === range.days}
             onClick={() => setDays(range.days)}
-            className={`btn ${days === range.days ? "btn-primary" : "btn-ghost"}`}
+            className="seg-item"
           >
             {range.label}
           </button>
@@ -73,8 +82,8 @@ export default function MuscleMapPage() {
           </div>
 
           {undertrained.length > 0 && (
-            <section className="card p-4">
-              <h2 className="text-base font-medium">Hedefin yarısının altında</h2>
+            <section className="card p-6">
+              <h2 className="text-base">Hedefin yarısının altında</h2>
               <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
                 Bu gruplar ihmal edilmiş. Programda dengelemek isteyebilirsin.
               </p>
@@ -92,8 +101,8 @@ export default function MuscleMapPage() {
           )}
 
           {overtrained.length > 0 && (
-            <section className="card p-4">
-              <h2 className="text-base font-medium" style={{ color: "var(--color-warning)" }}>
+            <section className="card p-6">
+              <h2 className="text-base" style={{ color: "var(--color-warning)" }}>
                 Hedefin belirgin üstünde
               </h2>
               <p className="mt-1 text-xs text-[var(--color-ink-muted)]">

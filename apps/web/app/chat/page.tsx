@@ -122,7 +122,7 @@ export default function ChatPage() {
 
   return (
     <div className="flex min-h-[calc(100dvh-10rem)] flex-col">
-      <h1 className="text-2xl font-semibold tracking-tight">Asistan</h1>
+      <h1 className="text-xl lg:text-2xl">Asistan</h1>
       <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
         Antrenman, beslenme ve programın hakkında konuş. Veri değiştiren öneriler onayına sunulur.
       </p>

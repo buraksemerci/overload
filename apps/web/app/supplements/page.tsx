@@ -3,6 +3,7 @@
 /** Supplement Takibi (Bölüm 8, ekran 11). */
 
 import { useState } from "react";
+import { PageHeader } from "@/components/Layout";
 import { ErrorBox, Empty, Loading } from "@/components/States";
 import { useCreateSupplement, useMarkIntake, useSupplementsToday } from "@/lib/queries";
 
@@ -24,14 +25,17 @@ export default function SupplementsPage() {
   const [adding, setAdding] = useState(false);
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Supplement</h1>
-        <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
-          Bugünün listesi. &ldquo;Atladım&rdquo; da kaydediliyor — uyum oranını
-          görebilmek için işaretlememekle almamak ayrı tutuluyor.
-        </p>
-      </header>
+    <div className="mx-auto flex max-w-[68rem] flex-col gap-6">
+      <PageHeader
+        title="Supplement"
+        info={
+          <>
+            &ldquo;Atladım&rdquo; da kaydediliyor: işaretlememek ile almamak ayrı
+            tutuluyor, yoksa uyum oranı hesaplanamaz. Boş bırakılan bir gün
+            &ldquo;bilinmiyor&rdquo;, atlanan gün ise &ldquo;alınmadı&rdquo;.
+          </>
+        }
+      />
 
       {today.isLoading ? (
         <Loading />
@@ -104,7 +108,7 @@ export default function SupplementsPage() {
 
       {mark.isError && <ErrorBox error={mark.error} />}
 
-      <section className="card p-4">
+      <section className="card p-6">
         {adding ? (
           <form
             className="space-y-3"
@@ -123,7 +127,7 @@ export default function SupplementsPage() {
               );
             }}
           >
-            <h2 className="text-base font-medium">Yeni supplement</h2>
+            <h2 className="text-base">Yeni supplement</h2>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}

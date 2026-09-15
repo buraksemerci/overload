@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { ConsistencyGrid } from "@/components/ConsistencyGrid";
 import { ExerciseChart } from "@/components/ExerciseChart";
+import { PageHeader } from "@/components/Layout";
 import { ErrorBox, Empty, Loading, fmt } from "@/components/States";
 import { prLabel, prUnit } from "@/lib/labels";
 import {
@@ -35,17 +36,12 @@ export default function ProgressPage() {
   const [selectedExercise, setSelectedExercise] = useState<string | null>(null);
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">İlerleme</h1>
-        <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
-          Güç standartları, tutarlılık ve kırılan rekorlar.
-        </p>
-      </header>
+    <div className="mx-auto flex max-w-[68rem] flex-col gap-6">
+      <PageHeader title="İlerleme" />
 
       {/* --- Tutarlılık ızgarası --- */}
-      <section className="card p-4">
-        <h2 className="text-base font-medium">Tutarlılık</h2>
+      <section className="card p-6">
+        <h2 className="text-base">Tutarlılık</h2>
         <p className="mt-0.5 text-xs text-[var(--color-ink-muted)]">
           Son 12 ay. Koyuluk o günkü toplam tonajı gösteriyor.
         </p>
@@ -59,8 +55,8 @@ export default function ProgressPage() {
       </section>
 
       {/* --- Güç standartları --- */}
-      <section className="card p-4">
-        <h2 className="text-base font-medium">Güç standartları</h2>
+      <section className="card p-6">
+        <h2 className="text-base">Güç standartları</h2>
         <p className="mt-0.5 text-xs text-[var(--color-ink-muted)]">
           Vücut ağırlığına göre seviye. 1RM değerleri Epley formülüyle{" "}
           <strong>tahmin</strong> ediliyor — gerçek tek tekrar testi değil.
@@ -116,8 +112,8 @@ export default function ProgressPage() {
       </section>
 
       {/* --- Hareket bazında ilerleme --- */}
-      <section className="card p-4">
-        <h2 className="text-base font-medium">Hareket grafiği</h2>
+      <section className="card p-6">
+        <h2 className="text-base">Hareket grafiği</h2>
         <p className="mt-0.5 text-xs text-[var(--color-ink-muted)]">
           Bir hareket seç — ağırlık, hacim ve tahmini 1RM&apos;in zaman içindeki
           değişimi.
@@ -155,8 +151,8 @@ export default function ProgressPage() {
       </section>
 
       {/* --- Kişisel rekorlar --- */}
-      <section className="card p-4">
-        <h2 className="text-base font-medium">Kişisel rekorlar</h2>
+      <section className="card p-6">
+        <h2 className="text-base">Kişisel rekorlar</h2>
         {records.isLoading ? (
           <Loading />
         ) : records.isError ? (

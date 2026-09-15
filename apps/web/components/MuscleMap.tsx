@@ -96,14 +96,15 @@ export function MuscleMap({ volumes, interactive = true, className }: Props) {
   return (
     <div className={className}>
       {interactive && (
-        <div className="mb-4 flex gap-1" role="tablist" aria-label="Vücut görünümü">
+        <div className="seg mb-5" role="tablist" aria-label="Vücut görünümü">
           {(["front", "back"] as const).map((r) => (
             <button
               key={r}
+              type="button"
               role="tab"
               aria-selected={region === r}
               onClick={() => setRegion(r)}
-              className={`btn ${region === r ? "btn-primary" : "btn-ghost"}`}
+              className="seg-item"
             >
               {r === "front" ? "Ön" : "Arka"}
             </button>
@@ -121,9 +122,9 @@ export function MuscleMap({ volumes, interactive = true, className }: Props) {
 
         {shapes.map((shape) => {
           const volume = bySvgId.get(shape.svgId);
-          const fill = volume
-            ? volumeColor(volume.sets, volume.target)
-            : "var(--color-surface-raised)";
+          // Veri gelmeyen şekil ile "0 set" aynı görünmeli; farklı renk
+          // vermek kullanıcıya olmayan bir ayrım gösteriyordu.
+          const fill = volume ? volumeColor(volume.sets, volume.target) : "var(--color-heat-0)";
 
           const parts = [
             <path key="l" d={shape.d} />,

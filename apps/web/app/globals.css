@@ -323,6 +323,47 @@
     color: var(--color-ink);
   }
 
+  /* Segmentli kontrol — "7/14/30 gün", "ön/arka", "yağ kaybı/koruma/kas" gibi
+     birbirini dışlayan görünüm seçicileri.
+
+     BİRİNCİL DÜĞME DEĞİL. İlk uygulamada seçili sekme `btn-primary` idi, yani
+     volt dolgu alıyordu; kas haritası ekranında iki segmentli kontrol yan yana
+     olduğu için ekranda iki volt öğesi birden çıkıyordu ve "ekran başına bir
+     volt" kuralı kırılıyordu. Daha temel sorun anlamsal: bir görünüm seçicisi
+     aksiyon değil, durum. Volt aksiyona ve başarıya ayrılmış.
+
+     Seçili durum beyaz bir yüzeyle işaretleniyor — gömülü rayın içinden
+     yukarı çıkmış gibi. */
+  .seg {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    background: var(--color-surface-raised);
+    border-radius: var(--radius-md);
+  }
+
+  .seg-item {
+    border-radius: calc(var(--radius-md) - 2px);
+    padding: 0.375rem 0.75rem;
+    font-size: var(--text-sm);
+    color: var(--color-ink-muted);
+    white-space: nowrap;
+    transition:
+      background-color var(--dur-micro) var(--ease-out),
+      color var(--dur-micro) var(--ease-out);
+  }
+  .seg-item:hover {
+    color: var(--color-ink);
+  }
+
+  .seg-item[aria-selected="true"],
+  .seg-item[aria-pressed="true"] {
+    background: var(--color-surface);
+    color: var(--color-ink);
+    font-weight: 500;
+    box-shadow: 0 1px 2px oklch(21% 0.014 115 / 0.06);
+  }
+
   /* Girdi alanı */
   .field {
     background: var(--color-surface);

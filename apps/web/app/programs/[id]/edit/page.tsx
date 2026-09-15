@@ -88,7 +88,7 @@ export default function ProgramEditPage() {
 
   if (program.data?.is_template) {
     return (
-      <div className="card p-4">
+      <div className="card p-6">
         <p className="text-sm">
           Şablon programlar düzenlenemez. Önce kendi kopyanı çıkar — Programlar
           ekranındaki &ldquo;Başlat&rdquo; butonu bunu yapıyor.
@@ -109,7 +109,7 @@ export default function ProgramEditPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight">{program.data?.name}</h1>
+        <h1 className="text-xl lg:text-2xl">{program.data?.name}</h1>
         <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
           Sıralamak için tutamağı sürükle ya da tutamağa odaklanıp boşluk + ok
           tuşlarını kullan.

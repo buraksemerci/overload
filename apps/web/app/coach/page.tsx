@@ -8,6 +8,7 @@
  * kendisini göstermek daha kullanışlı.
  */
 
+import { PageHeader } from "@/components/Layout";
 import { ErrorBox, Loading, Stat, fmt } from "@/components/States";
 import { useCurrentWeek, useLatestCoachReport } from "@/lib/queries";
 
@@ -26,14 +27,17 @@ export default function CoachPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Koç Raporu</h1>
-        <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
-          Haftalık değerlendirme her Pazartesi otomatik üretilir. Aşağıda içinde
-          bulunduğun haftanın canlı sayıları da var.
-        </p>
-      </header>
+    <div className="mx-auto flex max-w-[68rem] flex-col gap-6">
+      <PageHeader
+        title="Koç Raporu"
+        info={
+          <>
+            Haftalık değerlendirme her Pazartesi, tamamlanmış hafta için gece
+            çalışan bir işle üretiliyor. Aşağıdaki sayılar içinde bulunduğun
+            haftanın canlı hâli — rapor beklemeden görebilmen için.
+          </>
+        }
+      />
 
       {/* --- Bu haftanın canlı metrikleri --- */}
       <section>
@@ -56,7 +60,7 @@ export default function CoachPage() {
 
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               {list("new_records").length > 0 && (
-                <div className="card p-4">
+                <div className="card p-6">
                   <p className="text-2xs uppercase tracking-wide" style={{ color: "var(--color-accent)" }}>
                     Yeni rekorlar
                   </p>
@@ -70,7 +74,7 @@ export default function CoachPage() {
                 </div>
               )}
               {list("undertrained_muscles").length > 0 && (
-                <div className="card p-4">
+                <div className="card p-6">
                   <p className="text-2xs uppercase tracking-wide text-[var(--color-ink-muted)]">
                     Hedefin altında
                   </p>
@@ -90,7 +94,7 @@ export default function CoachPage() {
         {report.isLoading ? (
           <Loading />
         ) : report.isError ? (
-          <div className="card p-4">
+          <div className="card p-6">
             <p className="text-sm text-[var(--color-ink-muted)]">
               Henüz rapor üretilmedi. Raporlar tamamlanmış bir hafta için, gece
               çalışan bir işle oluşturuluyor — ilk haftan dolduğunda burada olacak.
@@ -103,7 +107,7 @@ export default function CoachPage() {
             </p>
           </div>
         ) : (
-          <article className="card p-4">
+          <article className="card p-6">
             <p className="text-2xs text-[var(--color-ink-faint)]">
               {report.data &&
                 new Date(`${report.data.week_start}T00:00:00`).toLocaleDateString("tr-TR", {

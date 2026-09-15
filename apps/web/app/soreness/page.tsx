@@ -2,6 +2,7 @@
 
 /** Soreness Check-in (Bölüm 8, ekran 12): kas grubu bazında günlük ağrı seviyesi. */
 
+import { PageHeader } from "@/components/Layout";
 import { ErrorBox, Loading } from "@/components/States";
 import { useInjuries, useLogSoreness, useMuscleGroups, useSoreness } from "@/lib/queries";
 
@@ -30,18 +31,22 @@ export default function SorenessPage() {
   const back = (groups.data ?? []).filter((g) => g.region === "back");
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Ağrı Check-in</h1>
-        <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
-          Bugün hangi kasların ağrıyor? Asistan bu bilgiyi antrenman önerirken
-          kullanıyor — ör. quad&apos;lerin 4/4 ağrıyorsa bacak gününü öne almanı önermez.
-        </p>
-      </header>
+    <div className="mx-auto flex max-w-[68rem] flex-col gap-6">
+      <PageHeader
+        title="Ağrı Check-in"
+        lead="Bugün hangi kasların ağrıyor?"
+        info={
+          <>
+            Asistan bu bilgiyi antrenman önerirken kullanıyor — örneğin
+            quad&apos;lerin 4/4 ağrıyorsa bacak gününü öne almanı önermez.
+            0 ağrı yok, 4 hareketi kısıtlıyor demek.
+          </>
+        }
+      />
 
       {(injuries.data ?? []).length > 0 && (
-        <section className="card p-4" style={{ borderColor: "var(--color-warning)" }}>
-          <h2 className="text-base font-medium" style={{ color: "var(--color-warning)" }}>
+        <section className="card p-6" style={{ borderColor: "var(--color-warning)" }}>
+          <h2 className="text-base" style={{ color: "var(--color-warning)" }}>
             Aktif sakatlık notu
           </h2>
           <ul className="mt-2 space-y-1">
@@ -83,8 +88,8 @@ function Group({
   onSelect: (input: { muscle_group_slug: string; level: number }) => void;
 }) {
   return (
-    <section className="card p-4">
-      <h2 className="text-base font-medium">{title}</h2>
+    <section className="card p-6">
+      <h2 className="text-base">{title}</h2>
       <ul className="mt-3 space-y-3">
         {groups.map((group) => {
           const current = values.get(group.slug);

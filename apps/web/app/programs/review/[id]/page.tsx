@@ -94,7 +94,7 @@ export default function ProgramReviewPage() {
         <p className="text-2xs uppercase tracking-wide" style={{ color: "var(--color-accent)" }}>
           Program önerisi · onayın gerekiyor
         </p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">Programı gözden geçir</h1>
+        <h1 className="mt-1 text-xl lg:text-2xl">Programı gözden geçir</h1>
         <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
           Aşağıdaki her satırı değiştirebilirsin. <strong>Onaylayana kadar hiçbir şey
           kaydedilmiyor</strong> — vazgeçersen program hiç var olmamış olur.
@@ -102,7 +102,7 @@ export default function ProgramReviewPage() {
       </header>
 
       {!isOpen && (
-        <div className="card p-4">
+        <div className="card p-6">
           <p className="text-sm text-[var(--color-ink-muted)]">
             Bu öneri zaten &ldquo;{pending.data?.status}&rdquo; durumunda; artık
             düzenlenemez.
@@ -111,7 +111,7 @@ export default function ProgramReviewPage() {
       )}
 
       {draft.rationale && (
-        <section className="card p-4">
+        <section className="card p-6">
           <h2 className="text-xs font-medium text-[var(--color-ink-muted)]">
             Asistanın gerekçesi
           </h2>
@@ -171,7 +171,7 @@ export default function ProgramReviewPage() {
 
       {/* --- Günler --- */}
       {draft.days.map((day, dayIndex) => (
-        <section key={dayIndex} className="card p-4">
+        <section key={dayIndex} className="card p-6">
           <div className="flex items-center gap-2">
             <input
               value={day.label}

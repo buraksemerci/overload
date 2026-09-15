@@ -3,6 +3,7 @@
 /** Hareket Kütüphanesi (Bölüm 8, ekran 5). */
 
 import { useState } from "react";
+import { PageHeader } from "@/components/Layout";
 import { ErrorBox, Empty, Loading } from "@/components/States";
 import { useExercises } from "@/lib/queries";
 
@@ -23,14 +24,17 @@ export default function ExercisesPage() {
   const exercises = useExercises(query, equipment || undefined);
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Hareket Kütüphanesi</h1>
-        <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
-          Her hareketin kas grubu eşlemesi var — kas haritası ve hacim dengesi
-          buradan besleniyor.
-        </p>
-      </header>
+    <div className="mx-auto flex max-w-[68rem] flex-col gap-6">
+      <PageHeader
+        title="Hareket Kütüphanesi"
+        info={
+          <>
+            Her hareketin kas grubu eşlemesi var: birincil ve ikincil kaslar ayrı
+            işaretli. Kas haritası ve haftalık hacim dengesi bu eşlemeden
+            besleniyor — yani bir hareketi yanlış eşlemek haritayı da yanıltır.
+          </>
+        }
+      />
 
       <div className="space-y-3">
         <input
@@ -39,16 +43,14 @@ export default function ExercisesPage() {
           placeholder="Hareket ara…"
           className="h-11 w-full rounded-[3px] border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 text-sm outline-none"
         />
-        <div className="flex flex-wrap gap-1">
+        <div className="seg flex-wrap" role="group" aria-label="Ekipman filtresi">
           {EQUIPMENT.map((option) => (
             <button
               key={option.value}
+              type="button"
+              aria-pressed={equipment === option.value}
               onClick={() => setEquipment(option.value)}
-              className={`rounded-[3px] px-2 py-1 text-2xs ${
-                equipment === option.value
-                  ? "bg-[var(--color-accent)] text-[var(--color-ink)]"
-                  : "border border-[var(--color-border-strong)] text-[var(--color-ink-muted)]"
-              }`}
+              className="seg-item text-xs"
             >
               {option.label}
             </button>

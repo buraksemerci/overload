@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
+import { PageHeader } from "@/components/Layout";
 import { ErrorBox, Empty, Loading, fmt } from "@/components/States";
 import { api } from "@/lib/api";
 import { keys, useMealSuggestions, useNutritionDay } from "@/lib/queries";
@@ -88,29 +89,31 @@ export default function NutritionPage() {
   const data = day.data!;
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Beslenme</h1>
-        <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
-          Değerler USDA ve Open Food Facts&apos;ten geliyor — kalori/makro tahmini
-          yapılmıyor, gerçek veriden okunuyor.
-        </p>
-      </header>
+    <div className="mx-auto flex max-w-[68rem] flex-col gap-6">
+      <PageHeader
+        title="Beslenme"
+        info={
+          <>
+            Değerler USDA FoodData Central ve Open Food Facts&apos;ten geliyor;
+            kalori ve makro <strong>tahmin edilmiyor</strong>, gerçek veriden
+            okunuyor. Makrolar 100 gram başına normalize ediliyor çünkü iki
+            kaynağın porsiyon tanımları tutarsız.
+          </>
+        }
+      />
 
       {/* --- Hedef ve kalan --- */}
-      <section className="card p-4">
+      <section className="card p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-base font-medium">Bugün</h2>
-          <div className="flex gap-1">
+          <h2 className="text-base">Bugün</h2>
+          <div className="seg" role="group" aria-label="Hedef">
             {GOALS.map((option) => (
               <button
                 key={option.value}
+                type="button"
+                aria-pressed={goal === option.value}
                 onClick={() => setGoal(option.value)}
-                className={`rounded-[3px] px-2 py-1 text-2xs ${
-                  goal === option.value
-                    ? "bg-[var(--color-accent)] text-[var(--color-ink)]"
-                    : "border border-[var(--color-border-strong)] text-[var(--color-ink-muted)]"
-                }`}
+                className="seg-item text-xs"
               >
                 {option.label}
               </button>
@@ -173,8 +176,8 @@ export default function NutritionPage() {
       </section>
 
       {/* --- Besin ekle --- */}
-      <section className="card p-4">
-        <h2 className="text-base font-medium">Besin ekle</h2>
+      <section className="card p-6">
+        <h2 className="text-base">Besin ekle</h2>
         <p className="mt-0.5 text-xs text-[var(--color-ink-muted)]">
           İngilizce ad daha iyi sonuç verir (ör. &ldquo;chicken breast&rdquo;). Fotoğrafla
           eklemek için <Link href="/chat" className="underline">asistanı</Link> kullan.
@@ -315,8 +318,8 @@ export default function NutritionPage() {
       </section>
 
       {/* --- Öğün önerisi --- */}
-      <section className="card p-4">
-        <h2 className="text-base font-medium">Kalan makrolara göre öneri</h2>
+      <section className="card p-6">
+        <h2 className="text-base">Kalan makrolara göre öneri</h2>
         <p className="mt-0.5 text-xs text-[var(--color-ink-muted)]">
           Porsiyonlar kalan makro açığını dolduracak şekilde hesaplanıyor —
           tahmin değil, aritmetik.
@@ -364,8 +367,8 @@ export default function NutritionPage() {
       </section>
 
       {/* --- Günün kalemleri --- */}
-      <section className="card p-4">
-        <h2 className="text-base font-medium">Günlük kayıt</h2>
+      <section className="card p-6">
+        <h2 className="text-base">Günlük kayıt</h2>
         {data.items.length === 0 ? (
           <p className="mt-3 text-xs text-[var(--color-ink-faint)]">
             Bugün henüz bir şey kaydetmedin.

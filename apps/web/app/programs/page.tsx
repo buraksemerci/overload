@@ -4,6 +4,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { PageHeader } from "@/components/Layout";
 import { ErrorBox, Empty, Loading } from "@/components/States";
 import {
   useActivateProgram,
@@ -35,14 +36,8 @@ export default function ProgramsPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Programlar</h1>
-        <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
-          Kendi programların ve hazır şablon kütüphanesi. Yeni bir program kurmak için
-          asistana da danışabilirsin.
-        </p>
-      </header>
+    <div className="mx-auto flex max-w-[68rem] flex-col gap-6">
+      <PageHeader title="Programlar" />
 
       <Link href="/chat" className="btn btn-primary inline-flex">
         AI ile program oluştur
@@ -155,7 +150,7 @@ function ProgramCard({
   action: React.ReactNode;
 }) {
   return (
-    <div className="card p-4">
+    <div className="card p-6">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-sm font-medium">{program.name}</h3>

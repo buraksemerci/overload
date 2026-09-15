@@ -35,7 +35,7 @@ export default function LoginPage() {
 
   return (
     <div className="mx-auto flex min-h-[70dvh] max-w-sm flex-col justify-center">
-      <h1 className="text-2xl font-semibold tracking-tight">overload</h1>
+      <h1 className="text-xl lg:text-2xl">overload</h1>
       <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
         {mode === "login"
           ? "Devam etmek için giriş yap."

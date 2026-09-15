@@ -11,6 +11,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { PageHeader } from "@/components/Layout";
 import { ErrorBox, Loading } from "@/components/States";
 import { api } from "@/lib/api";
 import { logout, type Me } from "@/lib/auth";
@@ -78,17 +79,14 @@ export default function AccountPage() {
   const set = (patch: Partial<ProfileForm>) => setForm({ ...form, ...patch });
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Hesap Ayarları</h1>
-        <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
-          Bu sayfadaki bilgiler yalnızca buradan değiştirilebilir — AI asistanının
-          bu alanlara erişimi yok.
-        </p>
-      </header>
+    <div className="mx-auto flex max-w-[68rem] flex-col gap-6">
+      <PageHeader
+        title="Hesap Ayarları"
+        lead="Bu sayfadaki bilgiler yalnızca buradan değiştirilebilir — AI asistanının bu alanlara erişimi yok."
+      />
 
-      <section className="card p-4">
-        <h2 className="text-base font-medium">Profil</h2>
+      <section className="card p-6">
+        <h2 className="text-base">Profil</h2>
         <p className="mt-0.5 text-xs text-[var(--color-ink-muted)]">
           Boy, doğum tarihi ve cinsiyet TDEE hesabı ve güç standartları için gerekli.
           Cinsiyet belirtilmezse bu iki özellik kapalı kalır — ortalama almak
@@ -154,8 +152,8 @@ export default function AccountPage() {
         {save.isError && <div className="mt-3"><ErrorBox error={save.error} /></div>}
       </section>
 
-      <section className="card p-4">
-        <h2 className="text-base font-medium">Oturum</h2>
+      <section className="card p-6">
+        <h2 className="text-base">Oturum</h2>
         <p className="mt-0.5 text-xs text-[var(--color-ink-muted)]">
           E-posta: {me.data?.email}
         </p>
@@ -170,8 +168,8 @@ export default function AccountPage() {
         </button>
       </section>
 
-      <section className="card p-4">
-        <h2 className="text-base font-medium">AI sınırı</h2>
+      <section className="card p-6">
+        <h2 className="text-base">AI sınırı</h2>
         <p className="mt-2 text-xs text-[var(--color-ink-muted)]">
           Asistan verilerini okuyabilir ve yeni kayıt ekleyebilir. Var olan kayıtları
           değiştirmek ya da silmek için senin onayını isteyen bir kart gösterir.

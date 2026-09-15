@@ -3,6 +3,7 @@
 /** Geçmiş / Takvim (Bölüm 8, ekran 6). */
 
 import { useState } from "react";
+import { PageHeader } from "@/components/Layout";
 import { ErrorBox, Empty, Loading, fmt } from "@/components/States";
 import { useSessions, type WorkoutSession } from "@/lib/queries";
 
@@ -17,13 +18,8 @@ export default function HistoryPage() {
   const rows = sessions.data ?? [];
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Geçmiş</h1>
-        <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
-          Tamamlanan ve devam eden antrenmanlar.
-        </p>
-      </header>
+    <div className="mx-auto flex max-w-[68rem] flex-col gap-6">
+      <PageHeader title="Geçmiş" />
 
       {rows.length === 0 ? (
         <Empty

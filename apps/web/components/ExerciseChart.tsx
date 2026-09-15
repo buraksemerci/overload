@@ -65,16 +65,14 @@ export function ExerciseChart({ exerciseId }: { exerciseId: string }) {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex gap-1">
+        <div className="seg" role="group" aria-label="Ölçüt">
           {METRICS.map((option) => (
             <button
               key={option.key}
+              type="button"
+              aria-pressed={metric === option.key}
               onClick={() => setMetric(option.key)}
-              className={`rounded-[3px] px-2 py-1 text-2xs ${
-                metric === option.key
-                  ? "bg-[var(--color-accent)] text-[var(--color-ink)]"
-                  : "border border-[var(--color-border-strong)] text-[var(--color-ink-muted)]"
-              }`}
+              className="seg-item text-xs"
             >
               {option.label}
             </button>

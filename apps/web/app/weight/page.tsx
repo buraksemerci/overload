@@ -12,6 +12,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { PageHeader } from "@/components/Layout";
 import { ErrorBox, Empty, Loading, Stat, fmt } from "@/components/States";
 import { useLogBodyweight, useWeightTrend } from "@/lib/queries";
 
@@ -46,16 +47,19 @@ export default function WeightPage() {
     avgLatest !== null && avgEarlier !== null ? avgLatest - avgEarlier : null;
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Kilo Takibi</h1>
-        <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
-          Günde tek kayıt; aynı güne ikinci giriş üzerine yazar. Trend için 7 günlük
-          hareketli ortalamaya bak, tek güne değil.
-        </p>
-      </header>
+    <div className="mx-auto flex max-w-[68rem] flex-col gap-6">
+      <PageHeader
+        title="Kilo Takibi"
+        info={
+          <>
+            Günde tek kayıt tutuluyor; aynı güne ikinci giriş üzerine yazıyor.
+            Gün içi dalgalanma (su, yemek) trend çizgisini gürültüye boğuyor.
+            Karar verirken 7 günlük hareketli ortalamaya bak, tek güne değil.
+          </>
+        }
+      />
 
-      <section className="card p-4">
+      <section className="card p-6">
         <form
           className="flex gap-2"
           onSubmit={(e) => {
@@ -113,8 +117,8 @@ export default function WeightPage() {
             />
           </div>
 
-          <section className="card p-4">
-            <h2 className="text-base font-medium">Trend</h2>
+          <section className="card p-6">
+            <h2 className="text-base">Trend</h2>
             <div className="mt-4 h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={points} margin={{ top: 4, right: 8, bottom: 4, left: -16 }}>

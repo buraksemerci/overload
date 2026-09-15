@@ -176,24 +176,14 @@ async def search_foods(
     user: CurrentUser,
     q: Annotated[str, Query(min_length=2, max_length=120)],
 ) -> list[FoodDatabaseEntry]:
-    """Önbellekte arar, bulamazsa USDA'ya gider ve sonucu önbelleğe yazar."""
-    cached = (
-        (
-            await db.execute(
-                select(FoodDatabaseEntry)
-                .where(FoodDatabaseEntry.search_name.ilike(f"%{q.strip().lower()}%"))
-                .limit(20)
-            )
-        )
-        .scalars()
-        .all()
-    )
-    if cached:
-        return list(cached)
+    """Önbellekte arar, bulamazsa USDA'ya gider ve adayları önbelleğe yazar.
 
-    entry = await sources.resolve_food(db, q)
+    Birden çok aday döner ve seçimi kullanıcı yapar; gerekçesi
+    `sources.search_foods` içinde.
+    """
+    results = await sources.search_foods(db, q)
     await db.flush()
-    return [entry] if entry else []
+    return results
 
 
 @router.get("/foods/barcode/{barcode}", response_model=FoodOut, tags=["nutrition"])

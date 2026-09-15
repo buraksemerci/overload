@@ -66,6 +66,13 @@ class FoodDatabaseEntry(TimestampMixin, Base):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     search_name: Mapped[str] = mapped_column(String(200), nullable=False)
     brand: Mapped[str | None] = mapped_column(String(120))
+    #: Kaynak veri kümesi (USDA'da "Foundation" / "SR Legacy").
+    #:
+    #: Sıralama için saklanıyor: Foundation, USDA'nın özenle derlenmiş temel
+    #: gıda kümesi ve "chicken breast" arayan biri neredeyse her zaman onu
+    #: kastediyor. Bu bilgi olmadan ÖNBELLEKTEN gelen sonuçlar taze
+    #: sonuçlardan daha kötü sıralanıyordu — yani arama zamanla bozuluyordu.
+    source_dataset: Mapped[str | None] = mapped_column(String(32))
 
     calories_per_100g: Mapped[Decimal] = mapped_column(Numeric(7, 2), nullable=False)
     protein_g: Mapped[Decimal] = mapped_column(Numeric(6, 2), nullable=False)

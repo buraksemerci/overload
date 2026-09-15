@@ -807,6 +807,215 @@
         "title": "Health",
         "type": "object"
       },
+      "HistoryExerciseOut": {
+        "description": "Bir seans içindeki tek hareket ve o hareketin setleri.",
+        "properties": {
+          "exercise_id": {
+            "format": "uuid",
+            "title": "Exercise Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "sets": {
+            "items": {
+              "$ref": "#/components/schemas/HistorySetOut"
+            },
+            "title": "Sets",
+            "type": "array"
+          },
+          "top_reps": {
+            "title": "Top Reps",
+            "type": "integer"
+          },
+          "top_weight_kg": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Top Weight Kg",
+            "type": "string"
+          },
+          "volume_kg": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Volume Kg",
+            "type": "string"
+          }
+        },
+        "required": [
+          "exercise_id",
+          "name",
+          "sets",
+          "volume_kg",
+          "top_weight_kg",
+          "top_reps"
+        ],
+        "title": "HistoryExerciseOut",
+        "type": "object"
+      },
+      "HistorySessionOut": {
+        "properties": {
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "day_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day Label"
+          },
+          "duration_min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Min"
+          },
+          "exercises": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryExerciseOut"
+            },
+            "title": "Exercises",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_deload": {
+            "title": "Is Deload",
+            "type": "boolean"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "program_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Program Name"
+          },
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/RecordOut"
+            },
+            "title": "Records",
+            "type": "array"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "total_sets": {
+            "title": "Total Sets",
+            "type": "integer"
+          },
+          "volume_kg": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Volume Kg",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "day_label",
+          "program_name",
+          "started_at",
+          "completed_at",
+          "notes",
+          "is_deload",
+          "duration_min",
+          "total_sets",
+          "volume_kg",
+          "exercises",
+          "records"
+        ],
+        "title": "HistorySessionOut",
+        "type": "object"
+      },
+      "HistorySetOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_warmup": {
+            "title": "Is Warmup",
+            "type": "boolean"
+          },
+          "reps": {
+            "title": "Reps",
+            "type": "integer"
+          },
+          "rir": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rir"
+          },
+          "set_number": {
+            "title": "Set Number",
+            "type": "integer"
+          },
+          "technique": {
+            "$ref": "#/components/schemas/IntensityTechnique"
+          },
+          "weight_kg": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Weight Kg",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "set_number",
+          "weight_kg",
+          "reps",
+          "rir",
+          "is_warmup",
+          "technique"
+        ],
+        "title": "HistorySetOut",
+        "type": "object"
+      },
       "InjuryIn": {
         "properties": {
           "description": {
@@ -6357,6 +6566,61 @@
         "summary": "Users:Patch User",
         "tags": [
           "account"
+        ]
+      }
+    },
+    "/workouts/history": {
+      "get": {
+        "description": "Tamamlanmış seanslar, hareket hareket gruplanmış.\n\nAçık (devam eden) seans DIŞARIDA: geçmiş bitmiş işlerin kaydı ve yarım bir\nseans oraya girdiğinde tonajı da süresi de yanıltıcı oluyor. Devam eden\nseansa antrenman ekranından dönülüyor.",
+        "operationId": "workout_history_workouts_history_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 40,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/HistorySessionOut"
+                  },
+                  "title": "Response Workout History Workouts History Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Workout History",
+        "tags": [
+          "workouts"
         ]
       }
     },

@@ -303,6 +303,52 @@ export function useSessions(limit = 30): UseQueryResult<WorkoutSession[]> {
   });
 }
 
+/* --- Geçmiş ---------------------------------------------------------------
+   `/workouts/history` gruplamayı ve tonaj aritmetiğini SUNUCUDA yapıyor.
+   Önce setler düz geliyordu ve geçmiş ekranı kendi tonaj hesabını yazıyordu —
+   aynı kural (ısınma seti hariç) iki dilde birden tanımlıydı. */
+
+export interface HistorySet {
+  id: string;
+  set_number: number;
+  weight_kg: string;
+  reps: number;
+  rir: number | null;
+  is_warmup: boolean;
+  technique: string;
+}
+
+export interface HistoryExercise {
+  exercise_id: string;
+  name: string;
+  sets: HistorySet[];
+  volume_kg: string;
+  top_weight_kg: string;
+  top_reps: number;
+}
+
+export interface HistorySession {
+  id: string;
+  day_label: string | null;
+  program_name: string | null;
+  started_at: string;
+  completed_at: string | null;
+  notes: string | null;
+  is_deload: boolean;
+  duration_min: number | null;
+  total_sets: number;
+  volume_kg: string;
+  exercises: HistoryExercise[];
+  records: PersonalRecordRow[];
+}
+
+export function useHistory(limit = 40): UseQueryResult<HistorySession[]> {
+  return useQuery({
+    queryKey: [...keys.sessions, "history", limit],
+    queryFn: () => api.get<HistorySession[]>(`/workouts/history?limit=${limit}`),
+  });
+}
+
 export function usePrograms(): UseQueryResult<ProgramSummary[]> {
   return useQuery({ queryKey: keys.programs, queryFn: () => api.get<ProgramSummary[]>("/programs") });
 }

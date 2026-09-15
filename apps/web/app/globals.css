@@ -380,6 +380,42 @@
   .field::placeholder {
     color: var(--color-ink-faint);
   }
+
+  /* --- Durum rozeti ------------------------------------------------------
+     "AKTİF", "DEVAM EDİYOR", "deload" gibi tek kelimelik durumlar.
+
+     Bunlar iki ekranda elle yazılmıştı ve ikisi de `--color-accent-dim`
+     kullanıyordu — açık temaya geçerken kaldırılmış bir değişken. Tanımsız
+     bir değişkenle yazılan `background` bildirimi GEÇERSİZ oluyor, yani
+     zemin şeffaf kalıyor; üstündeki `--color-accent` metin de kırık beyaz
+     üzerinde ~1.3:1 kontrast veriyor. Sonuç: rozetler görünmüyordu.
+
+     Rozet volt bütçesine girmiyor: dolgu yıkama (`accent-wash`), metin
+     okunabilir koyu varyant. Dolgu volt olsaydı her liste satırı aksan
+     harcardı. */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    border-radius: var(--radius-sm);
+    padding: 0.125rem 0.4375rem;
+    font-size: var(--text-2xs);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    background: var(--color-surface-raised);
+    color: var(--color-ink-muted);
+  }
+
+  .badge-accent {
+    background: var(--color-accent-wash);
+    color: var(--color-accent-deep);
+  }
+
+  .badge-warning {
+    background: oklch(96% 0.04 70);
+    color: var(--color-warning);
+  }
 }
 
 /* --- Sayfa açılışı: TEK sıralı hareket ---

@@ -29,6 +29,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from overload_api.db.base import Base, TimestampMixin, enum_column, pk_column
+from overload_api.db.models.exercise import Exercise
 from overload_api.db.models.program import IntensityTechnique
 
 
@@ -155,6 +156,12 @@ class SetLog(Base):
     completed_at: Mapped[datetime | None]
 
     session: Mapped[WorkoutSession] = relationship(back_populates="set_logs")
+    #: Hareketin kendisi. KASITLI olarak tembel: motor bu tabloyu çok
+    #: sorguluyor ve her sorguda hareket satırını çekmesi gereksiz. Adı
+    #: gerekince (geçmiş ekranı) çağıran taraf açıkça `selectinload` ediyor;
+    #: unutulursa MissingGreenlet ile yüksek sesle patlıyor — sessizce boş
+    #: dönmesinden iyi.
+    exercise: Mapped[Exercise] = relationship(lazy="select")
 
     __table_args__ = (
         # Vücut ağırlığı hareketlerinde 0 kg geçerli; negatif değil.

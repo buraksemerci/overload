@@ -96,7 +96,27 @@ export async function mockApi(page: Page): Promise<void> {
   await page.route(`${API}/workouts/muscle-volume**`, (route) => json(route, MUSCLE_VOLUME));
   await page.route(`${API}/workouts/records`, (route) => json(route, []));
   await page.route(`${API}/workouts/sessions**`, (route) => json(route, []));
-  await page.route(`${API}/programs`, (route) => json(route, []));
+  await page.route(`${API}/workouts/history**`, (route) => json(route, []));
+  // Boş liste DEĞİL: aktif program rozeti ("AKTİF") yalnızca aktif bir
+  // program varken görünüyor ve boş taklit veriyle hiç render edilmiyordu.
+  // Tam da o rozet, kaldırılmış bir CSS değişkeni yüzünden görünmez hâlde
+  // aylarca durdu ve hiçbir test kırılmadı.
+  await page.route(`${API}/programs`, (route) =>
+    json(route, [
+      {
+        id: "44444444-4444-4444-4444-444444444444",
+        name: "5 Günlük Split",
+        description: null,
+        goal: "hypertrophy",
+        level: "beginner",
+        days_per_week: 5,
+        is_template: false,
+        is_active: true,
+        source_name: null,
+        source_url: null,
+      },
+    ]),
+  );
   await page.route(`${API}/programs/templates`, (route) => json(route, []));
   await page.route(`${API}/exercises**`, (route) => json(route, []));
   await page.route(`${API}/progress/consistency**`, (route) => json(route, []));

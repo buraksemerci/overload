@@ -62,15 +62,7 @@ export default function ProgramsPage() {
                   }
                   action={
                     program.is_active ? (
-                      <span
-                        className="shrink-0 rounded-[3px] px-2 py-1 text-2xs"
-                        style={{
-                          background: "var(--color-accent-dim)",
-                          color: "var(--color-accent)",
-                        }}
-                      >
-                        AKTİF
-                      </span>
+                      <span className="badge badge-accent">AKTİF</span>
                     ) : (
                       <button
                         className="btn btn-ghost shrink-0"

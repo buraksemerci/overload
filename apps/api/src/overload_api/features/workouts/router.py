@@ -151,6 +151,60 @@ class StreakOut(BaseModel):
     label: str
 
 
+# --- Geçmiş ------------------------------------------------------------------
+#
+# Geçmiş ekranının ihtiyacı `SessionOut`'tan farklı: orada setler düz bir liste
+# hâlinde ve hareket adı hiç yok. Ekran "Set 1 / Set 2 / Set 3" gösteriyordu —
+# hangi harekete ait olduğu yazmadan. Kullanıcının kendi antrenmanını
+# tanıyamadığı bir geçmiş kaydının değeri yok.
+#
+# Gruplama ve hacim aritmetiği SUNUCUDA yapılıyor. Alternatifi setleri düz
+# gönderip tarayıcıda gruplamak olurdu; o zaman ısınma setini ayıklama ve
+# tonaj hesabı iki dilde birden yazılmış olurdu (ve zaten öyleydi —
+# `history/page.tsx` kendi tonaj hesabını yapıyordu).
+
+
+class HistorySetOut(BaseModel):
+    id: uuid.UUID
+    set_number: int
+    weight_kg: Decimal
+    reps: int
+    rir: int | None
+    is_warmup: bool
+    technique: IntensityTechnique
+
+
+class HistoryExerciseOut(BaseModel):
+    """Bir seans içindeki tek hareket ve o hareketin setleri."""
+
+    exercise_id: uuid.UUID
+    name: str
+    sets: list[HistorySetOut]
+    #: Isınma setleri HARİÇ tonaj. Isınma dahil edilse ilerleme grafiği
+    #: kullanıcının daha çok ısındığı haftalarda yükselirdi.
+    volume_kg: Decimal
+    #: Seansın en ağır çalışma seti — "o gün ne kaldırdım" sorusunun yanıtı.
+    top_weight_kg: Decimal
+    top_reps: int
+
+
+class HistorySessionOut(BaseModel):
+    id: uuid.UUID
+    day_label: str | None
+    program_name: str | None
+    started_at: datetime
+    completed_at: datetime | None
+    notes: str | None
+    is_deload: bool
+    duration_min: int | None
+    total_sets: int
+    volume_kg: Decimal
+    exercises: list[HistoryExerciseOut]
+    #: O seansta kırılan rekorlar. Motive edici olan tek şey listede kaç satır
+    #: olduğu değil, hangi günün bir şeyi ilk kez başardığı.
+    records: list[RecordOut]
+
+
 # --- Yardımcılar -------------------------------------------------------------
 
 
@@ -440,6 +494,175 @@ async def list_sessions(
 @router.get("/sessions/{session_id}", response_model=SessionOut)
 async def get_session(session_id: uuid.UUID, db: DbSession, user: CurrentUser) -> WorkoutSession:
     return await _owned_session(db, user, session_id)
+
+
+#: Tonaj ve ağırlıklar iki ondalığa sabitleniyor.
+#:
+#: Sütun `Numeric(6, 2)`, yani DB'den gelen her ağırlık iki ondalıklı. Ama
+#: `Decimal(0)` başlangıç değeri "0" olarak serileşiyor; hiç çalışma seti
+#: olmayan bir seans `"volume_kg": "0"` dönerken diğerleri `"500.00"`
+#: dönüyordu. Aynı alanın biçimi veriye göre değişmemeli — ekran bunları
+#: metin olarak alıyor.
+_Q2 = Decimal("0.01")
+
+
+def _history_session(
+    session_row: WorkoutSession,
+    day_labels: dict[uuid.UUID, tuple[str, str]],
+    records: list[PersonalRecord],
+) -> HistorySessionOut:
+    """Bir seansı hareket hareket gruplar ve özetlerini hesaplar.
+
+    Hareketler YAPILDIKLARI sırayla diziliyor ve bu sıra `completed_at`'ten
+    geliyor, ilişkinin kendi sırasından değil.
+
+    `WorkoutSession.set_logs` ilişkisi `set_number`'a göre sıralı — ama bu
+    sıralama BÜTÜN hareketleri birlikte kapsıyor. Yani önce her hareketin 1.
+    seti, sonra her hareketin 2. seti geliyor ve eşit `set_number`'lar
+    arasındaki sıra PostgreSQL'e bırakılmış durumda. Gruplama "ilk görülen
+    hareket önce" mantığıyla çalıştığı için hareket sırası rastgele çıkıyordu:
+    üçüncü yapılan hareket listenin başında görünüyordu.
+
+    `completed_at` her set kaydedildiğinde yazılıyor, yani salonda yapılan
+    sıranın birebir kaydı. `set_number` eşitlik bozucu olarak duruyor.
+    """
+    groups: dict[uuid.UUID, HistoryExerciseOut] = {}
+    total_volume = Decimal(0)
+    working_sets = 0
+
+    in_order = sorted(
+        session_row.set_logs,
+        key=lambda s: (s.completed_at or session_row.started_at, s.set_number),
+    )
+
+    for set_log in in_order:
+        group = groups.get(set_log.exercise_id)
+        if group is None:
+            group = HistoryExerciseOut(
+                exercise_id=set_log.exercise_id,
+                name=set_log.exercise.name,
+                sets=[],
+                volume_kg=Decimal(0),
+                top_weight_kg=Decimal(0),
+                top_reps=0,
+            )
+            groups[set_log.exercise_id] = group
+
+        group.sets.append(HistorySetOut.model_validate(set_log, from_attributes=True))
+        if set_log.is_warmup:
+            continue
+
+        working_sets += 1
+        volume = set_log.weight_kg * set_log.reps
+        group.volume_kg += volume
+        total_volume += volume
+        # Eşit ağırlıkta daha çok tekrar yapılan set daha iyi: "80x8" ile
+        # "80x5" aynı zirve değil.
+        if (set_log.weight_kg, set_log.reps) > (group.top_weight_kg, group.top_reps):
+            group.top_weight_kg = set_log.weight_kg
+            group.top_reps = set_log.reps
+
+    for group in groups.values():
+        group.volume_kg = group.volume_kg.quantize(_Q2)
+        group.top_weight_kg = group.top_weight_kg.quantize(_Q2)
+        # Hareket İÇİNDE sıra set numarası: üstteki sıralama yapılma anına
+        # göre ve ikisi normalde aynı, ama bir set sonradan düzeltilirse
+        # `completed_at` güncelleniyor ve set listesi karışık görünüyordu.
+        group.sets.sort(key=lambda s: s.set_number)
+
+    duration = None
+    if session_row.completed_at is not None:
+        seconds = (session_row.completed_at - session_row.started_at).total_seconds()
+        duration = int(seconds // 60)
+
+    label, program = (
+        day_labels.get(session_row.program_day_id, (None, None))
+        if session_row.program_day_id is not None
+        else (None, None)
+    )
+
+    return HistorySessionOut(
+        id=session_row.id,
+        day_label=label,
+        program_name=program,
+        started_at=session_row.started_at,
+        completed_at=session_row.completed_at,
+        notes=session_row.notes,
+        is_deload=session_row.is_deload,
+        duration_min=duration,
+        total_sets=working_sets,
+        volume_kg=total_volume.quantize(_Q2),
+        exercises=list(groups.values()),
+        records=[RecordOut.model_validate(r, from_attributes=True) for r in records],
+    )
+
+
+@router.get("/history", response_model=list[HistorySessionOut])
+async def workout_history(
+    db: DbSession,
+    user: CurrentUser,
+    limit: Annotated[int, Query(ge=1, le=200)] = 40,
+) -> list[HistorySessionOut]:
+    """Tamamlanmış seanslar, hareket hareket gruplanmış.
+
+    Açık (devam eden) seans DIŞARIDA: geçmiş bitmiş işlerin kaydı ve yarım bir
+    seans oraya girdiğinde tonajı da süresi de yanıltıcı oluyor. Devam eden
+    seansa antrenman ekranından dönülüyor.
+    """
+    sessions = list(
+        (
+            await db.execute(
+                select(WorkoutSession)
+                .where(
+                    WorkoutSession.user_id == user.id,
+                    WorkoutSession.completed_at.is_not(None),
+                )
+                # Hareket adı gerekiyor; ilişki tembel olduğu için AÇIKÇA
+                # yükleniyor (bkz. SetLog.exercise).
+                .options(selectinload(WorkoutSession.set_logs).selectinload(SetLog.exercise))
+                .order_by(WorkoutSession.started_at.desc())
+                .limit(limit)
+            )
+        )
+        .scalars()
+        .unique()
+        .all()
+    )
+    if not sessions:
+        return []
+
+    ids = [s.id for s in sessions]
+
+    # Gün etiketleri tek sorguda: seans başına ayrı sorgu N+1 olurdu.
+    day_ids = {s.program_day_id for s in sessions if s.program_day_id is not None}
+    day_labels: dict[uuid.UUID, tuple[str, str]] = {}
+    if day_ids:
+        rows = await db.execute(
+            select(ProgramDay.id, ProgramDay.label, Program.name)
+            .join(Program, Program.id == ProgramDay.program_id)
+            .where(ProgramDay.id.in_(day_ids))
+        )
+        day_labels = {row[0]: (row[1], row[2]) for row in rows}
+
+    by_session: dict[uuid.UUID, list[PersonalRecord]] = {}
+    for record in (
+        (
+            await db.execute(
+                select(PersonalRecord).where(
+                    PersonalRecord.user_id == user.id,
+                    PersonalRecord.workout_session_id.in_(ids),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    ):
+        assert record.workout_session_id is not None  # sorgu NULL'ları dışlıyor
+        by_session.setdefault(record.workout_session_id, []).append(record)
+
+    return [
+        _history_session(s, day_labels, by_session.get(s.id, [])) for s in sessions
+    ]
 
 
 @router.get("/progression/{exercise_id}", response_model=ProgressionOut)

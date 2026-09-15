@@ -39,7 +39,8 @@ import {
   useRestCountdown,
   type RestState,
 } from "@/components/RestTimer";
-import { ErrorBox, Empty, Loading, fmt } from "@/components/States";
+import { Photo } from "@/components/Photo";
+import { ErrorBox, Loading, fmt } from "@/components/States";
 import { prLabel, prUnit } from "@/lib/labels";
 import {
   useCompleteSession,
@@ -197,15 +198,26 @@ export default function WorkoutPage() {
   if (!workout || workout.exercises.length === 0) {
     return (
       <Page>
-        <Empty
-          title="Bugün için planlanmış antrenman yok"
-          hint="Önce bir program seçip aktif hâle getirmen gerekiyor."
-          action={
-            <Link href="/programs" className="btn btn-primary">
+        {/* Boş durumda fotoğraf: "veri yok" demek kullanıcıyı çıkmaza sokuyor,
+            bir davete dönüştürmek yönlendiriyor. Fotoğraf yoksa yuva nötr
+            dokuya düşüyor ve kart yine çalışıyor. */}
+        <section className="card overflow-hidden">
+          <Photo slug="empty-workout" ratio="21 / 9" scrim>
+            <div className="flex size-full items-end p-6 lg:p-8">
+              <p className="display text-lg lg:text-xl" style={{ color: "oklch(99% 0 0)" }}>
+                Bugün için planlanmış antrenman yok
+              </p>
+            </div>
+          </Photo>
+          <div className="flex flex-wrap items-center justify-between gap-4 p-6 lg:p-8">
+            <p className="text-sm text-[var(--color-ink-muted)]">
+              Önce bir program seçip aktif hâle getirmen gerekiyor.
+            </p>
+            <Link href="/programs" className="btn btn-primary shrink-0">
               Programlara git
             </Link>
-          }
-        />
+          </div>
+        </section>
       </Page>
     );
   }

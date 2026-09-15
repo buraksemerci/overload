@@ -176,31 +176,78 @@ test.describe("oturum açıkken", () => {
   test("ekranlar arasında gezinilebilir", async ({ page }) => {
     await page.goto("/");
 
-    // Kenar çubuğu etiketleri sayfa başlıklarıyla birebir aynı DEĞİL: menüde
-    // gruplar var ("BESLENME" bir başlık, altındaki bağlantı "Günlük"), o
-    // yüzden eşleme açıkça yazılıyor.
+    // Gezinme etiketleri sayfa başlıklarıyla birebir aynı DEĞİL: menüde
+    // gruplar var ("Beslenme" bir başlık, altındaki bağlantı "Günlük"), o
+    // yüzden eşleme açıkça yazılıyor. Grup adı da gerekiyor çünkü alt
+    // bağlantılar ancak grubun paneli açıldığında DOM'da.
     //
-    // Masaüstünde kenar çubuğu kalıcı; telefonda çekmece olarak açılıyor.
-    // Masaüstü çubuğu `md` altında `display:none` olduğu için erişilebilirlik
-    // ağacından düşüyor ve rol sorgusu iki öğeye birden uymuyor.
-    // Mobil olup olmadığı viewport'tan KESİN olarak biliniyor.
-    // Önce `isVisible()` ile sorulıyordu; o çağrı beklemiyor, yani sayfa
-    // hidrasyonu tamamlanmadan çağrıldığında düğmeyi bulamıyor ve menü hiç
-    // açılmıyordu. `.click()` ise kendisi bekliyor.
+    // Masaüstünde panel başlığa tıklanınca açılıyor; telefonda çekmece.
+    // `md` altında masaüstü gezinmesi `display:none` olduğu için
+    // erişilebilirlik ağacından düşüyor ve rol sorgusu iki öğeye uymuyor.
+    // Mobil olup olmadığı viewport'tan KESİN olarak biliniyor; `isVisible()`
+    // beklemiyor ve hidrasyon bitmeden çağrıldığında düğmeyi bulamıyordu.
     const isMobile = (page.viewportSize()?.width ?? 1280) < 768;
-    const openMenuIfNeeded = async () => {
-      if (isMobile) await page.getByRole("button", { name: "Menüyü aç" }).click();
-    };
 
-    for (const [navLabel, heading] of [
-      ["Günlük", "Beslenme"],
-      ["İlerleme", "İlerleme"],
-      ["Sohbet", "Asistan"],
+    for (const [group, navLabel, heading] of [
+      ["Beslenme", "Günlük", "Beslenme"],
+      ["Vücut", "İlerleme", "İlerleme"],
+      ["Asistan", "Sohbet", "Asistan"],
     ] as const) {
-      await openMenuIfNeeded();
-      await page.getByRole("link", { name: navLabel, exact: true }).click();
+      if (isMobile) {
+        // Çekmecede bütün gruplar açık duruyor; ayrı bir adım gerekmiyor.
+        await page.getByRole("button", { name: "Menüyü aç" }).click();
+      } else {
+        await page.getByRole("button", { name: group, exact: true }).click();
+      }
+      // Erişilebilir ad etiketi VE ipucunu içeriyor ("Günlük Kalan kalori
+      // ve öğünler") — ekran okuyucu için doğru olan bu. O yüzden baştan
+      // eşleyen bir düzenli ifade kullanılıyor.
+      await page.getByRole("link", { name: new RegExp(`^${navLabel}`) }).click();
       await expect(page.getByRole("heading", { name: heading, level: 1 })).toBeVisible();
     }
+  });
+
+  test("ana başlıklar üstte, alt ekranlar panelde", async ({ page }) => {
+    test.skip((page.viewportSize()?.width ?? 1280) < 768, "masaüstü gezinmesi");
+    await page.goto("/");
+
+    const nav = page.getByRole("navigation", { name: "Ana gezinme" });
+    // Üstte YALNIZCA dört ana başlık ve Panel var.
+    for (const title of ["Antrenman", "Beslenme", "Vücut", "Asistan"]) {
+      await expect(nav.getByRole("button", { name: title, exact: true })).toBeVisible();
+    }
+    // Alt ekranlar kapalıyken DOM'da değil.
+    await expect(page.getByRole("link", { name: /^Kas Haritası/ })).toBeHidden();
+
+    await nav.getByRole("button", { name: "Vücut", exact: true }).click();
+    await expect(page.getByRole("link", { name: /^Kas Haritası/ })).toBeVisible();
+    // Panelde dört ekranın hepsi var. Sorgu PANELE kapsamlı: ana paneldeki
+    // kutucuklar da aynı rotalara bağlanıyor ("Kilo — İlk ölçümünü gir").
+    const megaPanel = page.locator("header").getByRole("list");
+    for (const item of [/^İlerleme/, /^Kas Haritası/, /^Kilo/, /^Ağrı/]) {
+      await expect(megaPanel.getByRole("link", { name: item })).toBeVisible();
+    }
+  });
+
+  test("panel imleç üzerine gelince açılıyor", async ({ page }) => {
+    test.skip((page.viewportSize()?.width ?? 1280) < 768, "dokunmatikte hover yok");
+    await page.goto("/");
+
+    const nav = page.getByRole("navigation", { name: "Ana gezinme" });
+    await nav.getByRole("button", { name: "Antrenman", exact: true }).hover();
+    await expect(page.getByRole("link", { name: /^Programlar/ })).toBeVisible();
+  });
+
+  test("Escape paneli kapatıyor", async ({ page }) => {
+    test.skip((page.viewportSize()?.width ?? 1280) < 768, "masaüstü gezinmesi");
+    await page.goto("/");
+
+    const nav = page.getByRole("navigation", { name: "Ana gezinme" });
+    await nav.getByRole("button", { name: "Antrenman", exact: true }).click();
+    await expect(page.getByRole("link", { name: /^Programlar/ })).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("link", { name: /^Programlar/ })).toBeHidden();
   });
 
   test("hesap ayarları AI sınırını açıkça yazar", async ({ page }) => {

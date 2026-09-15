@@ -37,6 +37,7 @@
     "@vitejs/plugin-react": "^5.0.0",
     "jsdom": "^28.0.0",
     "serwist": "^9.5.12",
+    "sharp": "^0.35.4",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.0",
     "vitest": "^5.0.0"

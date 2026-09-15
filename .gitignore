@@ -49,3 +49,8 @@ packages/shared-types/src/api.d.ts
 *.sqlite
 *.db
 /tmp/
+
+# Kurulan ajan skill'leri — geliştirme aracı, proje kodu değil.
+# 927 KB'lık üçüncü taraf dokümantasyonu depoda tutmak yerine tek komutla
+# yeniden kurulabiliyor:  npx skills add nutlope/hallmark
+.agents/

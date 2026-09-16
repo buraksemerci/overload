@@ -57,7 +57,7 @@
  * deneyim.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Photo } from "@/components/Photo";
 
@@ -119,6 +119,21 @@ const PHASES: readonly Phase[] = [
   },
 ];
 
+/* --- Hareket azaltma tercihi --------------------------------------------- */
+
+const MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+
+const subscribeReducedMotion = (onChange: () => void): (() => void) => {
+  const query = window.matchMedia(MOTION_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+};
+
+const getReduced = (): boolean => window.matchMedia(MOTION_QUERY).matches;
+
+/** Sunucuda bilinemiyor: `null` "henüz bilinmiyor" demek. */
+const getServerReduced = (): boolean | null => null;
+
 /** Anlatının kapladığı kaydırma yüksekliği. Ekran boyu cinsinden. */
 const SCROLL_SCREENS = 5;
 
@@ -131,20 +146,17 @@ export function Scrollytelling() {
    *
    * `null` = henüz bilinmiyor. `null` iken düz (kaydırmasız) hâl basılıyor
    * çünkü o her koşulda okunur.
+   *
+   * `useEffect` + `setState` yerine `useSyncExternalStore`: `matchMedia`
+   * React dışı bir kaynak ve bu kanca tam olarak onun için var. Aboneliği de
+   * kendisi yönetiyor, yani tercih ekran açıkken değişirse (işletim sistemi
+   * ayarı) sahne kendiliğinden düz hâle geçiyor.
    */
-  const [reduced, setReduced] = useState<boolean | null>(null);
+  const reduced = useSyncExternalStore(subscribeReducedMotion, getReduced, getServerReduced);
   /** Video dosyası gerçekten yüklendi mi? Yoksa fotoğraf karelerine düşüyor. */
   const [hasVideo, setHasVideo] = useState(false);
   /** Hangi fazın metni görünüyor. */
   const [active, setActive] = useState(0);
-
-  useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduced(query.matches);
-    const onChange = () => setReduced(query.matches);
-    query.addEventListener("change", onChange);
-    return () => query.removeEventListener("change", onChange);
-  }, []);
 
   useEffect(() => {
     if (reduced !== false || root.current === null) return;

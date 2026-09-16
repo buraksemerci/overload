@@ -277,15 +277,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     [cancelClose, cancelOpen, panel, show],
   );
 
-  // Rota değişince menüler kapanır; aksi halde kullanıcı bir bağlantıya
-  // dokunduktan sonra panel açık kalıyor ve gittiği sayfayı görmüyor.
+  /**
+   * Rota değişince menüler kapanır; aksi halde kullanıcı bir bağlantıya
+   * dokunduktan sonra panel açık kalıyor ve gittiği sayfayı görmüyor.
+   *
+   * **Bekleyen AÇILIŞ iptal edilmiyor** (`cancelOpen` burada yok). Ediliyordu
+   * ve şu tuzağı kuruyordu: kullanıcı bir bağlantıya tıklayıp hemen başka bir
+   * sekmenin üstüne geliyor, açılış zamanlayıcısı kuruluyor, ardından
+   * gezinme yerleşip zamanlayıcıyı öldürüyor. Panel açılmıyor — ve imleç
+   * sekmenin üstünde durduğu için yeni bir `mouseenter` de gelmiyor.
+   * Kullanıcının tek çaresi imleci çekip geri götürmek.
+   *
+   * Bekleyen açılış imlecin ŞU ANKİ yerine ait; gezinme onu değiştirmedi.
+   */
   useEffect(() => {
     cancelClose();
-    cancelOpen();
     if (exitTimer.current !== null) clearTimeout(exitTimer.current);
+    /* eslint-disable-next-line react-hooks/set-state-in-effect --
+       Rota DEĞİŞİNCE paneli kapatmak bir yan etki zinciri: zamanlayıcılar
+       iptal ediliyor ve menü durumu sıfırlanıyor. "Anahtarla yeniden kur"
+       alternatifi bütün kabuğu yeniden monte ederdi. */
     setPanel(null);
     setDrawer(false);
-  }, [pathname, cancelClose, cancelOpen]);
+  }, [pathname, cancelClose]);
 
   useEffect(
     () => () => {

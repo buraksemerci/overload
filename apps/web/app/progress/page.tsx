@@ -30,7 +30,7 @@
 import { useState } from "react";
 import { ConsistencyGrid } from "@/components/ConsistencyGrid";
 import { ExerciseChart } from "@/components/ExerciseChart";
-import { InfoTip, Page, PageHeader, Section } from "@/components/Layout";
+import { Page, PageHeader, Section } from "@/components/Layout";
 import { ErrorBox, Empty, Loading, fmt } from "@/components/States";
 import { prLabel, prUnit } from "@/lib/labels";
 import {

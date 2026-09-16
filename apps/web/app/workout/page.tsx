@@ -107,7 +107,9 @@ export default function WorkoutPage() {
     [workout],
   );
 
-  const loggedSets = session.data?.sets ?? [];
+  /* `?? []` her render'da YENİ bir dizi üretiyor ve `findLogged` bağımlılığı
+     olduğu için her render'da yeniden kuruluyordu. */
+  const loggedSets = useMemo(() => session.data?.sets ?? [], [session.data]);
   const findLogged = useCallback(
     (exerciseId: string, setNumber: number): WorkoutSet | undefined =>
       loggedSets.find((s) => s.exercise_id === exerciseId && s.set_number === setNumber),
@@ -124,7 +126,7 @@ export default function WorkoutPage() {
   const doneCount = loggedSets.filter((s) => !s.is_warmup).length;
 
   const onRestDone = useCallback(() => setRest(null), []);
-  const { remaining, progress } = useRestCountdown(rest, audio.current, onRestDone);
+  const { remaining, progress } = useRestCountdown(rest, audio, onRestDone);
 
   const draftKey = (exerciseId: string, setNumber: number) => `${exerciseId}:${setNumber}`;
 

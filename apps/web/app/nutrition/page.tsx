@@ -76,8 +76,11 @@ export default function NutritionPage() {
       MEAL_ORDER.map((meal) => [meal, []]),
     );
     for (const item of data?.items ?? []) {
-      groups.get(item.meal_type)?.push(item) ??
-        groups.set(item.meal_type, [item]);
+      // Harita bütün öğün adlarıyla önceden dolduruluyor; buradaki dal
+      // yalnızca sunucudan beklenmeyen bir öğün tipi gelirse çalışıyor.
+      const group = groups.get(item.meal_type);
+      if (group) group.push(item);
+      else groups.set(item.meal_type, [item]);
     }
     return groups;
   }, [data]);

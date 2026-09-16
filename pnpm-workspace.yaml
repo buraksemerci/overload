@@ -7,3 +7,8 @@ packages:
 # (apps/web/scripts/story-video.mjs). Uygulama calisma zamaninda kullanmiyor.
 allowBuilds:
   ffmpeg-static: true
+# unrs-resolver: eslint-config-next'in ice aktardigi yol cozucusu. Kurulum
+# betigi platform ikilisini yerlestiriyor. Once `false` denendi: eslint
+# calisiyor, yalnizca cozucu saf JS yedegine dusuyor. Gelistirme araci icin
+# yeterli; kurulumda bir betik daha calistirmaya gerek yok.
+  unrs-resolver: false

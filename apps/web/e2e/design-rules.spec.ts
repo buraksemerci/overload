@@ -146,3 +146,144 @@ test.describe("tasarım kuralları", () => {
     });
   }
 });
+
+/**
+ * Kimlik taşıyan rotalar.
+ *
+ * Yukarıdaki listeye giremiyorlar çünkü var olmayan bir kimliğe gidildiğinde
+ * ekran hata durumunu basıyor ve denetim boş sayfayı ölçüyor. Kendi taklit
+ * verileriyle ayrı koşuyorlar — ama AYNI üç kuralla: bu iki ekran uzun süre
+ * denetimin dışında kaldı ve ikisinde de kırpılan alanlar, zeminsiz
+ * yapışkan çubuklar birikti.
+ */
+const PROGRAM_ID = "44444444-4444-4444-4444-444444444444";
+const ACTION_ID = "66666666-6666-6666-6666-666666666666";
+
+const PROGRAM_DETAIL = {
+  id: PROGRAM_ID,
+  name: "5 Günlük Split",
+  description: null,
+  goal: "hypertrophy",
+  level: "beginner",
+  days_per_week: 5,
+  is_template: false,
+  is_active: true,
+  source_name: null,
+  source_url: null,
+  created_at: "2026-08-01T10:00:00Z",
+  days: [
+    {
+      id: "aaaaaaaa-1111-1111-1111-111111111111",
+      order_index: 0,
+      label: "Pazartesi — Göğüs",
+      exercises: [
+        {
+          id: "bbbbbbbb-1111-1111-1111-111111111111",
+          exercise_id: "55555555-5555-5555-5555-555555555555",
+          exercise_name: "Barbell Bench Press",
+          equipment: "barbell",
+          order_index: 0,
+          target_sets: 4,
+          target_rep_min: 6,
+          target_rep_max: 8,
+          technique: "rir1",
+          superset_group: null,
+          rest_seconds: 180,
+          notes: null,
+          target_percent_1rm: null,
+          target_label: "4 × 6-8",
+        },
+      ],
+    },
+  ],
+};
+
+const PROPOSAL = {
+  name: "Üst/Alt Split",
+  description: "Haftada 4 gün",
+  goal: "hypertrophy",
+  level: "intermediate",
+  rationale: "4 gün ayırabildiğin için üst/alt bölünmesi haftada 2 frekans veriyor.",
+  days: [
+    {
+      label: "Üst Vücut A",
+      exercises: [
+        {
+          exercise_id: "55555555-5555-5555-5555-555555555555",
+          target_sets: 4,
+          target_rep_min: 6,
+          target_rep_max: 8,
+          technique: "rir1",
+          superset_group: null,
+          rest_seconds: 150,
+          notes: null,
+          target_percent_1rm: null,
+        },
+      ],
+    },
+  ],
+};
+
+const DYNAMIC = [
+  {
+    path: `/programs/${PROGRAM_ID}/edit`,
+    async mock(page: Page) {
+      await page.route(`http://localhost:8000/programs/${PROGRAM_ID}`, (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(PROGRAM_DETAIL),
+        }),
+      );
+    },
+  },
+  {
+    path: `/programs/review/${ACTION_ID}`,
+    async mock(page: Page) {
+      await page.route(
+        `http://localhost:8000/chat/pending-actions/${ACTION_ID}`,
+        (route) =>
+          route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({
+              id: ACTION_ID,
+              action_type: "propose_program",
+              summary: "«Üst/Alt Split» — 1 gün, 1 hareket",
+              payload: PROPOSAL,
+              status: "pending",
+              created_at: "2026-09-15T10:00:00Z",
+            }),
+          }),
+      );
+    },
+  },
+] as const;
+
+test.describe("tasarım kuralları — kimlikli rotalar", () => {
+  test.beforeEach(async ({ page }) => {
+    await signIn(page);
+    await mockApi(page);
+  });
+
+  for (const screen of DYNAMIC) {
+    test(`${screen.path} — en fazla iki volt öğesi`, async ({ page }) => {
+      await screen.mock(page);
+      await openScreen(page, screen.path);
+      const count = await page.evaluate(countVoltFills);
+      expect(count, `${screen.path} ekranında ${count} volt dolgu var`).toBeLessThanOrEqual(2);
+    });
+
+    test(`${screen.path} — volt metin rengi olarak kullanılmıyor`, async ({ page }) => {
+      await screen.mock(page);
+      await openScreen(page, screen.path);
+      expect(await page.evaluate(findVoltText)).toEqual([]);
+    });
+
+    test(`${screen.path} — tanımsız CSS değişkeni kullanılmıyor`, async ({ page }) => {
+      await screen.mock(page);
+      await openScreen(page, screen.path);
+      expect(await page.evaluate(findDeadVariables)).toEqual([]);
+    });
+  }
+});

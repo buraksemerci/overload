@@ -83,6 +83,12 @@ export default function AccountPage() {
         activity_level:
           (me.data as Me & { activity_level?: string }).activity_level ?? "moderate",
       };
+      /* eslint-disable-next-line react-hooks/set-state-in-effect --
+         Form durumu sunucudan gelen veriyle BİR KEZ tohumlanıyor ve sonra
+         kullanıcıya ait: türetilmiş bir değer değil, düzenlenen bir kopya.
+         Kural bunu "etki içinde setState" diye işaretliyor ama alternatifi
+         (veriyi anahtar yapıp bileşeni yeniden kurmak) kullanıcının yazdığı
+         her şeyi arka plandaki bir yeniden çekimde silerdi. */
       setForm(loaded);
       setInitial(loaded);
     }

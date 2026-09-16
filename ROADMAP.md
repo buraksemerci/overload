@@ -77,7 +77,29 @@ konmadı; bütçe geldiğinde buraya eklenecek.
       ekranlarla aynı
 - [x] `/coach` — kullanıcıya verilemeyecek geliştirici talimatı kaldırıldı
 
-### 7. Kapanış
-- [ ] Bütün ekranlarda tasarım denetimi yeşil
-- [ ] e2e kapsamı her ekran için en az bir davranış testi
-- [ ] Fotoğraf yuvalarının tamamı dolu ya da bilinçli boş
+### 7. Kapanış — BİTTİ
+- [x] Tasarım denetimi 16 ekranda yeşil. Kimlik taşıyan iki rota
+      (`/programs/[id]/edit`, `/programs/review/[id]`) kendi taklit
+      verileriyle ama AYNI üç kuralla koşuyor — uzun süre denetimin dışında
+      kaldılar ve ikisinde de kırpılan alanlar birikmişti.
+- [x] Her ekranın en az bir davranış testi var. Beş ekran yalnızca
+      "açılıyor mu" ile örtülüydü: `/programs`, `/exercises`, `/muscle-map`,
+      `/supplements`, `/soreness`.
+- [x] Fotoğraf yuvaları: referans verilen her slug üretiliyor. İki tanesi
+      **bilinçli boş** (kettlebell, direnç bandı) — elde o ekipmanın karesi
+      yok ve yanlış bir görsel koymak hiç koymamaktan kötü.
+- [x] `pnpm lint` çalışıyor. `next lint` Next 16'da kaldırılmıştı ve komut
+      "lint" adında bir klasör arıyordu; ESLint doğrudan bağlandı.
+
+## Sıradaki — ürün değil, yayına hazırlık
+
+Tasarım rotası bitti. Geriye uygulamayı 5-10 kişiye açmadan önce yapılması
+gerekenler kalıyor:
+
+- [ ] E-posta gönderimi (doğrulama, parola sıfırlama) ve doğrulanmamış
+      hesabın kapsamının sınırlanması
+- [ ] Oturum: yenileme jetonu ve giriş denemesi sınırı
+- [ ] Kullanıcı başına AI bütçesi — bu gelince `/account`a "AI sınırı" kartı
+- [ ] Hesap silme (KVKK/GDPR)
+- [ ] Dağıtım: web + API + Postgres, alan adı, yedek
+- [ ] Anthropic anahtarıyla AI katmanının uçtan uca doğrulanması

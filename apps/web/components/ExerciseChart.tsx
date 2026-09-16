@@ -30,6 +30,10 @@ const METRICS = [
 
 type MetricKey = (typeof METRICS)[number]["key"];
 
+/** Tek ondalık, VİRGÜLLE. `toFixed` her zaman nokta üretiyor. */
+const oneDecimal = (value: number): string =>
+  value.toLocaleString("tr-TR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
 export function ExerciseChart({ exerciseId }: { exerciseId: string }) {
   const history = useExerciseHistory(exerciseId);
   const [metric, setMetric] = useState<MetricKey>("tahmini1rm");
@@ -90,7 +94,7 @@ export function ExerciseChart({ exerciseId }: { exerciseId: string }) {
           }}
         >
           {change > 0 ? "+" : ""}
-          {change.toFixed(1)}% ({points.length} seans)
+          {oneDecimal(change)}% ({points.length} seans)
         </span>
       </div>
 
@@ -130,7 +134,7 @@ export function ExerciseChart({ exerciseId }: { exerciseId: string }) {
                 const numeric = typeof value === "number" ? value : Number(value);
                 return [
                   Number.isFinite(numeric)
-                    ? `${numeric.toFixed(1)} ${active.unit}`
+                    ? `${oneDecimal(numeric)} ${active.unit}`
                     : "—",
                   active.label,
                 ];

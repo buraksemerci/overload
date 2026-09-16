@@ -196,15 +196,31 @@ test.describe("oturum açıkken", () => {
       if (isMobile) {
         // Çekmecede bütün gruplar açık duruyor; ayrı bir adım gerekmiyor.
         await page.getByRole("button", { name: "Menüyü aç" }).click();
-      } else {
-        // Başlık bir bağlantı ve tıklamak grubun İLK ekranına gidiyor; alt
-        // ekranlara ulaşmak için panel imleçle açılıyor.
-        await page.getByRole("link", { name: group, exact: true }).hover();
       }
       // Erişilebilir ad etiketi VE ipucunu içeriyor ("Günlük Kalan kalori
       // ve öğünler") — ekran okuyucu için doğru olan bu. O yüzden baştan
       // eşleyen bir düzenli ifade kullanılıyor.
-      await page.getByRole("link", { name: new RegExp(`^${navLabel}`) }).click();
+      //
+      // `header` KAPSAMI ŞART: karşılama ekranındaki anlatının her fazında
+      // aynı adı taşıyan bir bağlantı var ("Beslenme", "Programlar"...).
+      // Onlar opaklığı sıfır olsa da DOM'da ve katı kip görünürlüğe bakmıyor.
+      const target = page
+        .locator(isMobile ? "body" : "header")
+        .getByRole("link", { name: new RegExp(`^${navLabel}`) });
+
+      if (!isMobile) {
+        /* Başlık bir bağlantı ve tıklamak grubun İLK ekranına gidiyor; alt
+           ekranlara ulaşmak için panel imleçle açılıyor.
+
+           TEK hover yetiyor ve bu bir davranış iddiası: bir önceki adımın
+           gezinmesi tam bu sırada yerleşse bile bekleyen açılış iptal
+           edilmemeli. İptal edildiğinde imleç sekmenin üstünde durduğu için
+           yeni bir `mouseenter` de gelmiyordu — panel bir daha hiç
+           açılmıyordu. */
+        await page.locator("header").getByRole("link", { name: group, exact: true }).hover();
+      }
+
+      await target.click();
       await expect(page.getByRole("heading", { name: heading, level: 1 })).toBeVisible();
     }
   });

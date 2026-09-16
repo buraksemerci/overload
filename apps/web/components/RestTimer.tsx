@@ -80,7 +80,16 @@ function beep(context: AudioContext | null): void {
  */
 export function useRestCountdown(
   rest: RestState | null,
-  audio: AudioContext | null,
+  /**
+   * Ses bağlamının REF'İ, değerin kendisi değil.
+   *
+   * Önce `audio.current` render sırasında okunup buraya geçiriliyordu. Ref
+   * render sırasında okunamaz: değeri o anki render'a ait ve React bunun
+   * değiştiğini bilmiyor — bağlam kullanıcı ilk dokunuşta açıldığı için de
+   * ilk render'da her zaman `null`du. Ref'i geçirip `.current`i etkinin
+   * içinde okumak, sesin gerçekten açılmış bağlamı kullanmasını sağlıyor.
+   */
+  audio: { current: AudioContext | null },
   onDone: () => void,
 ): { remaining: number; progress: number } {
   const [now, setNow] = useState(() => Date.now());
@@ -89,6 +98,10 @@ export function useRestCountdown(
   useEffect(() => {
     if (rest === null) return;
     fired.current = false;
+    /* eslint-disable-next-line react-hooks/set-state-in-effect --
+       Yeni bir dinlenme başladığında saat SIFIRLANMAK zorunda: aksi halde
+       sayaç bir önceki dinlenmenin son değerinden devam edip 250 ms sonra
+       zıplıyor. */
     setNow(Date.now());
     // 250ms: saniye değişimini gözle fark edilir gecikme olmadan yakalıyor.
     // Arka planda kısılsa bile `Date.now()` doğru kaldığı için sorun değil.
@@ -104,7 +117,7 @@ export function useRestCountdown(
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
       navigator.vibrate([200, 100, 200]); // Android; Safari'de sessizce yok sayılır
     }
-    beep(audio);
+    beep(audio.current);
     onDone();
   }, [rest, remaining, audio, onDone]);
 

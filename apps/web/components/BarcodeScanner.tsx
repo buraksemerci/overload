@@ -58,6 +58,9 @@ export function BarcodeScanner({ onDetected, onClose }: Props) {
   useEffect(() => {
     const Detector = getDetectorCtor();
     if (Detector === null) {
+      /* eslint-disable-next-line react-hooks/set-state-in-effect --
+         Tarayıcı yeteneği yokluyor. Render sırasında `BarcodeDetector`
+         aramak sunucuda patlıyor; bu okuma etki içinde kalmak zorunda. */
       setStatus("unsupported");
       return;
     }

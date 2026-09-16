@@ -276,7 +276,10 @@ export default function ChatPage() {
             <div className="card mb-2 flex items-center gap-2 px-3 py-2 text-xs">
               <span className="min-w-0 flex-1 truncate">{photo.name}</span>
               <span className="tnum shrink-0 text-[var(--color-ink-faint)]">
-                {(photo.size / 1024 / 1024).toFixed(1)} MB
+                {(photo.size / 1024 / 1024).toLocaleString("tr-TR", {
+                  maximumFractionDigits: 1,
+                })}{" "}
+                MB
               </span>
               <button
                 onClick={() => {

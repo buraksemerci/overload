@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { getToken } from "@/lib/api";
 
 /**
@@ -15,18 +15,26 @@ import { getToken } from "@/lib/api";
  * `mounted` bayrağı hidrasyon uyuşmazlığını önlüyor: sunucuda `localStorage`
  * yok, ilk render'da token okunamaz. Kontrolü mount sonrasına ertelemezsek
  * React "sunucu ve istemci farklı render etti" uyarısı veriyor.
+ *
+ * Bayrak `useEffect` + `setState` ile değil `useSyncExternalStore` ile
+ * kuruluyor. İkisi de aynı sonucu veriyor ama ikincisi "React dışı bir
+ * bilgiyi okuyorum" demenin doğru yolu: sunucu anlık görüntüsü `false`,
+ * istemci anlık görüntüsü `true` ve arada fazladan bir render yok.
  */
+
+/** Hiç değişmeyen bir kaynak: abonelik gerekmiyor. */
+const NEVER = () => () => {};
 
 const PUBLIC_PATHS = new Set(["/login"]);
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(
+    NEVER,
+    () => true,
+    () => false,
+  );
 
   useEffect(() => {
     if (!mounted) return;

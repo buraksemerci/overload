@@ -59,6 +59,10 @@ export default function ProgramEditPage() {
 
   useEffect(() => {
     if (program.data && days === null) {
+      /* eslint-disable-next-line react-hooks/set-state-in-effect --
+         Hesap ekranındaki tohumlama ile aynı: düzenlenen ağaç sunucudan bir
+         kez alınıyor, sonrası kullanıcının. Yeniden çekim, kaydedilmemiş
+         düzenlemeyi silmemeli. */
       setDays(
         program.data.days.map((day) => ({
           uid: nextUid(),

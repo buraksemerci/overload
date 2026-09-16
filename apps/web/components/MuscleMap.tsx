@@ -54,6 +54,16 @@ interface Props {
   className?: string;
 }
 
+/**
+ * Set sayısı — VİRGÜLLE.
+ *
+ * `toFixed(1)` her zaman nokta üretiyor ve haritanın üstündeki sayı "10.0",
+ * yanındaki listede duran aynı sayı "10,0" oluyordu. Aynı ekranda iki farklı
+ * ondalık ayırıcı.
+ */
+const setText = (value: number): string =>
+  value.toLocaleString("tr-TR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
 export function MuscleMap({ volumes, interactive = true, highlight, className }: Props) {
   const [region, setRegion] = useState<Region>("front");
   const [hovered, setHovered] = useState<MuscleVolume | null>(null);
@@ -113,7 +123,7 @@ export function MuscleMap({ volumes, interactive = true, highlight, className }:
               <p className="text-sm">
                 <span>{hovered.nameTr}</span>{" "}
                 <span className="tnum text-[var(--color-ink-muted)]">
-                  {hovered.sets.toFixed(1)} / {hovered.target} set
+                  {setText(hovered.sets)} / {hovered.target} set
                 </span>
               </p>
             ) : (
@@ -185,7 +195,9 @@ function BodySvg({
     if (svgId === null) return null;
     const volume = bySvgId.get(svgId);
     if (!volume) return null;
-    return <title>{`${volume.nameTr}: ${volume.sets.toFixed(1)} / ${volume.target} set`}</title>;
+    return (
+      <title>{`${volume.nameTr}: ${setText(volume.sets)} / ${volume.target} set`}</title>
+    );
   };
 
   // İşaretleme dolguyla DEĞİL konturla yapılıyor: dolguyu değiştirmek ısı

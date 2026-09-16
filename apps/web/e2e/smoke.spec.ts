@@ -239,7 +239,9 @@ test.describe("oturum açıkken", () => {
 
     const nav = page.getByRole("navigation", { name: "Ana gezinme" });
     await nav.getByRole("link", { name: "Antrenman", exact: true }).hover();
-    await expect(page.getByRole("link", { name: /^Programlar/ })).toBeVisible();
+    await expect(
+      page.locator("header").getByRole("link", { name: /^Programlar/ }),
+    ).toBeVisible();
   });
 
   test("başlığa tıklamak grubun ilk ekranına gidiyor", async ({ page }) => {
@@ -260,14 +262,17 @@ test.describe("oturum açıkken", () => {
     await page.goto("/");
 
     const nav = page.getByRole("navigation", { name: "Ana gezinme" });
+    // BAŞLIĞA kapsamlı: karşılama ekranındaki anlatı da "Programlar" adında
+    // bir bağlantı taşıyor ve o kapanmıyor.
+    const header = page.locator("header");
     await nav.getByRole("link", { name: "Antrenman", exact: true }).hover();
-    await expect(page.getByRole("link", { name: /^Programlar/ })).toBeVisible();
+    await expect(header.getByRole("link", { name: /^Programlar/ })).toBeVisible();
 
     // Çubuk yapışkan değil, sayfayla birlikte akıp gidiyor. Panel DURUMU da
     // kapanmalı: açık kalsaydı arkadaki içerik bulanık ve `inert` kalırdı ve
     // kullanıcı hiçbir şeye tıklayamazdı.
     await page.mouse.wheel(0, 400);
-    await expect(page.getByRole("link", { name: /^Programlar/ })).toBeHidden();
+    await expect(header.getByRole("link", { name: /^Programlar/ })).toBeHidden();
     await expect(page.locator("main")).not.toHaveAttribute("inert", /.*/);
   });
 
@@ -276,11 +281,12 @@ test.describe("oturum açıkken", () => {
     await page.goto("/");
 
     const nav = page.getByRole("navigation", { name: "Ana gezinme" });
+    const header = page.locator("header");
     await nav.getByRole("link", { name: "Antrenman", exact: true }).hover();
-    await expect(page.getByRole("link", { name: /^Programlar/ })).toBeVisible();
+    await expect(header.getByRole("link", { name: /^Programlar/ })).toBeVisible();
 
     await page.keyboard.press("Escape");
-    await expect(page.getByRole("link", { name: /^Programlar/ })).toBeHidden();
+    await expect(header.getByRole("link", { name: /^Programlar/ })).toBeHidden();
   });
 
   test("hesap ayarları AI sınırını açıkça yazar", async ({ page }) => {

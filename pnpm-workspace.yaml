@@ -1,3 +1,9 @@
 packages:
   - "apps/web"
   - "packages/*"
+# ffmpeg-static kurulum betigi calisabilir: paket, ikili dosyayi kendi
+# postinstall'unda indiriyor. Yalnizca gelistirme araci -- karsilama
+# ekranindaki anlati videosunu birlestirip yeniden kodluyor
+# (apps/web/scripts/story-video.mjs). Uygulama calisma zamaninda kullanmiyor.
+allowBuilds:
+  ffmpeg-static: true

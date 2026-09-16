@@ -1,7 +1,22 @@
 "use client";
 
 /**
- * Panel.
+ * Karşılama ekranı.
+ *
+ * --------------------------------------------------------------------------
+ * ÜÇ KATMAN
+ * --------------------------------------------------------------------------
+ * 1. **Bugün** — kullanıcı adıyla karşılanıyor, altında o an yapılacak tek
+ *    iş ve üç gösterge. Buraya her gün gelen kişi için ekranın tamamı bu.
+ * 2. **Anlatı** — aşağı kaydırınca bir günün dört ânı geçiyor ve her biri
+ *    ilgili bölüme bağlanıyor. Uygulamayı ilk kez açan için burası harita.
+ * 3. **Bölümler** — anlatının altında dört ana bölüme giden bento kartlar.
+ *
+ * Sıra kasıtlı: her gün gelen kişi kaydırmak zorunda kalmıyor, yeni gelen
+ * kişi aşağı inince ne olduğunu öğreniyor.
+ *
+ * --------------------------------------------------------------------------
+ * SADELİK BÜTÇESİ — "Bugün" katmanının tek kuralı
  *
  * --------------------------------------------------------------------------
  * SADELİK BÜTÇESİ — bu ekranın tek kuralı
@@ -28,8 +43,11 @@
 
 import Link from "next/link";
 import { Page } from "@/components/Layout";
+import { Photo } from "@/components/Photo";
+import { Scrollytelling } from "@/components/Scrollytelling";
 import { ErrorBox, Loading, fmt } from "@/components/States";
 import {
+  useMe,
   useNutritionDay,
   useSessions,
   useStreak,
@@ -111,17 +129,119 @@ export default function DashboardPage() {
           <Tile label="Kilo" value="—" foot="İlk ölçümünü gir" href="/weight" />
         )}
       </div>
+
+      {/* --- Anlatı ------------------------------------------------------
+          TAM GENİŞLİK: sahne ekranın tamamını kaplamak zorunda. `Page` kabı
+          80rem'de duruyor ve negatif kenar boşluğu yalnızca dolguyu geri
+          alıyordu — sahne 1440px'lik bir ekranda iki yanında beyaz şeritle
+          kalıyor, bir video oynatıcı gibi duruyordu.
+
+          `50% - 50vw` kabın ortasından ekranın kenarına kadar geri çekiyor.
+          `100vw` kaydırma çubuğunu da sayıyor; taşmayı `body`deki
+          `overflow-x: clip` kesiyor. */}
+      <div
+        className="mt-16"
+        style={{ width: "100vw", marginInline: "calc(50% - 50vw)" }}
+      >
+        <Scrollytelling />
+      </div>
+
+      {/* --- Bölümler ---------------------------------------------------- */}
+      <section className="mt-16">
+        <h2 className="label mb-3">Bölümler</h2>
+        <SectionGrid />
+      </section>
     </Page>
+  );
+}
+
+/* --- Bölüm kartları -------------------------------------------------------
+   Bento: kartlar eşit değil. İlk kart iki sütun kaplıyor çünkü uygulamanın
+   ana işi orada; kalan üçü eşit. Dört özdeş kutu dizmek en tanınabilir
+   "üretilmiş arayüz" deseni ve hepsinin aynı önemde olduğunu söylüyor. */
+
+const SECTIONS: ReadonlyArray<{
+  href: Href;
+  photo: string;
+  title: string;
+  note: string;
+  wide?: boolean;
+}> = [
+  {
+    href: "/workout",
+    photo: "nav-antrenman",
+    title: "Antrenman",
+    note: "Bugünün akışı, programlar, hareket kütüphanesi, geçmiş",
+    wide: true,
+  },
+  {
+    href: "/nutrition",
+    photo: "nav-beslenme",
+    title: "Beslenme",
+    note: "Günlük ve supplement",
+  },
+  {
+    href: "/progress",
+    photo: "nav-vucut",
+    title: "Vücut",
+    note: "İlerleme, kas haritası, kilo, ağrı",
+  },
+  {
+    href: "/chat",
+    photo: "nav-asistan",
+    title: "Asistan",
+    note: "Sohbet ve haftalık rapor",
+  },
+];
+
+function SectionGrid() {
+  return (
+    <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      {SECTIONS.map((section, index) => (
+        <li
+          key={String(section.href)}
+          className={`reveal ${section.wide ? "lg:col-span-2" : ""}`}
+          style={{ ["--i" as string]: index }}
+        >
+          <Link href={section.href} className="card block h-full overflow-hidden">
+            <Photo
+              slug={section.photo}
+              ratio={section.wide ? "2 / 1" : "4 / 3"}
+              scrim
+            >
+              <div className="flex size-full flex-col justify-end p-5 lg:p-6">
+                <p
+                  className="display text-lg lg:text-xl"
+                  style={{ color: "oklch(99% 0 0)" }}
+                >
+                  {section.title}
+                </p>
+                <p className="mt-1 text-xs" style={{ color: "oklch(86% 0.01 115)" }}>
+                  {section.note}
+                </p>
+              </div>
+            </Photo>
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }
 
 /* --- Selamlama ------------------------------------------------------------ */
 
 function Greeting() {
+  const me = useMe();
   const now = new Date();
   const hour = now.getHours();
   const part =
     hour < 6 ? "İyi geceler" : hour < 12 ? "Günaydın" : hour < 18 ? "İyi günler" : "İyi akşamlar";
+
+  /* Ad varsa selamlamaya giriyor. Yoksa selamlama tek başına kalıyor —
+     "Hoş geldin, " diye biten bir cümle, boş bir ada işaret etmekten kötü.
+     E-posta ADRESİ ad yerine KULLANILMIYOR: "Günaydın, kbura@gmail.com"
+     karşılama değil, veritabanı çıktısı. */
+  const name = me.data?.display_name?.trim();
 
   // Selamlama tek başına bilgi taşımıyor; tarih onu işe yarar hâle getiriyor.
   const date = now.toLocaleDateString("tr-TR", {
@@ -132,8 +252,10 @@ function Greeting() {
 
   return (
     <div className="reveal" style={{ "--i": 0 } as React.CSSProperties}>
-      <h1 className="text-xl">{part}</h1>
-      <p className="mt-0.5 text-sm text-[var(--color-ink-faint)]">{date}</p>
+      <h1 className="display text-2xl lg:text-3xl">
+        {name ? `${part}, ${name}` : part}
+      </h1>
+      <p className="mt-1 text-sm text-[var(--color-ink-faint)]">{date}</p>
     </div>
   );
 }

@@ -12,6 +12,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Page, PageHeader, Section } from "@/components/Layout";
+import { Photo } from "@/components/Photo";
 import { ErrorBox, Loading } from "@/components/States";
 import { api } from "@/lib/api";
 import { logout, type Me } from "@/lib/auth";
@@ -78,6 +79,11 @@ export default function AccountPage() {
 
   const set = (patch: Partial<ProfileForm>) => setForm({ ...form, ...patch });
 
+  /* Baş harf: ad varsa ondan, yoksa e-postadan. Türkçe yerelinde
+     `toLocaleUpperCase` şart — "i" harfi "I" değil "İ" olmalı. */
+  const source = form.display_name.trim() || me.data?.email || "";
+  const initial = source ? source[0]!.toLocaleUpperCase("tr-TR") : "·";
+
   return (
     <Page>
       <PageHeader
@@ -97,6 +103,45 @@ export default function AccountPage() {
           </>
         }
       />
+
+      {/* --- Kimlik kartı -------------------------------------------------
+          Hesap ekranı baştan sona formdu ve hiçbir yerinde "bu benim
+          hesabım" hissi yoktu. Kapak kartı o boşluğu dolduruyor: ad,
+          e-posta ve baş harf tek bakışta.
+
+          Fotoğraf bir portre DEĞİL, bölüm görseli — kullanıcının kendi
+          fotoğrafını yüklemesi henüz yok ve yerine rastgele bir yüz koymak
+          yanlış olurdu. */}
+      <section className="card overflow-hidden">
+        <Photo slug="nav-vucut" ratio="21 / 9" scrim position="center 35%">
+          <div className="flex size-full items-end gap-4 p-6 lg:p-8">
+            <span
+              aria-hidden
+              className="grid size-14 shrink-0 place-items-center border text-lg font-semibold lg:size-16"
+              style={{
+                borderColor: "oklch(99% 0 0 / 0.5)",
+                color: "oklch(99% 0 0)",
+              }}
+            >
+              {initial}
+            </span>
+            <div className="min-w-0">
+              <p
+                className="display truncate text-xl lg:text-2xl"
+                style={{ color: "oklch(99% 0 0)" }}
+              >
+                {form.display_name.trim() || "Adını ekle"}
+              </p>
+              <p
+                className="truncate text-sm"
+                style={{ color: "oklch(88% 0.01 115)" }}
+              >
+                {me.data?.email}
+              </p>
+            </div>
+          </div>
+        </Photo>
+      </section>
 
       <Section
         title="Profil"

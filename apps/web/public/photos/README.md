@@ -98,6 +98,23 @@ kaynak yok. Ekipmana göre altı fotoğraf bütün kütüphaneyi kaplıyor.
 yok ve yanlış bir görsel koymak, hiç koymamaktan kötü — o kartlar nötr
 dokuyla çalışıyor ve düzgün görünüyor.
 
+### Karşılama anlatısı
+
+Karşılama ekranındaki dört kare **Higgsfield ile üretildi** (Unsplash değil).
+Aynı kareler `public/video/story.mp4`in anahtar kareleri olarak da
+kullanıldı: video, bu dört görüntü arasında üretilen üç geçiş parçasının
+birleşimi.
+
+| Slug | Faz |
+|---|---|
+| `story-outdoor` | Sabah — dışarıda koşu |
+| `story-gym` | Antrenman — salonda ağırlık |
+| `story-meal` | Sonrası — öğün |
+| `story-phone` | Zamanla — telefonda panel |
+
+Bu dördü yalnızca **yedek**: video yüklenemezse anlatı onlara düşüyor.
+Videonun kendisi `scripts/story-video.mjs` ile hazırlanıyor.
+
 ## Nereden
 
 - **Unsplash** — <https://unsplash.com/license>

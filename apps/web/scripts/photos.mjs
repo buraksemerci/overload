@@ -87,6 +87,19 @@ const JOBS = [
 
   // --- Antrenman bitiş ekranı ----------------------------------------------
   { slug: "celebration", file: "threadmill.jpg", fit: "cover", width: 1800, height: 771, position: "center" },
+
+  // --- Karşılama ekranı: scrollytelling kareleri ---------------------------
+  // Higgsfield ile üretildi; dört kare aynı kişiyi bir günün içinde izliyor.
+  // Tam ekran arka plan oldukları için diğerlerinden büyükler (1920 geniş) —
+  // bir kart değil, ekranın tamamı.
+  //
+  // `~/Downloads/hf` altında duruyorlar; betiğe ikinci bir kaynak klasör
+  // vermek yerine yol doğrudan yazıldı çünkü bu dört dosya üretilmiş içerik
+  // ve indirilen fotoğraflarla aynı yerde durmuyor.
+  { slug: "story-outdoor", file: "hf/story-1.png", fit: "cover", width: 1920, height: 1080, position: "center" },
+  { slug: "story-gym", file: "hf/story-2.png", fit: "cover", width: 1920, height: 1080, position: "center" },
+  { slug: "story-meal", file: "hf/story-3.png", fit: "cover", width: 1920, height: 1080, position: "center" },
+  { slug: "story-phone", file: "hf/story-4.png", fit: "cover", width: 1920, height: 1080, position: "center" },
 ];
 
 await mkdir(OUT, { recursive: true });

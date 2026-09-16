@@ -62,10 +62,15 @@ export default function SupplementsPage() {
             işaretleyebilirsin.
           </>
         }
+        /* Liste boşken başlıkta ekleme düğmesi YOK: boş durumun kendi
+           daveti zaten aynı işi yapıyor ve iki ayrı "ekle" düğmesi aynı
+           ekranda birbirini tekrar ediyordu. */
         actions={
-          <button type="button" className="btn btn-ghost" onClick={() => setAdding(true)}>
-            Supplement ekle
-          </button>
+          rows.length > 0 && (
+            <button type="button" className="btn btn-ghost" onClick={() => setAdding(true)}>
+              Supplement ekle
+            </button>
+          )
         }
       />
 
@@ -77,6 +82,7 @@ export default function SupplementsPage() {
         <ErrorBox error={today.error} onRetry={() => void today.refetch()} />
       ) : rows.length === 0 ? (
         <Empty
+          photo="empty-supplements"
           title="Henüz supplement tanımlamadın"
           hint="Ekledikten sonra her gün tek dokunuşla işaretleyebilirsin."
           action={

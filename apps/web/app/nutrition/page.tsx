@@ -35,7 +35,13 @@ import { FoodSheet, type SheetMode } from "@/components/FoodSheet";
 import { Photo } from "@/components/Photo";
 import { InfoTip, Page, PageHeader, Section } from "@/components/Layout";
 import { ErrorBox, Loading, fmt } from "@/components/States";
-import { currentMeal, dayLabel, MEAL_ORDER, mealLabel, shiftDay } from "@/lib/meals";
+import {
+  currentMeal,
+  dayLabel,
+  MEAL_ORDER,
+  mealLabel,
+  shiftDay,
+} from "@/lib/meals";
 import {
   useMealSuggestions,
   useNutritionDay,
@@ -66,7 +72,9 @@ export default function NutritionPage() {
   const data = day.data;
 
   const byMeal = useMemo(() => {
-    const groups = new Map<string, FoodLogRow[]>(MEAL_ORDER.map((meal) => [meal, []]));
+    const groups = new Map<string, FoodLogRow[]>(
+      MEAL_ORDER.map((meal) => [meal, []]),
+    );
     for (const item of data?.items ?? []) {
       groups.get(item.meal_type)?.push(item) ??
         groups.set(item.meal_type, [item]);
@@ -75,10 +83,13 @@ export default function NutritionPage() {
   }, [data]);
 
   if (day.isLoading) return <Loading />;
-  if (day.isError) return <ErrorBox error={day.error} onRetry={() => void day.refetch()} />;
+  if (day.isError)
+    return <ErrorBox error={day.error} onRetry={() => void day.refetch()} />;
   if (!data) return <Loading />;
 
-  const remainingCalories = data.remaining ? num(data.remaining.calories) : null;
+  const remainingCalories = data.remaining
+    ? num(data.remaining.calories)
+    : null;
 
   return (
     <Page>
@@ -114,11 +125,7 @@ export default function NutritionPage() {
       />
 
       {/* --- 3. Diğer öğünler -------------------------------------------- */}
-      <OtherMeals
-        focused={focused}
-        byMeal={byMeal}
-        onFocus={setFocused}
-      />
+      <OtherMeals focused={focused} byMeal={byMeal} onFocus={setFocused} />
 
       <Suggestions goal={goal} />
 
@@ -145,8 +152,14 @@ function DayNav({
 }) {
   return (
     <div className="flex items-center gap-1">
-      <Arrow label="Önceki gün" direction="left" onClick={() => onChange(shiftDay(date, -1))} />
-      <span className="min-w-[6.5rem] text-center text-sm font-medium">{dayLabel(date)}</span>
+      <Arrow
+        label="Önceki gün"
+        direction="left"
+        onClick={() => onChange(shiftDay(date, -1))}
+      />
+      <span className="min-w-[6.5rem] text-center text-sm font-medium">
+        {dayLabel(date)}
+      </span>
       {/* Bugünden ileri gidilemiyor: gelecekte yenen bir şey yok. */}
       <Arrow
         label="Sonraki gün"
@@ -177,7 +190,16 @@ function Arrow({
       onClick={onClick}
       className="btn-quiet grid size-9 place-items-center rounded-[var(--radius-md)] text-[var(--color-ink-muted)] disabled:opacity-30"
     >
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        aria-hidden
+      >
         <path d={direction === "left" ? "M15 6l-6 6 6 6" : "M9 6l6 6-6 6"} />
       </svg>
     </button>
@@ -206,8 +228,9 @@ function Hero({
       <Section>
         <p className="text-sm">Kalori hedefi hesaplanamıyor.</p>
         <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
-          Boy, doğum tarihi, cinsiyet ve en az bir kilo kaydı gerekiyor. O zamana
-          kadar yediklerin kaydedilebilir; sadece hedefle karşılaştırılamaz.
+          Boy, doğum tarihi, cinsiyet ve en az bir kilo kaydı gerekiyor. O
+          zamana kadar yediklerin kaydedilebilir; sadece hedefle
+          karşılaştırılamaz.
         </p>
         <div className="mt-4 flex gap-2">
           <Link href="/account" className="btn btn-ghost">
@@ -233,7 +256,9 @@ function Hero({
           bırakıyordu. Sade olmak seyrek olmak değil. */}
       <div className="mx-auto flex max-w-[46rem] flex-col items-center gap-8 lg:flex-row lg:items-center lg:gap-14">
         <Ring ratio={ratio} over={over}>
-          <p className="figure tnum text-4xl leading-none">{fmt(Math.abs(remaining), 0)}</p>
+          <p className="figure tnum text-4xl leading-none">
+            {fmt(Math.abs(remaining), 0)}
+          </p>
           <p className="label mt-1.5">{over ? "kcal fazla" : "kcal kaldı"}</p>
         </Ring>
 
@@ -253,8 +278,10 @@ function Hero({
           </div>
 
           <p className="tnum text-sm text-[var(--color-ink-muted)]">
-            <span className="font-semibold text-[var(--color-ink)]">{fmt(eaten, 0)}</span> /{" "}
-            {fmt(target, 0)} kcal yendi
+            <span className="font-semibold text-[var(--color-ink)]">
+              {fmt(eaten, 0)}
+            </span>{" "}
+            / {fmt(target, 0)} kcal yendi
           </p>
 
           {data.target.floor_applied && (
@@ -320,8 +347,19 @@ function Ring({
 
   return (
     <div className="relative grid size-[13.5rem] shrink-0 place-items-center">
-      <svg viewBox="0 0 100 100" className="absolute inset-0 -rotate-90" aria-hidden>
-        <circle cx="50" cy="50" r={r} fill="none" stroke="var(--color-border)" strokeWidth="3" />
+      <svg
+        viewBox="0 0 100 100"
+        className="absolute inset-0 -rotate-90"
+        aria-hidden
+      >
+        <circle
+          cx="50"
+          cy="50"
+          r={r}
+          fill="none"
+          stroke="var(--color-border)"
+          strokeWidth="3"
+        />
         {ratio > 0 && (
           <circle
             cx="50"
@@ -335,7 +373,9 @@ function Ring({
             // Yay yalnızca gerçekten varsa çiziliyor.
             strokeLinecap="round"
             strokeDasharray={`${Math.min(1, ratio) * circumference} ${circumference}`}
-            style={{ transition: "stroke-dasharray var(--dur-long) var(--ease-out)" }}
+            style={{
+              transition: "stroke-dasharray var(--dur-long) var(--ease-out)",
+            }}
           />
         )}
       </svg>
@@ -355,7 +395,8 @@ function MacroBar({
 }) {
   const ratio = target > 0 ? current / target : 0;
   // Hedefin üstü uyarı değil bilgi; kırmızı yalnızca gerçek hatalar için.
-  const color = ratio > 1.1 ? "var(--color-warning)" : "var(--color-accent-deep)";
+  const color =
+    ratio > 1.1 ? "var(--color-warning)" : "var(--color-accent-deep)";
 
   return (
     <div>
@@ -394,62 +435,91 @@ function FocusedMeal({
 }) {
   const calories = items.reduce((sum, item) => sum + num(item.calories), 0);
 
+  /**
+   * Boş öğün ekranın en ölü ânı — ve arkasında okunacak bir sayı olmadığı
+   * için fotoğrafın tam da ait olduğu yer. Kart ikiye bölünmüyor: başlık da
+   * davet de eylem de görselin ÜSTÜNDE, tek katman.
+   *
+   * Dolu öğünde fotoğraf YOK. Orada okunacak satırlar var ve bir listenin
+   * arkasına görsel koymak yalnızca kontrastı düşürür.
+   */
+  if (items.length === 0) {
+    return (
+      <section className="card overflow-hidden">
+        <Photo slug="empty-nutrition" ratio="21 / 9" scrim>
+          <div className="flex size-full flex-col justify-between p-6 lg:p-8">
+            <h2
+              className="display on-photo-dark text-lg"
+              style={{ color: "oklch(99% 0 0)" }}
+            >
+              {mealLabel(meal)}
+            </h2>
+            <div>
+              <p
+                className="on-photo-dark text-sm"
+                style={{ color: "oklch(94% 0.01 115)" }}
+              >
+                Henüz bir şey yok.
+              </p>
+              <button
+                type="button"
+                className="btn btn-primary mt-3"
+                onClick={onAdd}
+              >
+                Besin ekle
+              </button>
+            </div>
+          </div>
+        </Photo>
+      </section>
+    );
+  }
+
   return (
     <section className="card p-6 lg:p-8">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <div className="flex items-baseline gap-3">
           <h2 className="display text-lg">{mealLabel(meal)}</h2>
-          {items.length > 0 && (
-            <span className="tnum text-sm text-[var(--color-ink-muted)]">
-              {fmt(calories, 0)} kcal
-            </span>
-          )}
+          <span className="tnum text-sm text-[var(--color-ink-muted)]">
+            {fmt(calories, 0)} kcal
+          </span>
         </div>
         <button type="button" className="btn btn-primary" onClick={onAdd}>
           Besin ekle
         </button>
       </div>
 
-      {items.length === 0 ? (
-        /* Boş öğün ekranın en ölü ânı. Fotoğraf "henüz bir şey yok"
-           cümlesini bir davete çeviriyor ve ekranın o bölümünü canlı
-           tutuyor — arkasında okunacak bir sayı olmadığı için güvenli. */
-        <div className="mt-5 -mx-6 -mb-6 overflow-hidden lg:-mx-8 lg:-mb-8">
-          <Photo slug="empty-nutrition" ratio="21 / 9" scrim>
-            <div className="flex size-full items-end p-6 lg:p-8">
-              <p className="text-sm" style={{ color: "oklch(94% 0.01 115)" }}>
-                {mealLabel(meal)} için henüz bir şey yok.
-              </p>
-            </div>
-          </Photo>
-        </div>
-      ) : (
-        <ul className="mt-5 divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
-          {items.map((item, index) => (
-            <li key={item.id} className="reveal" style={{ ["--i" as string]: index }}>
-              {/* Satırın tamamı düzenlemeyi açıyor. Ayrı bir kalem simgesi
+      <ul className="mt-5 divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
+        {items.map((item, index) => (
+          <li
+            key={item.id}
+            className="reveal"
+            style={{ ["--i" as string]: index }}
+          >
+            {/* Satırın tamamı düzenlemeyi açıyor. Ayrı bir kalem simgesi
                   koymak hem küçük bir hedef hem de öğrenilmesi gereken bir
                   şey olurdu; satıra dokunmak beklenen davranış. */}
-              <button
-                type="button"
-                onClick={() => onEdit(item)}
-                aria-label={`${item.food.name} kalemini düzenle`}
-                className="flex w-full items-center justify-between gap-4 py-3 text-left transition-colors hover:bg-[var(--color-surface-raised)]"
-                style={{ transitionDuration: "var(--dur-micro)" }}
-              >
-                <span className="min-w-0">
-                  <span className="block truncate text-sm">{item.food.name}</span>
-                  <span className="tnum block text-2xs text-[var(--color-ink-faint)]">
-                    {fmt(item.quantity_g, 0)} g · P{fmt(item.protein_g, 0)} K
-                    {fmt(item.carbs_g, 0)} Y{fmt(item.fat_g, 0)}
-                  </span>
+            <button
+              type="button"
+              onClick={() => onEdit(item)}
+              aria-label={`${item.food.name} kalemini düzenle`}
+              className="flex w-full items-center justify-between gap-4 py-3 text-left transition-colors hover:bg-[var(--color-surface-raised)]"
+              style={{ transitionDuration: "var(--dur-micro)" }}
+            >
+              <span className="min-w-0">
+                <span className="block truncate text-sm">{item.food.name}</span>
+                <span className="tnum block text-2xs text-[var(--color-ink-faint)]">
+                  {fmt(item.quantity_g, 0)} g · P{fmt(item.protein_g, 0)} K
+                  {fmt(item.carbs_g, 0)} Y{fmt(item.fat_g, 0)}
                 </span>
-                <span className="tnum shrink-0 text-sm">{fmt(item.calories, 0)}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+              </span>
+              <span className="tnum shrink-0 text-sm">
+                {fmt(item.calories, 0)}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
@@ -472,7 +542,10 @@ function OtherMeals({
       <ul className="grid gap-2 sm:grid-cols-3">
         {others.map((meal) => {
           const items = byMeal.get(meal) ?? [];
-          const calories = items.reduce((sum, item) => sum + num(item.calories), 0);
+          const calories = items.reduce(
+            (sum, item) => sum + num(item.calories),
+            0,
+          );
           return (
             <li key={meal}>
               <button
@@ -522,8 +595,8 @@ function Suggestions({ goal }: { goal: string }) {
             <p className="label">Öneriler</p>
             <InfoTip label="Öneriler nasıl hesaplanıyor">
               Porsiyonlar kalan makro açığını dolduracak şekilde hesaplanıyor —
-              tahmin değil, aritmetik. Besinler senin daha önce kaydettiklerinden
-              seçiliyor.
+              tahmin değil, aritmetik. Besinler senin daha önce
+              kaydettiklerinden seçiliyor.
             </InfoTip>
           </div>
 
@@ -532,30 +605,39 @@ function Suggestions({ goal }: { goal: string }) {
           ) : suggestions.isError ? (
             <ErrorBox error={suggestions.error} />
           ) : suggestions.data?.reason ? (
-            <p className="text-sm text-[var(--color-ink-muted)]">{suggestions.data.reason}</p>
+            <p className="text-sm text-[var(--color-ink-muted)]">
+              {suggestions.data.reason}
+            </p>
           ) : (
             <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {(suggestions.data?.suggestions ?? []).map((suggestion, index) => (
-                <li key={index} className="card reveal p-4" style={{ ["--i" as string]: index }}>
-                  <ul className="space-y-1">
-                    {suggestion.items.map((item) => (
-                      <li
-                        key={item.food_id}
-                        className="flex items-baseline justify-between gap-3 text-sm"
-                      >
-                        <span className="min-w-0 truncate">{item.name}</span>
-                        <span className="tnum shrink-0 text-[var(--color-ink-muted)]">
-                          {item.quantity_g} g
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="tnum mt-3 border-t border-[var(--color-border)] pt-2 text-2xs text-[var(--color-ink-faint)]">
-                    {suggestion.total_calories} kcal · P{suggestion.total_protein_g} K
-                    {suggestion.total_carbs_g} Y{suggestion.total_fat_g}
-                  </p>
-                </li>
-              ))}
+              {(suggestions.data?.suggestions ?? []).map(
+                (suggestion, index) => (
+                  <li
+                    key={index}
+                    className="card reveal p-4"
+                    style={{ ["--i" as string]: index }}
+                  >
+                    <ul className="space-y-1">
+                      {suggestion.items.map((item) => (
+                        <li
+                          key={item.food_id}
+                          className="flex items-baseline justify-between gap-3 text-sm"
+                        >
+                          <span className="min-w-0 truncate">{item.name}</span>
+                          <span className="tnum shrink-0 text-[var(--color-ink-muted)]">
+                            {item.quantity_g} g
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="tnum mt-3 border-t border-[var(--color-border)] pt-2 text-2xs text-[var(--color-ink-faint)]">
+                      {suggestion.total_calories} kcal · P
+                      {suggestion.total_protein_g} K{suggestion.total_carbs_g} Y
+                      {suggestion.total_fat_g}
+                    </p>
+                  </li>
+                ),
+              )}
             </ul>
           )}
         </div>

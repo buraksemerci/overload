@@ -59,9 +59,12 @@ konmadı; bütçe geldiğinde buraya eklenecek.
       yüzey, kendi zeminine oturan kaydet çubuğu
 - [x] `/programs/review/[id]` — aynı çubuk dili, kırpılmayan alanlar
 
-### 4. Beslenme
-- [ ] `/nutrition` — halka + öğün kartları bento'ya
-- [ ] `/supplements` — kart dili
+### 4. Beslenme — BİTTİ
+- [x] `/nutrition` — boş öğün kartı ikiye bölünmüyor: başlık da davet de
+      eylem de fotoğrafın üstünde tek katmanda. Dolu öğünde fotoğraf yok;
+      orada okunacak satırlar var.
+- [x] `/supplements` — boş durum bir davet (fotoğraf + cümle + tek eylem);
+      liste boşken başlıktaki ikinci "ekle" düğmesi kalkıyor
 
 ### 5. Vücut
 - [ ] `/progress` — bento: güç kartı, tutarlılık, rekor rafı

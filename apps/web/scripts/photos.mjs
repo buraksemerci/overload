@@ -62,6 +62,9 @@ const JOBS = [
   { slug: "empty-workout", file: "another deadlift.jpg", fit: "cover", width: 1800, height: 771, position: "center" },
   { slug: "empty-nutrition", file: "salad.jpg", fit: "cover", width: 1800, height: 771, position: "center" },
   { slug: "empty-history", file: "gym.jpg", fit: "cover", width: 1800, height: 771, position: "top" },
+  // Supplement listesi boşken. Hap kutusu fotoğrafı elde yok; günün masası
+  // "her gün tekrarlanan bir şey" fikrini daha iyi taşıyor.
+  { slug: "empty-supplements", file: "breakfast.jpg", fit: "cover", width: 1800, height: 771, position: "center" },
 
   // --- Program şablonları: 3/4 DİKEY kart -----------------------------------
   // Kartın içeriği (ad, özet, iki düğme) fotoğrafın üstünde duruyor; yatay

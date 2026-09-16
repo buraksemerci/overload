@@ -189,7 +189,10 @@ export default function WeightPage() {
         >
           <div className="h-64 w-full lg:h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={points} margin={{ top: 4, right: 8, bottom: 4, left: -16 }}>
+              {/* `left: 0`. Negatif sol boşluk ekseni sola çekiyordu ve
+                  `width={44}` içine sığmayan etiketin İLK KARAKTERİ
+                  kırpılıyordu: "80,7" ekranda "0,7" olarak duruyordu. */}
+              <LineChart data={points} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
                 <CartesianGrid stroke="var(--color-border)" strokeDasharray="2 4" />
                 <XAxis
                   dataKey="label"
@@ -201,7 +204,13 @@ export default function WeightPage() {
                   domain={["dataMin - 1", "dataMax + 1"]}
                   tick={{ fill: "var(--color-ink-faint)", fontSize: 10 }}
                   stroke="var(--color-border)"
-                  width={44}
+                  width={48}
+                  // Ham eksen değeri "80.7166" gibi çıkıyor: hem nokta hem
+                  // altı basamak. Uzun etiket `width` içine sığmıyor ve
+                  // taşan kısmı SVG'nin dışında kalıp kırpılıyordu.
+                  tickFormatter={(value: number) =>
+                    value.toLocaleString("tr-TR", { maximumFractionDigits: 1 })
+                  }
                 />
                 <Tooltip
                   contentStyle={{

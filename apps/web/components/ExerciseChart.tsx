@@ -96,7 +96,9 @@ export function ExerciseChart({ exerciseId }: { exerciseId: string }) {
 
       <div className="mt-3 h-48 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={points} margin={{ top: 4, right: 8, bottom: 4, left: -20 }}>
+          {/* `left: 0`: negatif sol boşluk, eksen etiketinin ilk karakterini
+              kırpıyordu ("102,5" → "02,5"). */}
+          <LineChart data={points} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
             <CartesianGrid stroke="var(--color-border)" strokeDasharray="2 4" />
             <XAxis
               dataKey="label"
@@ -108,13 +110,16 @@ export function ExerciseChart({ exerciseId }: { exerciseId: string }) {
               domain={["dataMin - 2", "dataMax + 2"]}
               tick={{ fill: "var(--color-ink-faint)", fontSize: 10 }}
               stroke="var(--color-border)"
-              width={44}
+              width={48}
+              tickFormatter={(value: number) =>
+                value.toLocaleString("tr-TR", { maximumFractionDigits: 1 })
+              }
             />
             <Tooltip
               contentStyle={{
                 background: "var(--color-surface)",
                 border: "1px solid var(--color-border-strong)",
-                borderRadius: 5,
+                borderRadius: "var(--radius-md)",
                 fontSize: 12,
               }}
               labelStyle={{ color: "var(--color-ink-muted)" }}

@@ -73,11 +73,11 @@ export default function ProgressPage() {
         title="Güç standartları"
         info={
           <>
-            Seviye, tahmini 1RM&apos;in vücut ağırlığına oranından çıkıyor.
-            1RM <strong>Epley formülüyle tahmin</strong> ediliyor — gerçek tek
-            tekrar testi değil. Oranlar cinsiyete göre ayrı tablolardan
-            geliyor; aynı mutlak ağırlık farklı vücut ağırlıklarında farklı
-            seviyeye denk düşüyor.
+            Seviye, tahmini 1RM&apos;in vücut ağırlığına oranından çıkıyor. 1RM{" "}
+            <strong>Epley formülüyle tahmin</strong> ediliyor — gerçek tek
+            tekrar testi değil. Oranlar cinsiyete göre ayrı tablolardan geliyor;
+            aynı mutlak ağırlık farklı vücut ağırlıklarında farklı seviyeye denk
+            düşüyor.
           </>
         }
       >
@@ -93,13 +93,17 @@ export default function ProgressPage() {
           <>
             {standards.data?.is_estimated && (
               <p className="mb-4 text-xs text-[var(--color-ink-faint)]">
-                Vücut ağırlığı tahmini ({fmt(standards.data.bodyweight_kg, 1)} kg) —
-                kilo kaydı girdiğinde kesinleşir.
+                Vücut ağırlığı tahmini ({fmt(standards.data.bodyweight_kg, 1)}{" "}
+                kg) — kilo kaydı girdiğinde kesinleşir.
               </p>
             )}
             <ul className="grid gap-x-8 gap-y-5 lg:grid-cols-2">
               {(standards.data?.results ?? []).map((row, index) => (
-                <li key={row.lift_key} className="reveal" style={{ ["--i" as string]: index }}>
+                <li
+                  key={row.lift_key}
+                  className="reveal"
+                  style={{ ["--i" as string]: index }}
+                >
                   <div className="flex items-baseline justify-between gap-3">
                     <span className="min-w-0 truncate text-sm font-medium">
                       {row.lift_label}
@@ -118,14 +122,17 @@ export default function ProgressPage() {
                         className="h-full"
                         style={{
                           width: `${Math.round(row.progress_to_next * 100)}%`,
-                          background: LEVEL_COLOR[row.level] ?? "var(--color-ink)",
+                          background:
+                            LEVEL_COLOR[row.level] ?? "var(--color-ink)",
                           transition: "width var(--dur-long) var(--ease-out)",
                         }}
                       />
                     </div>
                     <span
                       className="shrink-0 text-2xs font-medium tracking-wide uppercase"
-                      style={{ color: LEVEL_COLOR[row.level] ?? "var(--color-ink)" }}
+                      style={{
+                        color: LEVEL_COLOR[row.level] ?? "var(--color-ink)",
+                      }}
                     >
                       {row.level_label}
                     </span>
@@ -155,36 +162,55 @@ export default function ProgressPage() {
           <Loading />
         ) : consistency.isError ? (
           <ErrorBox error={consistency.error} />
+        ) : (consistency.data ?? []).length === 0 ? (
+          /* Izgara veri yokken kendini ÇİZMİYOR ve kart yalnızca başlıktan
+             ibaret kalıyordu — ekranda ne olduğu belirsiz boş bir kutu. */
+          <p className="text-sm text-[var(--color-ink-faint)]">
+            Son 12 ayda tamamlanmış antrenman yok. İlk seansından sonra burası
+            dolmaya başlıyor.
+          </p>
         ) : (
           <ConsistencyGrid days={consistency.data ?? []} />
         )}
       </Section>
 
-      {/* --- Rekorlar ----------------------------------------------------- */}
-      <Section
-        title="Kişisel rekorlar"
-        info="Hareket başına GÜNCEL en iyi. Dört tür ayrı takip ediliyor çünkü farklı şeyler ölçüyorlar: ağır tek set, dayanıklılık, toplam iş ve ikisini birleştiren tahmini 1RM."
-      >
-        {records.isLoading ? (
-          <Loading />
-        ) : records.isError ? (
-          <ErrorBox error={records.error} />
-        ) : (records.data ?? []).length === 0 ? (
-          <Empty
-            photo="goal-powerbuilding"
-            title="Henüz rekor yok"
-            hint="İlk antrenmanını tamamladığında her hareket için dört tür rekor takip edilmeye başlar."
-          />
-        ) : (
-          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {(records.data ?? []).map((row, index) => (
-              <li key={row.exercise_id} className="reveal" style={{ ["--i" as string]: index }}>
-                <RecordCard row={row} />
-              </li>
-            ))}
-          </ul>
-        )}
-      </Section>
+      {/* --- Rekorlar -----------------------------------------------------
+          Boşken BAŞLIK ŞERİDİ YOK: fotoğraflı davet kendi başına bir kart ve
+          üstüne bir başlık kartı daha koymak onu ikinci kez çerçeveliyordu.
+          Dolu hâlde başlık geri geliyor — o zaman altında sıralanacak bir
+          liste var. */}
+      {(records.data ?? []).length === 0 &&
+      !records.isLoading &&
+      !records.isError ? (
+        <Empty
+          photo="goal-powerbuilding"
+          title="Henüz rekor yok"
+          hint="İlk antrenmanını tamamladığında her hareket için dört tür rekor takip edilmeye başlar."
+        />
+      ) : (
+        <Section
+          title="Kişisel rekorlar"
+          info="Hareket başına GÜNCEL en iyi. Dört tür ayrı takip ediliyor çünkü farklı şeyler ölçüyorlar: ağır tek set, dayanıklılık, toplam iş ve ikisini birleştiren tahmini 1RM."
+        >
+          {records.isLoading ? (
+            <Loading />
+          ) : records.isError ? (
+            <ErrorBox error={records.error} />
+          ) : (
+            <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {(records.data ?? []).map((row, index) => (
+                <li
+                  key={row.exercise_id}
+                  className="reveal"
+                  style={{ ["--i" as string]: index }}
+                >
+                  <RecordCard row={row} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
+      )}
 
       {/* --- Hareket grafiği ---------------------------------------------- */}
       <Section
@@ -246,16 +272,22 @@ function RecordCard({ row }: { row: ExerciseRecords }) {
               {/* "En çok tekrar" tam sayı; ağırlıklarda tek ondalık anlamlı
                   (2,5 kg'lık plakalar). */}
               {fmt(record.value, record.type === "max_reps" ? 0 : 1)}{" "}
-              <span className="text-[var(--color-ink-faint)]">{prUnit(record.type)}</span>
+              <span className="text-[var(--color-ink-faint)]">
+                {prUnit(record.type)}
+              </span>
               {record.type === "max_weight" && record.reps !== null && (
-                <span className="text-[var(--color-ink-faint)]"> × {record.reps}</span>
+                <span className="text-[var(--color-ink-faint)]">
+                  {" "}
+                  × {record.reps}
+                </span>
               )}
             </span>
           </li>
         ))}
       </ul>
       <p className="mt-2.5 border-t border-[var(--color-border)] pt-2 text-2xs text-[var(--color-ink-faint)]">
-        Son: {new Date(row.last_achieved_at).toLocaleDateString("tr-TR", {
+        Son:{" "}
+        {new Date(row.last_achieved_at).toLocaleDateString("tr-TR", {
           day: "numeric",
           month: "short",
           year: "numeric",

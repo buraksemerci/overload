@@ -91,6 +91,69 @@ export async function register(
   await login(email, password);
 }
 
+/**
+ * Parola sıfırlama isteği.
+ *
+ * Hata YUTULUYOR: sunucu var olmayan bir adres için de 202 dönüyor ve
+ * burada farklı davranmak, bir adresin kayıtlı olup olmadığını dışarıdan
+ * öğrenmenin yolu olurdu. Çağıran ekran her durumda aynı cümleyi gösteriyor.
+ */
+export async function requestPasswordReset(email: string): Promise<void> {
+  try {
+    await api.post("/auth/forgot-password", { email });
+  } catch {
+    /* bilerek yutuluyor — yukarıdaki açıklamaya bakın */
+  }
+}
+
+/** `fastapi-users`ın hata kodları kullanıcıya gösterilecek metinler değil. */
+const RESET_MESSAGES: Record<string, string> = {
+  RESET_PASSWORD_BAD_TOKEN:
+    "Bağlantının süresi dolmuş ya da daha önce kullanılmış. Yeni bir tane iste.",
+};
+
+const VERIFY_MESSAGES: Record<string, string> = {
+  VERIFY_USER_BAD_TOKEN:
+    "Bağlantının süresi dolmuş ya da daha önce kullanılmış.",
+  VERIFY_USER_ALREADY_VERIFIED: "Bu adres zaten doğrulanmış.",
+};
+
+function translate(error: unknown, table: Record<string, string>, fallback: string): never {
+  if (error instanceof ApiError) {
+    const detail = (error.detail as { detail?: unknown })?.detail;
+    if (typeof detail === "string" && detail in table) {
+      throw new ApiError(error.status, table[detail]!, error.detail);
+    }
+    // Parola politikası hatası iç içe bir nesne olarak geliyor.
+    if (
+      typeof detail === "object" &&
+      detail !== null &&
+      "reason" in detail &&
+      typeof (detail as { reason: unknown }).reason === "string"
+    ) {
+      throw new ApiError(error.status, (detail as { reason: string }).reason, error.detail);
+    }
+    throw new ApiError(error.status, fallback, error.detail);
+  }
+  throw new Error(fallback);
+}
+
+export async function resetPassword(token: string, password: string): Promise<void> {
+  try {
+    await api.post("/auth/reset-password", { token, password });
+  } catch (error) {
+    translate(error, RESET_MESSAGES, "Parola değiştirilemedi.");
+  }
+}
+
+export async function verifyEmail(token: string): Promise<void> {
+  try {
+    await api.post("/auth/verify", { token });
+  } catch (error) {
+    translate(error, VERIFY_MESSAGES, "Doğrulanamadı.");
+  }
+}
+
 export function logout(): void {
   setToken(null);
 }

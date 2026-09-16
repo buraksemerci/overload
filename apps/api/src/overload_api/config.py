@@ -67,6 +67,18 @@ class Settings(BaseSettings):
     usda_api_key: SecretStr | None = None
     off_user_agent: str = "overload/0.1 (github.com/kabese/overload)"
 
+    # --- E-posta ---
+    # `smtp_host` tanımlandığı anda gerçek gönderim devreye giriyor; ayrı bir
+    # "açık/kapalı" ayarı YOK çünkü iki ayarın çelişmesi (host var ama kapalı)
+    # hata ayıklaması en zor durumlardan biri. Tanımsızken mesajlar günlüğe
+    # yazılıyor ve geliştirmede akışın tamamı SMTP kurmadan denenebiliyor.
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_user: str | None = None
+    smtp_password: SecretStr | None = None
+    smtp_starttls: bool = True
+    email_from: str = "overload <noreply@localhost>"
+
     # --- URL'ler ---
     frontend_url: str = "http://localhost:3000"
 
@@ -86,6 +98,7 @@ class Settings(BaseSettings):
         "usda_api_key",
         "r2_access_key_id",
         "r2_secret_access_key",
+        "smtp_password",
         mode="before",
     )
     @classmethod

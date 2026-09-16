@@ -182,7 +182,15 @@ const GROUPS: readonly NavGroup[] = [
   },
 ];
 
-const CHROMELESS = new Set(["/login"]);
+/* Gezinme çubuğunun GÖRÜNMEDİĞİ yollar: oturumu olmayan kişinin geldiği
+   ekranlar. Menüyü göstermek, tıklandığında giriş ekranına atan bağlantılar
+   sunmak demek olurdu. */
+const CHROMELESS = new Set([
+  "/login",
+  "/forgot-password",
+  "/reset-password",
+  "/verify",
+]);
 
 /** Üst çubuğun yüksekliği. Fotoğraf örtüsü bu kadar yukarıdan başlıyor. */
 const BAR_HEIGHT = "4.5rem";

@@ -66,6 +66,9 @@ RULES: dict[tuple[str, str], Rule] = {
     ("POST", "/auth/jwt/login"): Rule(limit=10, window_seconds=900, only_failures=True),
     ("POST", "/auth/register"): Rule(limit=5, window_seconds=3600),
     ("POST", "/auth/forgot-password"): Rule(limit=5, window_seconds=3600),
+    # Doğrulama e-postası da gönderim: aksi halde bir adrese istendiği kadar
+    # posta atılabiliyor ve gönderen alan adı spam olarak işaretleniyor.
+    ("POST", "/auth/request-verify-token"): Rule(limit=5, window_seconds=3600),
 }
 
 

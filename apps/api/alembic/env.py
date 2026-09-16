@@ -20,7 +20,13 @@ from overload_api.db.models import Base
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # `disable_existing_loggers=False` ŞART. Varsayılan `True` ve
+    # `alembic.ini`de adı geçmeyen BÜTÜN logger'ları kapatıyor — yani
+    # uygulamanın kendi logger'larını. Migration bir kez koşuyor ama etkisi
+    # sürecin geri kalanı boyunca sürüyor: testlerde uygulama günlükleri
+    # sessizleşiyordu ve bir gün üretimde `alembic upgrade`i süreç içinden
+    # çağırmak aynı şeyi orada yapardı.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 config.set_main_option("sqlalchemy.url", get_settings().database_url_sync)
 

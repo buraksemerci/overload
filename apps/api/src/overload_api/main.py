@@ -115,6 +115,12 @@ app.include_router(
     fastapi_users.get_register_router(UserRead, UserCreate), prefix="/auth", tags=["auth"]
 )
 app.include_router(fastapi_users.get_reset_password_router(), prefix="/auth", tags=["auth"])
+# Doğrulama router'ı: `/auth/request-verify-token` ve `/auth/verify`.
+# Kayıt kancası doğrulama e-postasını kendiliğinden gönderiyor ama bağlantının
+# gideceği ucun var olması gerekiyor — yoksa e-postadaki adres 404.
+app.include_router(
+    fastapi_users.get_verify_router(UserRead), prefix="/auth", tags=["auth"]
+)
 # Hesap ayarları (bölüm 4.3'ün sabit sınırı): SADECE buradan değişir.
 # AI'nın bu endpoint'lere karşılık gelen bir tool'u yok.
 # Hesap silme, kullanıcı router'ından ÖNCE.

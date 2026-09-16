@@ -25,7 +25,15 @@ import { getToken } from "@/lib/api";
 /** Hiç değişmeyen bir kaynak: abonelik gerekmiyor. */
 const NEVER = () => () => {};
 
-const PUBLIC_PATHS = new Set(["/login"]);
+/* Oturum İSTEMEYEN yollar. Parola kurtarma ve e-posta doğrulama buraya ait:
+   ikisi de tanım gereği oturumu olmayan kişinin geldiği yer. Doğrulama
+   bağlantısı e-postadan geliyor ve başka bir cihazda açılabiliyor. */
+const PUBLIC_PATHS = new Set([
+  "/login",
+  "/forgot-password",
+  "/reset-password",
+  "/verify",
+]);
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();

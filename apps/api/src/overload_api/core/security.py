@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from overload_api.config import get_settings
 from overload_api.db.models.user import User
 from overload_api.db.session import SessionFactory
+from overload_api.services import email
 
 
 async def _auth_session() -> AsyncIterator[AsyncSession]:
@@ -57,10 +58,31 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         self.verification_token_secret = secret
 
     async def on_after_register(self, user: User, request: Request | None = None) -> None:
-        # Yeni kullanıcıya başlangıç verisi (hareket kütüphanesi zaten paylaşımlı;
-        # burada kullanıcıya özel bir şey kurulmuyor). Kancayı ileride
-        # "hoş geldin programı" için kullanabiliriz.
-        return None
+        """Kayıttan hemen sonra doğrulama e-postası.
+
+        Kullanıcının ayrıca "doğrulama gönder" demesi gerekmiyor: kaydolmak
+        zaten adresi sahiplendiğini söylemek. İstek başarısız olursa kayıt
+        GERİ ALINMIYOR — hesap açıldı, yalnızca doğrulama bekliyor.
+        """
+        await self.request_verify(user, request)
+
+    async def on_after_forgot_password(
+        self, user: User, token: str, request: Request | None = None
+    ) -> None:
+        """Sıfırlama bağlantısını gönderir.
+
+        Bu kanca boştu: token üretiliyor ama kimseye ulaşmıyordu. Yani
+        "parolamı unuttum" akışı sonuna kadar çalışıyor, kullanıcıya hiçbir
+        şey gelmiyordu.
+        """
+        subject, body = email.reset_password_body(token)
+        await email.send(user.email, subject, body)
+
+    async def on_after_request_verify(
+        self, user: User, token: str, request: Request | None = None
+    ) -> None:
+        subject, body = email.verify_body(token)
+        await email.send(user.email, subject, body)
 
 
 async def get_user_manager(

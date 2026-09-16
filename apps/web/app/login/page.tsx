@@ -24,6 +24,7 @@
  * formunda durmamalı.
  */
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Photo } from "@/components/Photo";
@@ -164,6 +165,15 @@ export default function LoginPage() {
             {busy ? "…" : mode === "login" ? "Giriş yap" : "Hesap oluştur"}
           </button>
         </form>
+
+        {/* Yalnızca giriş kipinde: kayıt olurken parolasını unutmuş olamaz.
+            Bağlantı formun ALTINDA ve sessiz — ekranın işi giriş yaptırmak,
+            parola kurtarma nadir bir yol. */}
+        {mode === "login" && (
+          <Link href="/forgot-password" className="link mt-4 self-start text-xs">
+            Parolamı unuttum
+          </Link>
+        )}
       </div>
     </div>
   );

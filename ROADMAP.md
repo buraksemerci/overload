@@ -96,8 +96,10 @@ sayısı tek seferde devasa bağlam gönderen çağrıyı kesiyor.
 Tasarım rotası bitti. Geriye uygulamayı 5-10 kişiye açmadan önce yapılması
 gerekenler kalıyor:
 
-- [ ] E-posta gönderimi (doğrulama, parola sıfırlama) ve doğrulanmamış
-      hesabın kapsamının sınırlanması
+- [x] E-posta gönderimi (doğrulama, parola sıfırlama) — BİTTİ.
+      `SMTP_HOST` boşken mesajlar sunucu günlüğüne yazılıyor; gerçek gönderim
+      için tek yapılması gereken o değişkeni doldurmak.
+- [ ] Doğrulanmamış hesabın kapsamının sınırlanması
 - [x] Giriş denemesi sınırı — BİTTİ
 - [ ] Oturum: yenileme jetonu
 - [x] Kullanıcı başına AI bütçesi ve `/account`taki "AI sınırı" kartı — BİTTİ

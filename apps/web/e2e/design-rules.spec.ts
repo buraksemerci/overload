@@ -26,6 +26,14 @@ const SCREENS = [
   "/account",
 ] as const;
 
+/** Oturum istemeyen ekranlar. Aynı üç kural, ama `signIn` olmadan. */
+const PUBLIC_SCREENS = [
+  "/login",
+  "/forgot-password",
+  "/reset-password?token=ornek",
+  "/verify?token=ornek",
+] as const;
+
 /**
  * Sayfadaki volt DOLGULU öğeleri sayar.
  *
@@ -142,6 +150,22 @@ test.describe("tasarım kuralları", () => {
 
     test(`${path} — tanımsız CSS değişkeni kullanılmıyor`, async ({ page }) => {
       await openScreen(page, path);
+      expect(await page.evaluate(findDeadVariables)).toEqual([]);
+    });
+  }
+});
+
+test.describe("tasarım kuralları — oturumsuz ekranlar", () => {
+  for (const path of PUBLIC_SCREENS) {
+    test(`${path} — volt metin rengi olarak kullanılmıyor`, async ({ page }) => {
+      await page.goto(path);
+      await expect(page.locator("main")).toBeVisible();
+      expect(await page.evaluate(findVoltText)).toEqual([]);
+    });
+
+    test(`${path} — tanımsız CSS değişkeni kullanılmıyor`, async ({ page }) => {
+      await page.goto(path);
+      await expect(page.locator("main")).toBeVisible();
       expect(await page.evaluate(findDeadVariables)).toEqual([]);
     });
   }

@@ -1,30 +1,55 @@
 /**
- * Karşılama ekranının anlatı videosunu hazırlar.
+ * Giriş ekranının anlatı videosunu hazırlar — iki çözünürlükte.
  *
- *     node scripts/story-video.mjs ~/Downloads/hf
+ *     node scripts/story-video.mjs ~/Downloads/hf2
  *
- * --------------------------------------------------------------------------
- * NEDEN YENİDEN KODLANIYOR
- * --------------------------------------------------------------------------
- * Video kendi kendine oynamıyor; kaydırma yüzdesi doğrudan `currentTime`e
- * yazılıyor (bkz. `components/Scrollytelling.tsx`). Bu, sıradan bir mp4 ile
- * çalışmıyor.
+ * Çıktı:
+ *     public/video/story-1080.mp4   1920×1080
+ *     public/video/story-1440.mp4   2560×1440  (kaynağın kendi çözünürlüğü)
  *
- * Normal bir mp4'te anahtar kareler 2-3 saniyede bir. Tarayıcı ara bir
- * saniyeye atlamak istediğinde en yakın anahtar kareye düşüp oradan
- * çözümlüyor — kaydırma yukarı gittiğinde bu, görünür bir takılma demek.
- * `-g 1` her kareyi anahtar kare yapıyor: her konuma doğrudan atlanabiliyor.
- *
- * Bedeli dosya boyutu: aynı görüntü yaklaşık üç kat yer kaplıyor. Çözünürlük
- * 1280 genişliğe ve kare hızı 24'e düşürülerek dengeleniyor — tam ekran arka
- * plan olduğu için keskinlik zaten ikinci planda, üstünde perde ve yazı var.
+ * Hangisinin yükleneceğine tarayıcı karar veriyor (`lib/storyVideo.ts`).
  *
  * --------------------------------------------------------------------------
- * SES YOK
+ * KAYNAK
  * --------------------------------------------------------------------------
- * `-an`: video sessiz. Kullanıcının başlatmadığı bir sesin çalması kabul
- * edilemez ve `muted` olmayan bir video iOS'ta zaten hiç yüklenmiyor. Ses
- * parçasını atmak dosyayı da küçültüyor.
+ * Higgsfield `minimax_h3` segmentleri: 2560×1440, 24 fps, 5-10 Mbit/sn.
+ *
+ * Önceki sürüm bunu 1152×648 / 20 fps / CRF 28'e indiriyordu: dosya 5 MB'a
+ * düşüyordu ama kaynağa göre SSIM 0,936 — büyük ekranda gözle görülür
+ * yumuşama ve kare atlaması. Kare hızını düşürmek ayrıca kaydırırken
+ * hareketi kesik gösteriyordu.
+ *
+ * --------------------------------------------------------------------------
+ * HER KARE ANAHTAR KARE — ÖLÇÜLEREK SEÇİLDİ
+ * --------------------------------------------------------------------------
+ * Video kendi kendine oynamıyor; kaydırma yüzdesi `currentTime`e yazılıyor.
+ * Her arama, en yakın önceki anahtar kareden hedefe kadar bütün kareleri
+ * çözmek demek. Kısa bir GOP dosyayı küçültüyor ama her aramayı pahalılaştırıyor.
+ *
+ * Headless Chromium'da (yazılım çözücü, en kötü durum) 2 saniyelik sürekli
+ * kaydırmada ekrana basılan kare sayısı (120 = kusursuz 60 fps):
+ *
+ *     1920, her kare anahtar, CRF 23   21 MB   SSIM 0,985   112 kare
+ *     1920, 6 karede bir,     CRF 23   12 MB   SSIM 0,987    75 kare
+ *     2560, her kare anahtar, CRF 24   30 MB   SSIM 0,989    83 kare
+ *     2560, 3 karede bir,     CRF 22   27 MB   SSIM 0,992    60 kare
+ *     2560, 6 karede bir,     CRF 23   19 MB   SSIM 0,992    53 kare
+ *
+ * (SSIM, 2560 genişliğe büyütülüp kaynakla karşılaştırılarak ölçüldü: büyük
+ * ekrandaki izleyicinin gördüğü şey. 1920 sürümü 1080p ekranda kaynaktan
+ * ayırt edilemiyor.)
+ *
+ * Kısa GOP'lar kaliteyi binde üç artırıp akıcılığı üçte bir düşürüyor. Bu
+ * sahnenin tek vaadi kesintisiz olması; 0,989 ile 0,992 arasındaki fark,
+ * üstüne perde ve yazı binmiş bir arka planda görülmüyor. Her kare anahtar.
+ *
+ * --------------------------------------------------------------------------
+ * DİĞER AYARLAR
+ * --------------------------------------------------------------------------
+ * - 24 fps — kaynağın kendisi. Düşürmek kaydırırken hareketi kesik yapıyor.
+ * - `-tune film` — gerçek çekim görüntüsünde dokuyu koruyor.
+ * - `-an` — ses yok. `muted` olmayan video iOS'ta hiç yüklenmiyor.
+ * - `+faststart` — moov başta; dosya inmeden aranabilir.
  */
 
 import { execFileSync } from "node:child_process";
@@ -34,12 +59,17 @@ import ffmpeg from "ffmpeg-static";
 
 const SRC = process.argv[2];
 const OUT_DIR = "public/video";
-const OUT = join(OUT_DIR, "story.mp4");
 
 if (!SRC) {
   console.error("Kullanım: node scripts/story-video.mjs <segment-klasörü>");
   process.exit(1);
 }
+
+/** Çözünürlük başına kodlama. CRF'ler yukarıdaki ölçümden. */
+const RENDITIONS = [
+  { name: "story-1080.mp4", width: 1920, crf: 23 },
+  { name: "story-1440.mp4", width: 2560, crf: 24 },
+];
 
 /** Dosya adındaki sıra numarası. `seg-10` `seg-2`den sonra gelmeli. */
 function segmentNumber(name) {
@@ -47,7 +77,6 @@ function segmentNumber(name) {
   return match === null ? 0 : Number(match[0]);
 }
 
-/** `seg-1.mp4`, `seg-2.mp4`, ... sırayla. */
 const segments = readdirSync(SRC)
   .filter((name) => /^seg-\d+\.mp4$/.test(name))
   .sort((a, b) => segmentNumber(a) - segmentNumber(b))
@@ -60,55 +89,54 @@ if (segments.length === 0) {
 
 mkdirSync(OUT_DIR, { recursive: true });
 
-/* Birleştirme listesi. `concat` demuxer'ı seçildi çünkü segmentler aynı
-   kodlayıcıdan çıkıyor ve filtre grafiği kurmaya gerek yok; zaten hepsi
-   yeniden kodlanacak. */
 const listFile = join(OUT_DIR, "_concat.txt");
 writeFileSync(
   listFile,
   segments.map((path) => `file '${path.replace(/\\/g, "/")}'`).join("\n"),
 );
 
-const args = [
-  "-y",
-  "-f",
-  "concat",
-  "-safe",
-  "0",
-  "-i",
-  listFile,
-  "-an",
-  "-vf",
-  // 1152 genişlik ve 20 kare/sn: her kare anahtar kare olduğu için dosya
-  // normalin ~3 katı büyüyor ve bu iki değer onu dengeliyor. Tam ekran
-  // arka plan; üstünde perde ve yazı var, keskinlik ikinci planda.
-  "scale=1152:-2,fps=20",
-  "-c:v",
-  "libx264",
-  // Her kare anahtar kare: kaydırmayla ileri geri atlamanın tek yolu.
-  "-g",
-  "1",
-  "-keyint_min",
-  "1",
-  "-sc_threshold",
-  "0",
-  "-preset",
-  "slow",
-  "-crf",
-  "28",
-  "-pix_fmt",
-  "yuv420p",
-  // `faststart`: moov atom başa alınıyor, video tamamı inmeden oynatılabilir
-  // hâle geliyor.
-  "-movflags",
-  "+faststart",
-  OUT,
-];
+try {
+  for (const rendition of RENDITIONS) {
+    const out = join(OUT_DIR, rendition.name);
+    const args = [
+      "-y",
+      "-f",
+      "concat",
+      "-safe",
+      "0",
+      "-i",
+      listFile,
+      "-an",
+      "-vf",
+      `scale=${rendition.width}:-2:flags=lanczos`,
+      "-r",
+      "24",
+      "-c:v",
+      "libx264",
+      "-preset",
+      "slow",
+      "-tune",
+      "film",
+      "-crf",
+      String(rendition.crf),
+      // Her kare anahtar kare: kaydırmayla ileri geri atlarken tek kare çözülüyor.
+      "-g",
+      "1",
+      "-keyint_min",
+      "1",
+      "-sc_threshold",
+      "0",
+      "-pix_fmt",
+      "yuv420p",
+      "-movflags",
+      "+faststart",
+      out,
+    ];
 
-console.log(`${segments.length} segment birleştiriliyor…`);
-execFileSync(ffmpeg, args, { stdio: ["ignore", "ignore", "inherit"] });
-
-rmSync(listFile, { force: true });
-
-const kb = Math.round(statSync(OUT).size / 1024);
-console.log(`${OUT}  ${kb} KB`);
+    console.log(`${rendition.name} kodlanıyor…`);
+    execFileSync(ffmpeg, args, { stdio: ["ignore", "ignore", "inherit"] });
+    console.log(`  ${Math.round(statSync(out).size / 1024)} KB`);
+  }
+} finally {
+  rmSync(listFile, { force: true });
+}

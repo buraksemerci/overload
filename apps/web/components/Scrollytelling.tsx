@@ -35,26 +35,35 @@
  * yazılıyor: kullanıcı ne kadar indiyse video o kadar ilerliyor, yukarı
  * çıkınca geri sarıyor. Anlatının hızını kullanıcı belirliyor.
  *
- * Üç şey bunu pürüzsüz yapıyor:
+ * Dört şey bunu pürüzsüz yapıyor:
  *
  * 1. **`scrub: 0.6`** — ham kaydırma değeri değil, yumuşatılmış hâli.
  *    Doğrudan bağlamak tekerlek adımlarını videoya aynen geçiriyor ve
  *    görüntü zıplıyor.
- * 2. **Yoğun anahtar kare** — video her karede anahtar kare olacak şekilde
- *    yeniden kodlanıyor (`scripts/story-video.mjs`). Normal bir mp4'te
- *    anahtar kareler 2-3 saniyede bir; aradaki bir saniyeye atlamak
- *    tarayıcıyı en yakın anahtar kareye düşürüyor ve geri sarma
- *    takılıyor.
- * 3. **`requestAnimationFrame` yerine doğrudan yazma** — `currentTime`
- *    ataması zaten kare sınırında uygulanıyor; araya bir çerçeve daha
- *    koymak gecikme ekliyor.
+ * 2. **Her kare anahtar kare** — normal bir mp4'te anahtar kareler 2-3
+ *    saniyede bir; aradaki bir saniyeye atlamak tarayıcıyı o kareden
+ *    itibaren her şeyi çözmeye zorluyor. Ayrıntılı ölçüm
+ *    `scripts/story-video.mjs`de.
+ * 3. **Arama zamanlayıcısı** — süren bir aramanın üstüne yenisi
+ *    başlatılmıyor; en son hedef arama bitince uygulanıyor. Kaynak
+ *    kalitesindeki dosyada bu olmadan kaydırırken görüntü donuyordu
+ *    (`lib/storyVideo.ts`).
+ * 4. **Ekrana göre dosya** — 1080p ya da kaynağın kendi 1440p'si. 1080p
+ *    bir ekrana 30 MB'lık dosya indirmenin görünür bir karşılığı yok.
+ *
+ * --------------------------------------------------------------------------
+ * GÖRÜNTÜ KALİTESİ
+ * --------------------------------------------------------------------------
+ * Önceki dosya 1152×648 / 20 fps'e indirilmişti: 5 MB ama kaynağa göre SSIM
+ * 0,936 — büyük ekranda gözle görülür yumuşama, kaydırırken kesik hareket.
+ * Şimdi kaynağın çözünürlüğü ve kare hızı korunuyor (SSIM 0,989).
  *
  * --------------------------------------------------------------------------
  * VİDEO YOKSA
  * --------------------------------------------------------------------------
- * Dosya `public/video/story.mp4`de duruyor ve olmayabilir. O durumda
- * bileşen dört fotoğraf karesine düşüyor — ekran yine çalışıyor, yalnızca
- * hareket yok. Aynı ilke `Photo` bileşeninde de geçerli.
+ * Dosyalar `public/video/` altında duruyor ve olmayabilir. O durumda bileşen
+ * dört fotoğraf karesine düşüyor — ekran yine çalışıyor, yalnızca hareket
+ * yok. Aynı ilke `Photo` bileşeninde de geçerli.
  *
  * --------------------------------------------------------------------------
  * HAREKET AZALTMA
@@ -67,6 +76,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Photo } from "@/components/Photo";
+import { chooseRendition, createSeeker, type Rendition } from "@/lib/storyVideo";
 
 interface Phase {
   /** Video yokken kullanılan kare. */
@@ -141,6 +151,41 @@ const getReduced = (): boolean => window.matchMedia(MOTION_QUERY).matches;
 /** Sunucuda bilinemiyor: `null` "henüz bilinmiyor" demek. */
 const getServerReduced = (): boolean | null => null;
 
+/* --- Hangi video dosyası ----------------------------------------------------- */
+
+/** Kaynağın kare hızı. Yarım kareden küçük aramalar bununla eleniyor. */
+const FPS = 24;
+
+let rendition: Rendition | null = null;
+
+/**
+ * Ekrana göre dosya — BİR KEZ seçiliyor.
+ *
+ * Pencere boyutu değişince yeniden seçmek, kullanıcı kaydırırken videoyu
+ * baştan yükletmek olurdu. İlk açılıştaki ekran yeterli bir tahmin.
+ */
+const getRendition = (): Rendition => {
+  if (rendition === null) {
+    const connection = (
+      navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }
+    ).connection;
+    rendition = chooseRendition({
+      width: window.innerWidth,
+      height: window.innerHeight,
+      devicePixelRatio: window.devicePixelRatio || 1,
+      saveData:
+        connection?.saveData === true ||
+        ["slow-2g", "2g", "3g"].includes(connection?.effectiveType ?? ""),
+    });
+  }
+  return rendition;
+};
+
+const NEVER = () => () => {};
+
+/** Sunucuda ekran yok: dosya istemcide seçiliyor. */
+const getServerRendition = (): Rendition | null => null;
+
 /** Anlatının kapladığı kaydırma yüksekliği. Ekran boyu cinsinden. */
 const SCROLL_SCREENS = 5;
 
@@ -160,6 +205,7 @@ export function Scrollytelling() {
    * ayarı) sahne kendiliğinden düz hâle geçiyor.
    */
   const reduced = useSyncExternalStore(subscribeReducedMotion, getReduced, getServerReduced);
+  const src = useSyncExternalStore(NEVER, getRendition, getServerRendition);
   /** Video dosyası gerçekten yüklendi mi? Yoksa fotoğraf karelerine düşüyor. */
   const [hasVideo, setHasVideo] = useState(false);
   /** Hangi fazın metni görünüyor. */
@@ -178,9 +224,14 @@ export function Scrollytelling() {
         import("gsap"),
         import("gsap/ScrollTrigger"),
       ]);
-      if (cancelled || root.current === null) return;
+      if (cancelled || root.current === null || video.current === null) return;
 
       gsap.registerPlugin(ScrollTrigger);
+
+      // Arama zamanlayıcısı: süren bir aramanın üstüne yenisini başlatmıyor
+      // (gerekçe ve ölçüm `lib/storyVideo.ts`de). Kaynak kalitesindeki
+      // dosyada her karede `currentTime`e yazmak görüntüyü donduruyordu.
+      const seeker = createSeeker(video.current, FPS);
 
       const context = gsap.context(() => {
         /**
@@ -208,9 +259,8 @@ export function Scrollytelling() {
             if (element !== null && Number.isFinite(element.duration)) {
               // `duration - 0.05`: tam sona yazmak bazı tarayıcılarda
               // `ended` tetikleyip son kareyi boşaltıyor.
-              element.currentTime = Math.min(
-                state.progress * element.duration,
-                element.duration - 0.05,
+              seeker.seek(
+                Math.min(state.progress * element.duration, element.duration - 0.05),
               );
             }
 
@@ -224,7 +274,10 @@ export function Scrollytelling() {
         });
       }, root);
 
-      cleanup = () => context.revert();
+      cleanup = () => {
+        context.revert();
+        seeker.dispose();
+      };
     })();
 
     return () => {
@@ -259,11 +312,12 @@ export function Scrollytelling() {
           // `autoPlay` YOK: video kendi kendine oynamıyor, zamanını
           // kaydırma sürüyor.
           onLoadedMetadata={() => setHasVideo(true)}
+          // Dosya istemcide ekrana göre seçiliyor (1080p ya da kaynağın
+          // 1440p'si); sunucuda `src` yok.
+          src={src ?? undefined}
           className="absolute inset-0 size-full object-cover"
           style={{ opacity: hasVideo ? 1 : 0 }}
-        >
-          <source src="/video/story.mp4" type="video/mp4" />
-        </video>
+        />
 
         {/* Video yoksa fotoğraf karesi. Aynı ilke `Photo` bileşeninde de
             geçerli: dosya eksikken ekran bozulmuyor. */}

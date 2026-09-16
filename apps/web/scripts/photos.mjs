@@ -104,7 +104,7 @@ const JOBS = [
   // --- Karşılama ekranı: anlatının dört durağı -----------------------------
   // Higgsfield ile üretildi. Dördü de AYNI salonun içinde: kamera kapıdan
   // giriyor, zemini geçiyor, bardaki kişiye varıyor, telefona yaklaşıyor.
-  // Video (`public/video/story.mp4`) bu dört karenin arasını dolduruyor;
+  // Video (`public/video/story-1080.mp4`, `story-1440.mp4`) bu dört karenin arasını dolduruyor;
   // buradaki dosyalar videonun yüklenemediği durumdaki yedek.
   //
   // Tam ekran arka plan oldukları için diğerlerinden büyükler (1920 geniş) —

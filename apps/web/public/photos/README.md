@@ -101,7 +101,7 @@ dokuyla çalışıyor ve düzgün görünüyor.
 ### Karşılama anlatısı
 
 Karşılama ekranındaki dört kare **Higgsfield ile üretildi** (Unsplash değil).
-Aynı kareler `public/video/story.mp4`in dönüm noktaları: video, bu dört
+Aynı kareler `public/video/story-1080.mp4` ve `story-1440.mp4`in dönüm noktaları: video, bu dört
 görüntü arasında üretilen üç geçiş parçasının birleşimi.
 
 | Slug | Kameranın olduğu yer |

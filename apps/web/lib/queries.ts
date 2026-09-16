@@ -28,6 +28,7 @@ import { fetchMe, type Me } from "./auth";
 
 export const keys = {
   me: ["me"] as const,
+  aiUsage: ["me", "ai-usage"] as const,
   workouts: ["workouts"] as const,
   today: ["workouts", "today"] as const,
   streak: ["workouts", "streak"] as const,
@@ -271,6 +272,20 @@ export interface CoachReport {
 
 export function useMe(): UseQueryResult<Me> {
   return useQuery({ queryKey: keys.me, queryFn: fetchMe, retry: false });
+}
+
+export interface AiUsage {
+  requests: number;
+  request_limit: number;
+  tokens: number;
+  token_limit: number;
+}
+
+export function useAiUsage(): UseQueryResult<AiUsage> {
+  return useQuery({
+    queryKey: keys.aiUsage,
+    queryFn: () => api.get<AiUsage>("/users/me/ai-usage"),
+  });
 }
 
 export function useToday(): UseQueryResult<TodayWorkout> {

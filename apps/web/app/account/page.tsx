@@ -37,7 +37,7 @@ import { Photo } from "@/components/Photo";
 import { ErrorBox, Loading } from "@/components/States";
 import { api } from "@/lib/api";
 import { logout, type Me } from "@/lib/auth";
-import { keys, useMe, useWeightTrend } from "@/lib/queries";
+import { keys, useAiUsage, useMe, useWeightTrend } from "@/lib/queries";
 
 interface ProfileForm {
   display_name: string;
@@ -342,6 +342,8 @@ export default function AccountPage() {
         {save.isError && <ErrorBox error={save.error} />}
       </form>
 
+      <AiBudget />
+
       <Section bare>
         <div className="card flex flex-wrap items-center justify-between gap-4 px-6 py-5">
           <div className="min-w-0">
@@ -363,6 +365,81 @@ export default function AccountPage() {
 
       <DeleteAccount />
     </Page>
+  );
+}
+
+/**
+ * Günlük AI sınırı.
+ *
+ * --------------------------------------------------------------------------
+ * NEDEN GÖSTERİLİYOR
+ * --------------------------------------------------------------------------
+ * Sınırın varlığını gizlemek, sınıra takılan kullanıcıyı "uygulama bozuldu"
+ * sanmaya bırakıyor. Burada durunca hem sebebi hem ne zaman açılacağı belli.
+ *
+ * İki sayı var çünkü iki sınır var: istek sayısı hızlı döngüyü, token sayısı
+ * tek seferde devasa bağlam gönderen çağrıyı kesiyor. Hangisi önce dolarsa
+ * kapı o an kapanıyor.
+ *
+ * Çubuk **dolduğunda** kehribara dönüyor. Volt değil: volt bir kazanım işareti
+ * ve dolmuş bir kota kazanım değil.
+ */
+function AiBudget() {
+  const usage = useAiUsage();
+  if (usage.data === undefined) return null;
+
+  const { requests, request_limit, tokens, token_limit } = usage.data;
+  const full = requests >= request_limit || tokens >= token_limit;
+
+  return (
+    <Section
+      title="AI sınırı"
+      info="Asistan çağrıları gün başına sınırlı. Fatura kullanıma göre çıkıyor ve döngüye giren bir istemci ya da arka arkaya denenen bir foto ayrıştırma bunu hızla büyütebiliyor. Sınır gece yarısı, senin saat diliminde sıfırlanıyor."
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Meter label="Asistan turu" current={requests} limit={request_limit} />
+        <Meter label="Token" current={tokens} limit={token_limit} />
+      </div>
+      {full && (
+        <p className="mt-4 text-xs" style={{ color: "var(--color-warning)" }}>
+          Bugünlük sınıra ulaştın. Yarın sıfırlanıyor; uygulamanın geri kalanı
+          çalışmaya devam ediyor.
+        </p>
+      )}
+    </Section>
+  );
+}
+
+function Meter({
+  label,
+  current,
+  limit,
+}: {
+  label: string;
+  current: number;
+  limit: number;
+}) {
+  const ratio = limit > 0 ? Math.min(1, current / limit) : 0;
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="label">{label}</span>
+        <span className="tnum text-xs text-[var(--color-ink-muted)]">
+          {current.toLocaleString("tr-TR")} / {limit.toLocaleString("tr-TR")}
+        </span>
+      </div>
+      <div className="mt-2 h-1.5 overflow-hidden bg-[var(--color-surface-raised)]">
+        <div
+          className="h-full"
+          style={{
+            width: `${Math.round(ratio * 100)}%`,
+            background:
+              ratio >= 1 ? "var(--color-warning)" : "var(--color-accent-deep)",
+            transition: "width var(--dur-long) var(--ease-out)",
+          }}
+        />
+      </div>
+    </div>
   );
 }
 

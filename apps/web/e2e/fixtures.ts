@@ -91,6 +91,9 @@ export async function signIn(page: Page): Promise<void> {
 /** Varsayılan API taklidini kurar. Testler tek tek üzerine yazabilir. */
 export async function mockApi(page: Page): Promise<void> {
   await page.route(`${API}/users/me`, (route) => json(route, ME));
+  await page.route(`${API}/users/me/ai-usage`, (route) =>
+    json(route, { requests: 4, request_limit: 60, tokens: 12_500, token_limit: 300_000 }),
+  );
   await page.route(`${API}/workouts/today`, (route) => json(route, TODAY_WORKOUT));
   await page.route(`${API}/workouts/streak`, (route) => json(route, STREAK));
   await page.route(`${API}/workouts/muscle-volume**`, (route) => json(route, MUSCLE_VOLUME));

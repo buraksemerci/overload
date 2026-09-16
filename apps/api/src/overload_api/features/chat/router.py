@@ -27,7 +27,7 @@ from overload_api.db.models.ai import (
 )
 from overload_api.db.session import session_scope
 from overload_api.features.chat.context import build_history
-from overload_api.services.ai import executors, runtime
+from overload_api.services.ai import budget, executors, runtime
 from overload_api.services.media import r2
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -79,6 +79,11 @@ async def stream_chat(payload: ChatRequest, db: DbSession, user: CurrentUser) ->
     Akış SSE çünkü tek yönlü: sunucudan istemciye token akışı. WebSocket çift yönlü
     kanal kurup yeniden bağlanma/kalp atışı yönetimi getirirdi; burada karşılığı yok.
     """
+    # Bütçe kontrolü AKIŞ BAŞLAMADAN önce. İçeride yapılsaydı istemci 200 ve
+    # bir SSE hata olayı alırdı; dışarıda yapılınca gerçek bir 429 dönüyor ve
+    # `Retry-After` mantığı istemcide sıradan bir hata gibi ele alınabiliyor.
+    await budget.ensure_available(db, user.id, user.timezone)
+
     # Anahtar -> ön-imzalı URL. Anthropic görseli bu adresten çekiyor, bu yüzden
     # bucket'ın herkese açık olmasına gerek yok.
     image_url: str | None = None

@@ -84,3 +84,41 @@ test.describe("hesap", () => {
     await expect(page.getByRole("link", { name: "İlk tartını gir" })).toBeVisible();
   });
 });
+
+test.describe("AI sınırı", () => {
+  test.beforeEach(async ({ page }) => {
+    await signIn(page);
+    await mockApi(page);
+  });
+
+  test("bugünün kullanımı sınırıyla birlikte görünüyor", async ({ page }) => {
+    await page.goto("/account");
+    await page.waitForLoadState("networkidle");
+
+    // Sınırın VARLIĞI gizlenmiyor: sınıra takılan kullanıcı "uygulama bozuldu"
+    // sanmamalı.
+    await expect(page.getByRole("heading", { name: "AI sınırı" })).toBeVisible();
+    await expect(page.getByText("4 / 60")).toBeVisible();
+    await expect(page.getByText("12.500 / 300.000")).toBeVisible();
+  });
+
+  test("sınır dolunca ne zaman açılacağı yazıyor", async ({ page }) => {
+    await page.route(`${API}/users/me/ai-usage`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          requests: 60,
+          request_limit: 60,
+          tokens: 41_000,
+          token_limit: 300_000,
+        }),
+      }),
+    );
+    await page.goto("/account");
+    await page.waitForLoadState("networkidle");
+
+    // "Kota doldu" tek başına kullanıcıyı çıkmazda bırakıyor.
+    await expect(page.getByText(/Yarın sıfırlanıyor/)).toBeVisible();
+  });
+});

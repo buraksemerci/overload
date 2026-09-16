@@ -40,7 +40,7 @@ from overload_api.db.models.ai import (
     PendingAction,
 )
 from overload_api.db.models.user import User
-from overload_api.services.ai import executors
+from overload_api.services.ai import budget, executors
 from overload_api.services.ai.client import complete_chat
 from overload_api.services.ai.tools import APPROVAL_REQUIRED, AUTO_EXECUTE
 
@@ -226,6 +226,12 @@ async def run_turn(
         except Exception as exc:
             yield TurnEvent("error", {"message": f"Model çağrısı başarısız: {exc}"})
             return
+
+        # Kullanım ÇAĞRIDAN SONRA sayılıyor: bir çağrının kaç token harcayacağı
+        # önceden bilinemiyor. Yani sınır bu çağrıyı kesmiyor, bir sonrakini
+        # engelliyor. Tool döngüsünün her turu ayrı sayılıyor — asıl maliyet
+        # orada birikiyor.
+        await budget.record(session, user.id, user.timezone, budget.usage_of(response))
 
         # Güvenlik sınıflandırıcısı reddettiyse `content` okumadan önce yakala.
         if response.stop_reason == "refusal":

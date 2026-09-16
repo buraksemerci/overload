@@ -10,6 +10,7 @@ from overload_api.db.models.ai import (
     ActionLog,
     ActionResult,
     ActionType,
+    AiUsage,
     ChatMessage,
     ChatRole,
     CoachReport,
@@ -72,6 +73,7 @@ RLS_TABLES: tuple[str, ...] = (
     "pending_action",
     "action_log",
     "coach_report",
+    "ai_usage",
 )
 
 # `program` ve `exercise` özel: şablon/kütüphane satırları (owner NULL) herkese açık
@@ -88,6 +90,7 @@ __all__ = [
     "ActivityLog",
     "ActivitySource",
     "ActivityType",
+    "AiUsage",
     "Base",
     "BodyRegion",
     "BodyWeightLog",

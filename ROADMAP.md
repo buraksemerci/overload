@@ -43,9 +43,9 @@ Bunlar tek tek ekranlarda tartışılmıyor; kabul edilmiş kurallar.
 - [x] Kaydet çubuğu yalnızca değişiklik varken, yanında "geri al"
 - [x] Son tartı gösteriliyor ama buradan DEĞİŞTİRİLEMİYOR (kilo `/weight`de)
 
-**AI sınırı kartı yok** çünkü gösterilecek veri yok: kullanıcı başına AI
-bütçesi henüz uygulanmadı. Uydurma bir sayı göstermektense kart hiç
-konmadı; bütçe geldiğinde buraya eklenecek.
+**AI sınırı kartı** sonradan eklendi: bütçe uygulanınca gösterilecek gerçek
+bir veri oldu. İki çubuk, iki ayrı sınır — istek sayısı hızlı döngüyü, token
+sayısı tek seferde devasa bağlam gönderen çağrıyı kesiyor.
 
 ### 3. Antrenman — BİTTİ
 - [x] `/workout` — başlangıç sahnesi fotoğrafın üstünde. Set kaydedilen
@@ -100,7 +100,7 @@ gerekenler kalıyor:
       hesabın kapsamının sınırlanması
 - [x] Giriş denemesi sınırı — BİTTİ
 - [ ] Oturum: yenileme jetonu
-- [ ] Kullanıcı başına AI bütçesi — bu gelince `/account`a "AI sınırı" kartı
+- [x] Kullanıcı başına AI bütçesi ve `/account`taki "AI sınırı" kartı — BİTTİ
 - [x] Hesap silme — BİTTİ
 - [ ] Dağıtım: web + API + Postgres, alan adı, yedek
 - [ ] Anthropic anahtarıyla AI katmanının uçtan uca doğrulanması

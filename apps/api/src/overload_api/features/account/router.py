@@ -32,9 +32,11 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
+
 from overload_api.core.deps import CurrentUser, DbSession
 from overload_api.core.security import UserManager, get_user_manager
 from overload_api.db.models.user import User
+from overload_api.services.ai import budget
 from overload_api.services.media import r2
 
 logger = logging.getLogger(__name__)
@@ -44,6 +46,30 @@ router = APIRouter(tags=["account"])
 
 class DeleteAccountIn(BaseModel):
     password: str = Field(min_length=1)
+
+
+class AiUsageOut(BaseModel):
+    """Bugünün AI kullanımı.
+
+    Hesap ekranında gösteriliyor. Sınırın VARLIĞINI gizlemek, sınıra takılan
+    kullanıcıyı "uygulama bozuldu" sanmaya bırakıyor.
+    """
+
+    requests: int
+    request_limit: int
+    tokens: int
+    token_limit: int
+
+
+@router.get("/users/me/ai-usage", response_model=AiUsageOut)
+async def ai_usage(user: CurrentUser, db: DbSession) -> AiUsageOut:
+    state = await budget.current(db, user.id, user.timezone)
+    return AiUsageOut(
+        requests=state.requests,
+        request_limit=state.request_limit,
+        tokens=state.tokens,
+        token_limit=state.token_limit,
+    )
 
 
 @router.delete("/users/me", status_code=status.HTTP_204_NO_CONTENT)

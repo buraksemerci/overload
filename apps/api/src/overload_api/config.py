@@ -46,6 +46,17 @@ class Settings(BaseSettings):
     anthropic_model_smart: str = "claude-sonnet-5"  # sohbet, koç raporu
     anthropic_max_tool_iterations: int = 8  # sonsuz tool döngüsüne karşı tavan
 
+    # --- Kullanıcı başına günlük AI bütçesi ---
+    # Fatura kullanıma göre çıkıyor ve uygulama birkaç kişiye açılınca o fatura
+    # başkalarının eline geçiyor. İki sınır farklı şeyleri kesiyor: istek sayısı
+    # hızlı döngüyü, token sayısı tek seferde devasa bağlam gönderen çağrıyı.
+    #
+    # Değerler normal bir günü rahatça geçirecek kadar yüksek: günde 60 asistan
+    # turu, on binlerce token. Sınıra takılan biri ya bir şeyi otomatikleştirmiş
+    # ya da bir döngüye girmiş demektir.
+    ai_daily_request_limit: int = 60
+    ai_daily_token_limit: int = 300_000
+
     # --- Cloudflare R2 ---
     r2_access_key_id: SecretStr | None = None
     r2_secret_access_key: SecretStr | None = None

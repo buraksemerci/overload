@@ -11,7 +11,9 @@
 
 import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Page } from "@/components/Layout";
+import { keys } from "@/lib/queries";
 import { api, streamChat } from "@/lib/api";
 import { uploadPhoto } from "@/lib/upload";
 
@@ -55,6 +57,7 @@ export default function ChatPage() {
   const abortRef = useRef<AbortController | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const client = useQueryClient();
 
   const send = useCallback(async () => {
     const message = input.trim();
@@ -126,8 +129,12 @@ export default function ChatPage() {
     } finally {
       setBusy(false);
       abortRef.current = null;
+      // Tur bitti: günlük AI sayacı değişti. Hesap ekranı bir sonraki
+      // açılışında taze değeri görsün — yoksa sınıra takılan kullanıcı orada
+      // hâlâ boş bir çubuk görüyor.
+      void client.invalidateQueries({ queryKey: keys.aiUsage });
     }
-  }, [input, busy, photo]);
+  }, [input, busy, photo, client]);
 
   const resolve = useCallback(
     async (id: string, decision: "approve" | "reject") => {

@@ -172,3 +172,47 @@ class CoachReport(Base):
         UniqueConstraint("user_id", "week_start", name="uq_coach_report_user_week"),
         Index("ix_coach_report_user_id_week_start", "user_id", "week_start"),
     )
+
+
+class AiUsage(Base):
+    """Günlük AI kullanımı — kullanıcı başına bir satır, gün başına bir satır.
+
+    --------------------------------------------------------------------------
+    NEDEN VAR
+    --------------------------------------------------------------------------
+    Anthropic faturası kullanıma göre çıkıyor ve uygulamayı birkaç kişiye açmak
+    o faturayı başkalarının eline vermek demek. Kötü niyet de gerekmiyor:
+    döngüye giren bir istemci ya da meraktan yüz kere denenen bir foto
+    ayrıştırma yeter.
+
+    Sayaç **gün başına** tutuluyor çünkü sınır da günlük: aylık bir sınır ayın
+    üçüncü günü tükenebiliyor ve geri kalan yirmi yedi gün uygulama ölü kalıyor.
+
+    --------------------------------------------------------------------------
+    NE SAYILIYOR
+    --------------------------------------------------------------------------
+    Hem istek hem token. İkisi farklı şeyleri koruyor: istek sayısı hızlı
+    döngüleri, token sayısı tek seferde devasa bağlam gönderen çağrıları.
+
+    `cache_read_tokens` ayrı tutuluyor: önbellekten okunan token onda bir
+    fiyatına geliyor ve normal girdiyle aynı kefeye koymak sınırı gereksiz yere
+    sıkıştırır.
+    """
+
+    __tablename__ = "ai_usage"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("user.id", ondelete="CASCADE"), primary_key=True
+    )
+    #: Kullanıcının kendi saat dilimindeki gün. UTC'ye sabitlemek, gün dönümünü
+    #: kullanıcının gecesinin ortasına düşürürdü.
+    day: Mapped[date_t] = mapped_column(primary_key=True)
+
+    requests: Mapped[int] = mapped_column(nullable=False, default=0)
+    input_tokens: Mapped[int] = mapped_column(nullable=False, default=0)
+    output_tokens: Mapped[int] = mapped_column(nullable=False, default=0)
+    cache_read_tokens: Mapped[int] = mapped_column(nullable=False, default=0)
+
+    __table_args__ = (
+        CheckConstraint("requests >= 0", name="ck_ai_usage_requests_positive"),
+    )

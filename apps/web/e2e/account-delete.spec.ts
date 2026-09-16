@@ -75,3 +75,42 @@ test.describe("hesap silme", () => {
     await expect(page.getByRole("button", { name: "Hesabımı sil" })).toBeVisible();
   });
 });
+
+test.describe("çıkış", () => {
+  test.beforeEach(async ({ page }) => {
+    await signIn(page);
+    await mockApi(page);
+  });
+
+  test("çıkış sunucuya haber veriyor", async ({ page }) => {
+    // Oturumlar veritabanında: satır silinince jeton o anda geçersiz.
+    // Yalnızca yereldeki kopyayı silmek, jeton başka bir yere kopyalanmışsa
+    // hiçbir işe yaramazdı.
+    let called = false;
+    await page.route(`${API}/auth/jwt/logout`, (route) => {
+      called = true;
+      return route.fulfill({ status: 204, body: "" });
+    });
+
+    await page.goto("/account");
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("button", { name: "Çıkış yap" }).click();
+
+    await expect.poll(() => called).toBe(true);
+    await expect(page).toHaveURL(/\/login$/);
+  });
+
+  test("istek başarısız olsa bile oturum yerelde kapanıyor", async ({ page }) => {
+    // Ağ hatası yüzünden oturumu açık bırakmak — özellikle ortak bir
+    // bilgisayarda — kabul edilemez.
+    await page.route(`${API}/auth/jwt/logout`, (route) => route.abort());
+
+    await page.goto("/account");
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("button", { name: "Çıkış yap" }).click();
+
+    await expect(page).toHaveURL(/\/login$/);
+    const token = await page.evaluate(() => localStorage.getItem("overload.token"));
+    expect(token).toBeNull();
+  });
+});

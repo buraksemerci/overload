@@ -104,7 +104,9 @@ gerekenler kalıyor:
       doğrulama e-postası gönderilemiyorken doğrulama şart koşmak, kullanıcıyı
       yerine getiremeyeceği bir koşula bağlamak olurdu.
 - [x] Giriş denemesi sınırı — BİTTİ
-- [ ] Oturum: yenileme jetonu
+- [x] Oturum iptali — BİTTİ. Yenileme jetonu YERİNE oturumlar veritabanına
+      taşındı: asıl eksik "kısa ömürlü jeton" değil, **geri alınabilirlik**
+      idi. Çıkış artık gerçekten çıkış.
 - [x] Kullanıcı başına AI bütçesi ve `/account`taki "AI sınırı" kartı — BİTTİ
 - [x] Hesap silme — BİTTİ
 - [ ] Dağıtım: web + API + Postgres, alan adı, yedek

@@ -8,6 +8,7 @@ from decimal import Decimal
 from enum import StrEnum
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
+from fastapi_users_db_sqlalchemy.access_token import SQLAlchemyBaseAccessTokenTableUUID
 from sqlalchemy import CheckConstraint, ForeignKey, Index, Numeric, SmallInteger, String
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -98,3 +99,33 @@ class Goal(TimestampMixin, Base):
             name="lift_goal_needs_exercise",
         ),
     )
+
+
+class AccessToken(SQLAlchemyBaseAccessTokenTableUUID, Base):
+    """Açık oturumlar.
+
+    --------------------------------------------------------------------------
+    NEDEN VERİTABANI, NEDEN JWT DEĞİL
+    --------------------------------------------------------------------------
+    Önce JWT kullanılıyordu ve JWT **geri alınamıyor**: imzası geçerli olan bir
+    jeton süresi dolana kadar (yedi gün) kabul edilir. Sonuçları:
+
+    * "Çıkış yap" yalnızca tarayıcıdaki kopyayı siliyordu. Jeton başkasının
+      eline geçtiyse çıkış yapmak hiçbir işe yaramıyordu.
+    * Hesabı silinen ya da devre dışı bırakılan bir kullanıcının jetonu
+      çalışmaya devam ediyordu.
+    * Ortak bir bilgisayarda oturum kapatmak, kapatmış olmuyordu.
+
+    Satır silinince jeton o anda geçersiz. Bedeli her istekte bir birincil
+    anahtar okuması — on kişilik bir kurulumda ölçülemeyecek kadar küçük.
+
+    --------------------------------------------------------------------------
+    RLS YOK
+    --------------------------------------------------------------------------
+    `user` tablosuyla aynı sebeple: kimlik doğrulama sırasında henüz bir
+    `app.user_id` yok — jetonu bulabilmek için önce jetonu bulmak gerekirdi.
+    Jetonun kendisi rastgele 43 karakter ve tahmin edilemez; erişim kontrolü
+    onun bilinmesine dayanıyor.
+    """
+
+    __tablename__ = "accesstoken"

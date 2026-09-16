@@ -834,7 +834,10 @@ function ProfileMenu({ tone = null }: { tone?: (typeof TONES)[keyof typeof TONES
             type="button"
             role="menuitem"
             onClick={() => {
-              logout();
+              /* Yönlendirme çıkış isteğini BEKLEMİYOR: kullanıcı "çıkış"a
+                 bastıysa ekranın anında değişmesi gerekiyor. İstek arkada
+                 tamamlanıyor ve sunucudaki oturum satırını siliyor. */
+              void logout();
               router.replace("/login");
             }}
             className="block w-full rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm hover:bg-[var(--color-surface-raised)]"

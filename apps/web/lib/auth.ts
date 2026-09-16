@@ -154,8 +154,26 @@ export async function verifyEmail(token: string): Promise<void> {
   }
 }
 
-export function logout(): void {
-  setToken(null);
+/**
+ * Çıkış.
+ *
+ * Sunucuya HABER VERİYOR. Oturumlar artık veritabanında ve satır silinince
+ * jeton o anda geçersiz; yalnızca yereldeki kopyayı silmek, jeton başka bir
+ * yere kopyalanmışsa hiçbir işe yaramazdı.
+ *
+ * İstek başarısız olsa bile yerel jeton SİLİNİYOR: kullanıcı "çıkış" dedi ve
+ * ağ hatası yüzünden oturumu açık bırakmak — özellikle ortak bir
+ * bilgisayarda — kabul edilemez. O durumda sunucudaki satır süresi dolana
+ * kadar kalıyor.
+ */
+export async function logout(): Promise<void> {
+  try {
+    await api.post("/auth/jwt/logout");
+  } catch {
+    /* yukarıdaki açıklamaya bakın */
+  } finally {
+    setToken(null);
+  }
 }
 
 export async function fetchMe(): Promise<Me> {

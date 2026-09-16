@@ -36,6 +36,7 @@ import { Page, PageHeader, Section } from "@/components/Layout";
 import { Photo } from "@/components/Photo";
 import { ErrorBox, Loading } from "@/components/States";
 import { api } from "@/lib/api";
+import { setToken } from "@/lib/api";
 import { logout, type Me } from "@/lib/auth";
 import { keys, useAiUsage, useMe, useWeightTrend } from "@/lib/queries";
 
@@ -356,8 +357,7 @@ export default function AccountPage() {
             type="button"
             className="btn btn-ghost shrink-0"
             onClick={() => {
-              logout();
-              router.replace("/login");
+              void logout().then(() => router.replace("/login"));
             }}
           >
             Çıkış yap
@@ -523,7 +523,10 @@ function DeleteAccount() {
   const remove = useMutation({
     mutationFn: (value: string) => api.delete<void>("/users/me", { password: value }),
     onSuccess: () => {
-      logout();
+      /* Hesap zaten silindi; jeton da onunla birlikte (`ON DELETE CASCADE`).
+         Sunucuya ayrıca çıkış demek 401 dönerdi — yerel kopyayı silmek
+         yeterli. */
+      setToken(null);
       router.replace("/login");
     },
   });

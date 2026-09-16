@@ -50,12 +50,20 @@ from overload_api.db.models.program import (
     ProgramGoal,
     ProgramLevel,
 )
-from overload_api.db.models.user import ActivityLevel, Goal, GoalType, Sex, User
+from overload_api.db.models.user import (
+    AccessToken,
+    ActivityLevel,
+    Goal,
+    GoalType,
+    Sex,
+    User,
+)
 from overload_api.db.models.workout import PersonalRecord, PRType, SetLog, WorkoutSession
 
 # RLS uygulanacak tablolar: kullanıcıya ait satır tutan her tablo.
-# `user` tablosu hariç — fastapi-users, kimlik doğrulanmadan ÖNCE e-postayla
-# kullanıcı aramak zorunda ve o anda henüz bir app.user_id yok.
+# `user` ve `accesstoken` hariç — fastapi-users, kimlik doğrulanmadan ÖNCE
+# e-postayla kullanıcı ve jetonla oturum aramak zorunda; o anda henüz bir
+# app.user_id yok.
 # `muscle_group`, `exercise`, `food_database_entry` de hariç: paylaşılan referans/önbellek.
 RLS_TABLES: tuple[str, ...] = (
     "goal",
@@ -83,6 +91,7 @@ RLS_OWNER_NULLABLE_TABLES: tuple[str, ...] = ("program", "exercise")
 __all__ = [
     "RLS_OWNER_NULLABLE_TABLES",
     "RLS_TABLES",
+    "AccessToken",
     "ActionLog",
     "ActionResult",
     "ActionType",

@@ -342,6 +342,27 @@ function Stage({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * Fotoğraflı sahne — YALNIZCA başlangıç ve bitiş anları için.
+ *
+ * Set kaydedilen sahne fotoğrafsız kalıyor ve bu bilinçli: orada sayı
+ * okunuyor ve sayı yazılıyor. Çalışma yüzeyinin arkasına görsel koymak,
+ * okunması gereken şeyin kontrastını düşürmekten başka bir işe yaramaz.
+ * Fotoğraf motive ettiği yerde duruyor — başlamadan önce ve bittikten
+ * sonra.
+ */
+function PhotoStage({ slug, children }: { slug: string; children: React.ReactNode }) {
+  return (
+    <section className="card overflow-hidden">
+      <Photo slug={slug} ratio="21 / 9" scrim position="center">
+        <div className="flex size-full flex-col items-center justify-center gap-5 px-8 py-12 text-center">
+          {children}
+        </div>
+      </Photo>
+    </section>
+  );
+}
+
 function Intro({
   exerciseCount,
   setCount,
@@ -354,19 +375,26 @@ function Intro({
   onStart: () => void;
 }) {
   return (
-    <Stage>
-      <p className="label">Bugün</p>
-      <p className="display text-3xl">
+    <PhotoStage slug="workout-intro">
+      <p className="label on-photo-dark" style={{ color: "oklch(88% 0.01 115)" }}>
+        Bugün
+      </p>
+      <p className="display on-photo-dark text-3xl" style={{ color: "oklch(99% 0 0)" }}>
         {exerciseCount} hareket · {setCount} set
       </p>
-      <p className="max-w-[38ch] text-sm text-[var(--color-ink-muted)]">
+      <p
+        className="on-photo-dark max-w-[38ch] text-sm"
+        style={{ color: "oklch(90% 0.01 115)" }}
+      >
         Setler sırayla gelecek. Ağırlıklar geçmişine ve gücüne göre önceden
         dolu; onayla ya da düzelt.
       </p>
+      {/* Voltu koruyor: ekranın tek eylemi bu ve koyu fotoğrafın üstünde
+          voltun kontrastı en yüksek olduğu yer. */}
       <button className="btn btn-primary px-8 py-3.5 text-base" disabled={pending} onClick={onStart}>
         {pending ? "Başlatılıyor…" : "Antrenmanı başlat"}
       </button>
-    </Stage>
+    </PhotoStage>
   );
 }
 

@@ -35,6 +35,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Page, PageHeader } from "@/components/Layout";
+import { Photo } from "@/components/Photo";
 import { Sheet } from "@/components/Sheet";
 import { ErrorBox, Empty, Loading, fmt } from "@/components/States";
 import { prLabel, prUnit } from "@/lib/labels";
@@ -133,11 +134,40 @@ export default function HistoryPage() {
     <Page>
       <PageHeader title="Geçmiş" />
 
-      {/* --- Birikim ------------------------------------------------------ */}
-      <section className="grid gap-2 sm:grid-cols-3">
-        <Figure value={fmt(totals.sessions, 0)} unit="seans" note="bu ay" />
-        <Figure value={fmt(totals.tonnage, 1)} unit="ton" note="toplam kaldırılan" />
-        <Figure value={fmt(totals.records, 0)} unit="rekor" note="kırılan" />
+      {/* --- Birikim ------------------------------------------------------
+          Üç eşit kutu yerine bir büyük iki küçük: tonaj bu ekranın başlığı.
+          Sayı fotoğrafın ÜSTÜNDE duruyor, altında değil — plakalı raf, bu
+          sayının ne olduğunu bir ikondan daha iyi söylüyor. */}
+      <section className="grid gap-2 lg:grid-cols-3">
+        <div className="card overflow-hidden lg:col-span-2">
+          <Photo slug="history-total" ratio="21 / 9" scrim position="center">
+            <div className="flex size-full flex-col justify-end p-6 lg:p-8">
+              <p
+                className="label on-photo-dark"
+                style={{ color: "oklch(88% 0.01 115)" }}
+              >
+                Toplam kaldırılan
+              </p>
+              <p className="on-photo-dark mt-1" style={{ color: "oklch(99% 0 0)" }}>
+                <span className="display tnum text-4xl lg:text-5xl">
+                  {fmt(totals.tonnage, 1)}
+                </span>
+                <span className="ml-2 text-sm">ton</span>
+              </p>
+              <p
+                className="on-photo-dark mt-1 text-xs"
+                style={{ color: "oklch(88% 0.01 115)" }}
+              >
+                {rows.length} seans boyunca
+              </p>
+            </div>
+          </Photo>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+          <Figure value={fmt(totals.sessions, 0)} unit="seans" note="bu ay" />
+          <Figure value={fmt(totals.records, 0)} unit="rekor" note="kırılan" />
+        </div>
       </section>
 
       {/* --- Seanslar ----------------------------------------------------- */}
@@ -159,11 +189,15 @@ export default function HistoryPage() {
   );
 }
 
+/**
+ * Yanındaki fotoğraf kartı kadar uzun duruyor ve içerik ORTALANMIŞ.
+ * Yukarı yaslandığında kartın alt yarısı boş bir kutu gibi görünüyordu.
+ */
 function Figure({ value, unit, note }: { value: string; unit: string; note: string }) {
   return (
-    <div className="card px-5 py-4">
+    <div className="card flex flex-col justify-center px-5 py-4">
       <p>
-        <span className="figure tnum text-lg">{value}</span>
+        <span className="figure tnum text-xl">{value}</span>
         <span className="ml-1.5 text-xs text-[var(--color-ink-muted)]">{unit}</span>
       </p>
       <p className="mt-0.5 text-2xs text-[var(--color-ink-faint)]">{note}</p>

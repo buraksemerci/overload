@@ -13,7 +13,8 @@
  */
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Page, PageHeader } from "@/components/Layout";
 import { SortableList } from "@/components/SortableList";
 import { ErrorBox, Loading } from "@/components/States";
 import {
@@ -82,9 +83,39 @@ export default function ProgramEditPage() {
     }
   }, [program.data, days]);
 
+  /**
+   * Seçenek listesi: kütüphane + PROGRAMIN KENDİ HAREKETLERİ.
+   *
+   * `/exercises` sunucuda varsayılan 50 satır döndürüyor. Programdaki bir
+   * hareket o ellinin dışında kalınca `<select>`in değerine karşılık gelen
+   * seçenek olmuyor ve tarayıcı listedeki BAŞKA bir hareketi gösteriyordu —
+   * kullanıcıya yalan söyleyen bir alan: ekranda "Bench Press" yazarken
+   * kayıtlı hareket bambaşkaydı.
+   *
+   * Program detayı her hareketin adını zaten taşıyor; eksik olanlar oradan
+   * tamamlanıyor.
+   */
+  const options = useMemo(() => {
+    const byId = new Map<string, string>();
+    for (const day of program.data?.days ?? []) {
+      for (const exercise of day.exercises) {
+        // Adsız satır listeye GİRMİYOR: sıralama karşılaştırıcısı `undefined`
+        // görünce patlıyor ve tek bir eksik alan bütün ekranı düşürüyor.
+        if (exercise.exercise_name)
+          byId.set(exercise.exercise_id, exercise.exercise_name);
+      }
+    }
+    for (const row of library.data ?? []) byId.set(row.id, row.name);
+    return [...byId]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, "tr"));
+  }, [program.data, library.data]);
+
   if (program.isLoading || days === null) return <Loading />;
   if (program.isError)
-    return <ErrorBox error={program.error} onRetry={() => void program.refetch()} />;
+    return (
+      <ErrorBox error={program.error} onRetry={() => void program.refetch()} />
+    );
 
   if (program.data?.is_template) {
     return (
@@ -106,15 +137,14 @@ export default function ProgramEditPage() {
 
   const firstExerciseId = library.data?.[0]?.id;
 
+  const emptyDay = days.some((day) => day.exercises.length === 0);
+
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-xl lg:text-2xl">{program.data?.name}</h1>
-        <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
-          Sıralamak için tutamağı sürükle ya da tutamağa odaklanıp boşluk + ok
-          tuşlarını kullan.
-        </p>
-      </header>
+    <Page>
+      <PageHeader
+        title={program.data?.name ?? "Program"}
+        lead="Sıralamak için tutamağı sürükle ya da tutamağa odaklanıp boşluk + ok tuşlarını kullan."
+      />
 
       <SortableList
         items={days}
@@ -129,14 +159,16 @@ export default function ProgramEditPage() {
               <input
                 value={day.label}
                 aria-label={`${dayIndex + 1}. günün adı`}
-                onChange={(e) => edit((next) => void (next[dayIndex]!.label = e.target.value))}
-                className="field h-10 min-w-0 flex-1 px-3 text-sm font-medium"
+                onChange={(e) =>
+                  edit((next) => void (next[dayIndex]!.label = e.target.value))
+                }
+                className="field h-11 min-w-0 flex-1 px-3 text-sm font-medium"
               />
               <button
                 disabled={days.length <= 1}
                 onClick={() => edit((next) => void next.splice(dayIndex, 1))}
                 aria-label={`${day.label} gününü sil`}
-                className="grid size-10 shrink-0 place-items-center rounded-[var(--radius-md)] border border-[var(--color-border-strong)] text-[var(--color-ink-faint)] hover:text-[var(--color-danger)] disabled:opacity-30"
+                className="grid size-11 shrink-0 place-items-center border border-[var(--color-border-strong)] text-[var(--color-ink-faint)] hover:text-[var(--color-danger)] disabled:opacity-30"
               >
                 ✕
               </button>
@@ -150,20 +182,24 @@ export default function ProgramEditPage() {
                   edit((next) => void (next[dayIndex]!.exercises = reordered))
                 }
                 renderItem={(exercise, exerciseIndex) => (
-                  <div className="mb-2 rounded-[var(--radius-md)] border border-[var(--color-border)] p-2.5">
+                  /* Kutu içinde kutu yerine hafif bir yüzey: gün zaten bir
+                     kart, hareket satırının ikinci bir çerçeveye ihtiyacı yok. */
+                  <div className="mb-2 bg-[var(--color-surface-raised)] p-3">
                     <div className="flex items-center gap-2">
                       <select
                         value={exercise.exercise_id}
                         onChange={(e) =>
                           edit(
                             (next) =>
-                              void (next[dayIndex]!.exercises[exerciseIndex]!.exercise_id =
-                                e.target.value),
+                              void (next[dayIndex]!.exercises[
+                                exerciseIndex
+                              ]!.exercise_id = e.target.value),
                           )
                         }
-                        className="field h-9 min-w-0 flex-1 px-2 text-sm"
+                        aria-label={`${exerciseIndex + 1}. hareket`}
+                        className="field h-10 min-w-0 flex-1 px-2 text-sm"
                       >
-                        {(library.data ?? []).map((option) => (
+                        {options.map((option) => (
                           <option key={option.id} value={option.id}>
                             {option.name}
                           </option>
@@ -172,11 +208,15 @@ export default function ProgramEditPage() {
                       <button
                         onClick={() =>
                           edit(
-                            (next) => void next[dayIndex]!.exercises.splice(exerciseIndex, 1),
+                            (next) =>
+                              void next[dayIndex]!.exercises.splice(
+                                exerciseIndex,
+                                1,
+                              ),
                           )
                         }
                         aria-label="Hareketi sil"
-                        className="grid size-9 shrink-0 place-items-center rounded-[var(--radius-md)] border border-[var(--color-border-strong)] text-xs text-[var(--color-ink-faint)] hover:text-[var(--color-danger)]"
+                        className="grid size-10 shrink-0 place-items-center border border-[var(--color-border-strong)] text-xs text-[var(--color-ink-faint)] hover:text-[var(--color-danger)]"
                       >
                         ✕
                       </button>
@@ -189,44 +229,51 @@ export default function ProgramEditPage() {
                         onChange={(v) =>
                           edit(
                             (next) =>
-                              void (next[dayIndex]!.exercises[exerciseIndex]!.target_sets = v),
+                              void (next[dayIndex]!.exercises[
+                                exerciseIndex
+                              ]!.target_sets = v),
                           )
                         }
                       />
                       <NumField
-                        label="Tek. min"
+                        label="Min"
+                        name="Min tekrar"
                         value={exercise.target_rep_min}
                         onChange={(v) =>
                           edit(
                             (next) =>
-                              void (next[dayIndex]!.exercises[exerciseIndex]!.target_rep_min = v),
+                              void (next[dayIndex]!.exercises[
+                                exerciseIndex
+                              ]!.target_rep_min = v),
                           )
                         }
                       />
                       <NumField
-                        label="Tek. max"
+                        label="Maks"
+                        name="Maks tekrar"
                         value={exercise.target_rep_max}
                         onChange={(v) =>
                           edit(
                             (next) =>
-                              void (next[dayIndex]!.exercises[exerciseIndex]!.target_rep_max = v),
+                              void (next[dayIndex]!.exercises[
+                                exerciseIndex
+                              ]!.target_rep_max = v),
                           )
                         }
                       />
                       <label className="min-w-[7rem] flex-1">
-                        <span className="mb-1 block text-2xs text-[var(--color-ink-muted)]">
-                          Teknik
-                        </span>
+                        <span className="label mb-1 block">Teknik</span>
                         <select
                           value={exercise.technique}
                           onChange={(e) =>
                             edit(
                               (next) =>
-                                void (next[dayIndex]!.exercises[exerciseIndex]!.technique =
-                                  e.target.value),
+                                void (next[dayIndex]!.exercises[
+                                  exerciseIndex
+                                ]!.technique = e.target.value),
                             )
                           }
-                          className="h-9 w-full rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-1.5 text-xs outline-none"
+                          className="h-10 w-full border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-1.5 text-xs outline-none"
                         >
                           {TECHNIQUES.map((t) => (
                             <option key={t.value} value={t.value}>
@@ -236,26 +283,27 @@ export default function ProgramEditPage() {
                         </select>
                       </label>
                       <label className="w-20">
-                        <span className="mb-1 block text-2xs text-[var(--color-ink-muted)]">
-                          Superset
-                        </span>
+                        <span className="label mb-1 block">Superset</span>
                         <input
                           inputMode="numeric"
                           value={exercise.superset_group ?? ""}
                           placeholder="—"
                           onChange={(e) => {
                             const raw = e.target.value.trim();
-                            const parsed = raw === "" ? null : Number.parseInt(raw, 10);
+                            const parsed =
+                              raw === "" ? null : Number.parseInt(raw, 10);
                             edit(
                               (next) =>
                                 void (next[dayIndex]!.exercises[
                                   exerciseIndex
-                                ]!.superset_group = Number.isFinite(parsed as number)
+                                ]!.superset_group = Number.isFinite(
+                                  parsed as number,
+                                )
                                   ? (parsed as number)
                                   : null),
                             );
                           }}
-                          className="tnum h-9 w-full rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-1.5 text-center text-xs outline-none"
+                          className="tnum h-10 w-full border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-1.5 text-center text-xs outline-none"
                         />
                       </label>
                     </div>
@@ -295,60 +343,90 @@ export default function ProgramEditPage() {
         disabled={days.length >= 7}
         onClick={() =>
           edit((next) =>
-            next.push({ uid: nextUid(), label: `Gün ${next.length + 1}`, exercises: [] }),
+            next.push({
+              uid: nextUid(),
+              label: `Gün ${next.length + 1}`,
+              exercises: [],
+            }),
           )
         }
       >
         + Gün ekle
       </button>
 
-      <div className="sticky bottom-20 flex flex-wrap gap-2 sm:bottom-0">
-        <button
-          className="btn btn-primary"
-          disabled={!dirty || save.isPending || days.some((d) => d.exercises.length === 0)}
-          onClick={async () => {
-            await save.mutateAsync({
-              programId: params.id,
-              // `uid` yalnızca istemci tarafı sıralama kimliği; API'ye gitmiyor.
-              days: days.map(({ label, exercises }) => ({
-                label,
-                exercises: exercises.map(({ uid: _uid, ...rest }) => rest),
-              })),
-            });
-            setDirty(false);
-            router.push("/programs");
-          }}
-        >
-          {save.isPending ? "Kaydediliyor…" : "Kaydet"}
-        </button>
-        <button className="btn btn-ghost" onClick={() => router.push("/programs")}>
-          Vazgeç
-        </button>
+      {/* Kaydet çubuğu kendi yüzeyinde duruyor. Zeminsizken sayfanın üstünden
+          kayarken altındaki gün kartlarının yazısı düğmelerin arasından
+          görünüyordu. Devre dışı bırakma SEBEBİ de burada: uyarıyı sayfanın
+          en altına koymak, düğmenin neden basılamadığını ekranın başka bir
+          yerinde aratıyordu. */}
+      <div className="card-raised sticky bottom-4 flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+        {emptyDay ? (
+          <p className="text-xs" style={{ color: "var(--color-warning)" }}>
+            Hareketi olmayan gün kaydedilemez — ya hareket ekle ya da günü sil.
+          </p>
+        ) : (
+          <p className="text-xs text-[var(--color-ink-faint)]">
+            {dirty ? "Kaydedilmemiş değişiklik var" : "Değişiklik yok"}
+          </p>
+        )}
+        <div className="flex flex-wrap gap-2">
+          <button
+            className="btn btn-primary"
+            disabled={!dirty || save.isPending || emptyDay}
+            onClick={async () => {
+              await save.mutateAsync({
+                programId: params.id,
+                // `uid` yalnızca istemci tarafı sıralama kimliği; API'ye gitmiyor.
+                days: days.map(({ label, exercises }) => ({
+                  label,
+                  exercises: exercises.map(({ uid: _uid, ...rest }) => rest),
+                })),
+              });
+              setDirty(false);
+              router.push("/programs");
+            }}
+          >
+            {save.isPending ? "Kaydediliyor…" : "Kaydet"}
+          </button>
+          <button
+            className="btn btn-ghost"
+            onClick={() => router.push("/programs")}
+          >
+            Vazgeç
+          </button>
+        </div>
       </div>
 
-      {days.some((d) => d.exercises.length === 0) && (
-        <p className="text-2xs" style={{ color: "var(--color-warning)" }}>
-          Hareketi olmayan gün kaydedilemez — ya hareket ekle ya da günü sil.
-        </p>
-      )}
       {save.isError && <ErrorBox error={save.error} />}
-    </div>
+    </Page>
   );
 }
 
+/**
+ * Dar sayı alanı.
+ *
+ * `label` GÖRÜNEN metin ve kısa: 4rem genişliğinde bir sütunda "Maks tekrar"
+ * iki satıra kırılıyor ve satır yüksekliğini bozuyordu. `name` ekran
+ * okuyucunun duyduğu ad — görünen metni İÇERİYOR, yoksa sesli adla ekrandaki
+ * ad birbirini tutmaz (WCAG 2.5.3).
+ */
 function NumField({
   label,
+  name,
   value,
   onChange,
 }: {
   label: string;
+  /** Ekran okuyucunun okuduğu ad. Verilmezse görünen metin kullanılıyor. */
+  name?: string;
   value: number;
   onChange: (value: number) => void;
 }) {
   return (
     <label className="w-16">
-      <span className="mb-1 block text-2xs text-[var(--color-ink-muted)]">{label}</span>
+      <span className="label mb-1 block">{label}</span>
       <input
+        aria-label={name ?? label}
         inputMode="numeric"
         value={value}
         onChange={(e) => {
@@ -356,7 +434,7 @@ function NumField({
           // NaN'ı state'e yazmak alanı kilitliyor; geçersiz girdide değeri koru.
           if (Number.isFinite(parsed)) onChange(parsed);
         }}
-        className="tnum h-9 w-full rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-1.5 text-center text-xs outline-none"
+        className="tnum h-10 w-full border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-1.5 text-center text-xs outline-none"
       />
     </label>
   );

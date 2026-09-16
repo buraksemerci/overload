@@ -47,13 +47,17 @@ Bunlar tek tek ekranlarda tartışılmıyor; kabul edilmiş kurallar.
 bütçesi henüz uygulanmadı. Uydurma bir sayı göstermektense kart hiç
 konmadı; bütçe geldiğinde buraya eklenecek.
 
-### 3. Antrenman
-- [ ] `/workout` — akış zaten iyi; kart dili hizalanacak
-- [ ] `/programs` — BİTTİ (fotoğraflı kartlar)
-- [ ] `/exercises` — BİTTİ (ekipman kartları)
-- [ ] `/history` — bento birikim kartları
-- [ ] `/programs/[id]/edit` — düzenleyici, kart dili
-- [ ] `/programs/review/[id]` — AI önerisi onayı
+### 3. Antrenman — BİTTİ
+- [x] `/workout` — başlangıç sahnesi fotoğrafın üstünde. Set kaydedilen
+      sahne fotoğrafsız: çalışma yüzeyinin arkasına görsel koymak, okunması
+      gereken şeyin kontrastını düşürür.
+- [x] `/programs` — fotoğraflı kartlar
+- [x] `/exercises` — ekipman kartları
+- [x] `/history` — birikim bandı: tonaj fotoğrafın üstünde tek büyük sayı,
+      yanında iki küçük kart
+- [x] `/programs/[id]/edit` — `Page` genişliği, kutu içinde kutu yerine hafif
+      yüzey, kendi zeminine oturan kaydet çubuğu
+- [x] `/programs/review/[id]` — aynı çubuk dili, kırpılmayan alanlar
 
 ### 4. Beslenme
 - [ ] `/nutrition` — halka + öğün kartları bento'ya

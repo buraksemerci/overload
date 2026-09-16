@@ -14,6 +14,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { Page } from "@/components/Layout";
 import { ErrorBox, Loading } from "@/components/States";
 import {
   useExercises,
@@ -58,7 +59,8 @@ export default function ProgramReviewPage() {
   const library = useExercises("");
   const nameById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const exercise of library.data ?? []) map.set(exercise.id, exercise.name);
+    for (const exercise of library.data ?? [])
+      map.set(exercise.id, exercise.name);
     return map;
   }, [library.data]);
 
@@ -73,7 +75,9 @@ export default function ProgramReviewPage() {
 
   if (pending.isLoading || draft === null) return <Loading />;
   if (pending.isError)
-    return <ErrorBox error={pending.error} onRetry={() => void pending.refetch()} />;
+    return (
+      <ErrorBox error={pending.error} onRetry={() => void pending.refetch()} />
+    );
 
   const isOpen = pending.data?.status === "pending";
 
@@ -86,18 +90,22 @@ export default function ProgramReviewPage() {
     setDirty(true);
   };
 
-  const totalExercises = draft.days.reduce((sum, day) => sum + day.exercises.length, 0);
+  const totalExercises = draft.days.reduce(
+    (sum, day) => sum + day.exercises.length,
+    0,
+  );
 
   return (
-    <div className="space-y-6">
+    <Page>
       <header>
         {/* Volt DOLGU olarak: metin rengi olarak kırık beyaz üzerinde
             ~1.3:1 kontrast veriyor ve okunmuyordu. */}
         <span className="badge badge-accent">ONAYIN GEREKİYOR</span>
         <h1 className="mt-1 text-xl lg:text-2xl">Programı gözden geçir</h1>
         <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
-          Aşağıdaki her satırı değiştirebilirsin. <strong>Onaylayana kadar hiçbir şey
-          kaydedilmiyor</strong> — vazgeçersen program hiç var olmamış olur.
+          Aşağıdaki her satırı değiştirebilirsin.{" "}
+          <strong>Onaylayana kadar hiçbir şey kaydedilmiyor</strong> —
+          vazgeçersen program hiç var olmamış olur.
         </p>
       </header>
 
@@ -122,7 +130,9 @@ export default function ProgramReviewPage() {
       {/* --- Program başlığı --- */}
       <section className="card space-y-3 p-4">
         <label className="block">
-          <span className="mb-1 block text-xs text-[var(--color-ink-muted)]">Program adı</span>
+          <span className="mb-1 block text-xs text-[var(--color-ink-muted)]">
+            Program adı
+          </span>
           <input
             value={draft.name}
             disabled={!isOpen}
@@ -133,11 +143,15 @@ export default function ProgramReviewPage() {
 
         <div className="flex gap-3">
           <label className="flex-1">
-            <span className="mb-1 block text-xs text-[var(--color-ink-muted)]">Hedef</span>
+            <span className="mb-1 block text-xs text-[var(--color-ink-muted)]">
+              Hedef
+            </span>
             <select
               value={draft.goal}
               disabled={!isOpen}
-              onChange={(e) => edit((next) => void (next.goal = e.target.value))}
+              onChange={(e) =>
+                edit((next) => void (next.goal = e.target.value))
+              }
               className="field h-11 w-full px-2 text-sm"
             >
               {GOALS.map((g) => (
@@ -148,11 +162,15 @@ export default function ProgramReviewPage() {
             </select>
           </label>
           <label className="flex-1">
-            <span className="mb-1 block text-xs text-[var(--color-ink-muted)]">Seviye</span>
+            <span className="mb-1 block text-xs text-[var(--color-ink-muted)]">
+              Seviye
+            </span>
             <select
               value={draft.level}
               disabled={!isOpen}
-              onChange={(e) => edit((next) => void (next.level = e.target.value))}
+              onChange={(e) =>
+                edit((next) => void (next.level = e.target.value))
+              }
               className="field h-11 w-full px-2 text-sm"
             >
               {LEVELS.map((l) => (
@@ -180,9 +198,11 @@ export default function ProgramReviewPage() {
               // hangi gün olduğu anlaşılmaz.
               aria-label={`${dayIndex + 1}. günün adı`}
               onChange={(e) =>
-                edit((next) => void (next.days[dayIndex]!.label = e.target.value))
+                edit(
+                  (next) => void (next.days[dayIndex]!.label = e.target.value),
+                )
               }
-              className="field h-10 flex-1 px-3 text-sm font-medium"
+              className="field h-11 flex-1 px-3 text-sm font-medium"
             />
             <button
               disabled={!isOpen || draft.days.length <= 1}
@@ -207,11 +227,12 @@ export default function ProgramReviewPage() {
                     onChange={(e) =>
                       edit(
                         (next) =>
-                          void (next.days[dayIndex]!.exercises[exerciseIndex]!.exercise_id =
-                            e.target.value),
+                          void (next.days[dayIndex]!.exercises[
+                            exerciseIndex
+                          ]!.exercise_id = e.target.value),
                       )
                     }
-                    className="field h-9 min-w-0 flex-1 px-2 text-sm"
+                    className="field h-10 min-w-0 flex-1 px-2 text-sm"
                   >
                     {/* Kütüphane yüklenmediyse en azından mevcut id korunsun */}
                     {!nameById.has(exercise.exercise_id) && (
@@ -244,7 +265,9 @@ export default function ProgramReviewPage() {
                       ↑
                     </button>
                     <button
-                      disabled={!isOpen || exerciseIndex === day.exercises.length - 1}
+                      disabled={
+                        !isOpen || exerciseIndex === day.exercises.length - 1
+                      }
                       onClick={() =>
                         edit((next) => {
                           const list = next.days[dayIndex]!.exercises;
@@ -262,7 +285,13 @@ export default function ProgramReviewPage() {
                     <button
                       disabled={!isOpen}
                       onClick={() =>
-                        edit((next) => void next.days[dayIndex]!.exercises.splice(exerciseIndex, 1))
+                        edit(
+                          (next) =>
+                            void next.days[dayIndex]!.exercises.splice(
+                              exerciseIndex,
+                              1,
+                            ),
+                        )
                       }
                       aria-label="Hareketi sil"
                       className="grid size-9 place-items-center rounded-[var(--radius-md)] border border-[var(--color-border-strong)] text-xs text-[var(--color-ink-faint)] hover:text-[var(--color-danger)] disabled:opacity-30"
@@ -280,47 +309,54 @@ export default function ProgramReviewPage() {
                     onChange={(v) =>
                       edit(
                         (next) =>
-                          void (next.days[dayIndex]!.exercises[exerciseIndex]!.target_sets = v),
+                          void (next.days[dayIndex]!.exercises[
+                            exerciseIndex
+                          ]!.target_sets = v),
                       )
                     }
                   />
                   <NumField
-                    label="Tekrar min"
+                    label="Min"
+                    name="Min tekrar"
                     value={exercise.target_rep_min}
                     disabled={!isOpen}
                     onChange={(v) =>
                       edit(
                         (next) =>
-                          void (next.days[dayIndex]!.exercises[exerciseIndex]!.target_rep_min = v),
+                          void (next.days[dayIndex]!.exercises[
+                            exerciseIndex
+                          ]!.target_rep_min = v),
                       )
                     }
                   />
                   <NumField
-                    label="Tekrar max"
+                    label="Maks"
+                    name="Maks tekrar"
                     value={exercise.target_rep_max}
                     disabled={!isOpen}
                     onChange={(v) =>
                       edit(
                         (next) =>
-                          void (next.days[dayIndex]!.exercises[exerciseIndex]!.target_rep_max = v),
+                          void (next.days[dayIndex]!.exercises[
+                            exerciseIndex
+                          ]!.target_rep_max = v),
                       )
                     }
                   />
                   <label className="min-w-[8rem] flex-1">
-                    <span className="mb-1 block text-2xs text-[var(--color-ink-muted)]">
-                      Teknik
-                    </span>
+                    <span className="label mb-1 block">Teknik</span>
                     <select
                       value={exercise.technique}
                       disabled={!isOpen}
                       onChange={(e) =>
                         edit(
                           (next) =>
-                            void (next.days[dayIndex]!.exercises[exerciseIndex]!.technique =
-                              e.target.value),
+                            void (next.days[dayIndex]!.exercises[
+                              exerciseIndex
+                            ]!.technique = e.target.value),
                         )
                       }
-                      className="h-9 w-full rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-1.5 text-xs outline-none"
+                      className="h-10 w-full border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-1.5 text-xs outline-none"
                     >
                       {TECHNIQUES.map((t) => (
                         <option key={t.value} value={t.value}>
@@ -344,12 +380,18 @@ export default function ProgramReviewPage() {
 
       {/* --- Eylemler --- */}
       {isOpen && (
-        <div className="sticky bottom-20 space-y-2 sm:bottom-0">
-          {dirty && (
-            <p className="text-2xs text-[var(--color-warning)]">
-              Kaydedilmemiş düzenlemen var. &ldquo;Onayla&rdquo; demeden önce kaydet.
-            </p>
-          )}
+        /* Çubuk kendi yüzeyinde: zeminsizken sayfanın üstünden kayarken
+           altındaki gün kartlarının yazısı düğmelerin arasından geçiyordu.
+           `bottom-20` mobil alt gezinme çubuğu içindi; o çubuk artık yok. */
+        <div className="card-raised sticky bottom-4 flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+          <p
+            className="text-xs"
+            style={{ color: dirty ? "var(--color-warning)" : undefined }}
+          >
+            {dirty
+              ? "Kaydedilmemiş düzenlemen var — «Onayla» demeden önce kaydet."
+              : "Onaya hazır."}
+          </p>
           <div className="flex flex-wrap gap-2">
             <button
               className="btn btn-ghost"
@@ -368,7 +410,10 @@ export default function ProgramReviewPage() {
               className="btn btn-primary"
               disabled={dirty || resolve.isPending}
               onClick={async () => {
-                await resolve.mutateAsync({ id: params.id, decision: "approve" });
+                await resolve.mutateAsync({
+                  id: params.id,
+                  decision: "approve",
+                });
                 router.replace("/programs");
               }}
             >
@@ -378,7 +423,10 @@ export default function ProgramReviewPage() {
               className="btn btn-ghost"
               disabled={resolve.isPending}
               onClick={async () => {
-                await resolve.mutateAsync({ id: params.id, decision: "reject" });
+                await resolve.mutateAsync({
+                  id: params.id,
+                  decision: "reject",
+                });
                 router.replace("/chat");
               }}
             >
@@ -389,25 +437,37 @@ export default function ProgramReviewPage() {
           {resolve.isError && <ErrorBox error={resolve.error} />}
         </div>
       )}
-    </div>
+    </Page>
   );
 }
 
+/**
+ * Dar sayı alanı.
+ *
+ * `label` GÖRÜNEN metin ve kısa: 4rem genişliğinde bir sütunda "Maks tekrar"
+ * iki satıra kırılıyor ve satır yüksekliğini bozuyordu. `name` ekran
+ * okuyucunun duyduğu ad — görünen metni İÇERİYOR, yoksa sesli adla ekrandaki
+ * ad birbirini tutmaz (WCAG 2.5.3).
+ */
 function NumField({
   label,
+  name,
   value,
   onChange,
   disabled,
 }: {
   label: string;
+  /** Ekran okuyucunun okuduğu ad. Verilmezse görünen metin kullanılıyor. */
+  name?: string;
   value: number;
   onChange: (value: number) => void;
   disabled: boolean;
 }) {
   return (
     <label className="w-16">
-      <span className="mb-1 block text-2xs text-[var(--color-ink-muted)]">{label}</span>
+      <span className="label mb-1 block">{label}</span>
       <input
+        aria-label={name ?? label}
         inputMode="numeric"
         value={value}
         disabled={disabled}
@@ -416,7 +476,7 @@ function NumField({
           // NaN'ı state'e yazmak alanı kilitliyor; geçersiz girdide değeri koru.
           if (Number.isFinite(parsed)) onChange(parsed);
         }}
-        className="tnum h-9 w-full rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-1.5 text-center text-xs outline-none"
+        className="tnum h-10 w-full border border-[var(--color-border-strong)] bg-[var(--color-ground)] px-1.5 text-center text-xs outline-none"
       />
     </label>
   );

@@ -88,6 +88,16 @@ const JOBS = [
   // --- Antrenman bitiş ekranı ----------------------------------------------
   { slug: "celebration", file: "threadmill.jpg", fit: "cover", width: 1800, height: 771, position: "center" },
 
+  // --- Antrenman başlangıcı ------------------------------------------------
+  // Başlamadan önceki tek ekran. Fotoğraf burada "motivasyon süsü" değil:
+  // ekranda başka hiçbir şey yok ve boş bir kart kullanıcıyı bekletiyordu.
+  { slug: "workout-intro", file: "squat.jpg", fit: "cover", width: 1800, height: 771, position: "center" },
+
+  // --- Geçmiş: birikim bandı -----------------------------------------------
+  // Toplam tonajın zemini. Plakalı bir raf, sayının ne olduğunu tek bakışta
+  // söylüyor — grafik ya da ikon yapmaya gerek kalmadan.
+  { slug: "history-total", file: "barbell rack.jpg", fit: "cover", width: 1800, height: 771, position: "center" },
+
   // --- Karşılama ekranı: anlatının dört durağı -----------------------------
   // Higgsfield ile üretildi. Dördü de AYNI salonun içinde: kamera kapıdan
   // giriyor, zemini geçiyor, bardaki kişiye varıyor, telefona yaklaşıyor.

@@ -12,6 +12,10 @@ from typing import Literal
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+#: Varsayılan sır. Üretimde bu değerle açılış DURDURULUYOR: değer depoda
+#: yazılı, yani herkes kendine geçerli bir oturum jetonu üretebilir.
+_DEFAULT_JWT_SECRET = "dev-only-insecure-secret-change-me"  # noqa: S105 - sır değil, tuzak
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -35,7 +39,7 @@ class Settings(BaseSettings):
     )
 
     # --- Auth ---
-    jwt_secret: SecretStr = SecretStr("dev-only-insecure-secret-change-me")
+    jwt_secret: SecretStr = SecretStr(_DEFAULT_JWT_SECRET)
     jwt_lifetime_seconds: int = 604_800  # 7 gün
 
     # --- Anthropic ---
@@ -129,6 +133,58 @@ class Settings(BaseSettings):
         if self.is_production:
             return [self.frontend_url]
         return [self.frontend_url, "http://localhost:3000", "http://127.0.0.1:3000"]
+
+    def production_problems(self) -> tuple[list[str], list[str]]:
+        """Üretimde kabul edilemez ve dikkat isteyen ayarlar: (hatalar, uyarılar).
+
+        --------------------------------------------------------------------
+        NEDEN AÇILIŞTA
+        --------------------------------------------------------------------
+        Bu ayarların yanlış olması sessiz. Varsayılan JWT sırrıyla ayağa kalkan
+        bir sunucu kusursuz çalışıyor gibi görünüyor — ta ki birisi depodaki
+        `.env.example` dosyasını okuyup kendine jeton üretene kadar. Sessiz bir
+        güvenlik açığını gürültülü bir açılış hatasına çevirmek, bu kontrolün
+        tek işi.
+
+        HATALAR açılışı durduruyor, UYARILAR yalnızca günlüğe yazılıyor:
+        e-posta ya da AI olmadan uygulama çalışmaya devam ediyor, ama
+        varsayılan bir sırla çalışmamalı.
+        """
+        errors: list[str] = []
+        warnings: list[str] = []
+
+        if self.jwt_secret.get_secret_value() == _DEFAULT_JWT_SECRET:
+            errors.append(
+                "JWT_SECRET varsayılan değerde. Bu değer depoda yazılı: "
+                "herkes kendine geçerli bir oturum jetonu üretebilir. "
+                "`python -c \"import secrets; print(secrets.token_urlsafe(48))\"` "
+                "ile yeni bir tane üret."
+            )
+
+        if "localhost" in self.frontend_url or "127.0.0.1" in self.frontend_url:
+            errors.append(
+                f"FRONTEND_URL yerel bir adres ({self.frontend_url}). Üretimde "
+                "CORS yalnızca bu adresi kabul ediyor; tarayıcı bütün istekleri "
+                "engeller."
+            )
+
+        if "localhost" in self.database_url or "127.0.0.1" in self.database_url:
+            warnings.append(
+                "DATABASE_URL yerel bir adrese işaret ediyor. Konteyner ağı "
+                "içinde doğru olabilir; değilse veritabanı bulunamaz."
+            )
+
+        if self.smtp_host is None:
+            warnings.append(
+                "SMTP_HOST tanımlı değil: parola sıfırlama ve doğrulama "
+                "e-postaları GÖNDERİLMİYOR, yalnızca günlüğe yazılıyor. "
+                "Parolasını unutan kullanıcı hesabına giremez."
+            )
+
+        if self.anthropic_api_key is None:
+            warnings.append("ANTHROPIC_API_KEY tanımlı değil: asistan kapalı.")
+
+        return errors, warnings
 
     def require_anthropic_key(self) -> str:
         if self.anthropic_api_key is None:

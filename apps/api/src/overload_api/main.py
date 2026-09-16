@@ -33,6 +33,7 @@ from overload_api.features.workouts.router import router as workouts_router
 
 settings = get_settings()
 logging.basicConfig(level=settings.log_level)
+logger = logging.getLogger(__name__)
 
 
 # --- Kullanıcı şemaları ------------------------------------------------------
@@ -75,6 +76,24 @@ class Health(BaseModel):
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    """Açılışta üretim ayarlarını denetliyor.
+
+    Yanlış ayarlar SESSİZ: varsayılan JWT sırrıyla ayağa kalkan bir sunucu
+    kusursuz çalışıyor gibi görünüyor — ta ki birisi depodaki
+    `.env.example`ı okuyup kendine jeton üretene kadar. Sessiz bir güvenlik
+    açığını gürültülü bir açılış hatasına çevirmek bu kontrolün tek işi.
+
+    Yalnızca `ENVIRONMENT=production`da koşuyor: geliştirme kurulumu tam da
+    bu "hatalı" değerlerle çalışmak zorunda.
+    """
+    if settings.is_production:
+        errors, warnings = settings.production_problems()
+        for warning in warnings:
+            logger.warning("Yapılandırma uyarısı: %s", warning)
+        if errors:
+            listed = "".join(f"\n  - {problem}" for problem in errors)
+            raise RuntimeError(f"Üretim yapılandırması eksik:{listed}")
+
     yield
     await dispose_engine()
 

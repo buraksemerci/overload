@@ -54,3 +54,56 @@ class TestDatabaseUrl:
         """asyncpg olmadan uygulama event loop'u bloklar; erken patlaması iyi."""
         with pytest.raises(ValidationError, match="asyncpg"):
             _settings(database_url="postgresql://overload:overload@localhost/overload")
+
+
+class TestProductionChecks:
+    """Üretimde kabul edilemez ayarlar açılışı DURDURUYOR.
+
+    Bu ayarların yanlış olması sessiz: varsayılan JWT sırrıyla ayağa kalkan
+    bir sunucu kusursuz çalışıyor gibi görünüyor — ta ki birisi depodaki
+    `.env.example`ı okuyup kendine jeton üretene kadar.
+    """
+
+    def _settings(self, **overrides: object):  # type: ignore[no-untyped-def]
+        from overload_api.config import Settings
+
+        base: dict[str, object] = {
+            "environment": "production",
+            "jwt_secret": "gercekten-rastgele-bir-sir-xyz",
+            "frontend_url": "https://overload.example.org",
+            "database_url": "postgresql+asyncpg://u:p@db.ornek.net:5432/overload",
+            "smtp_host": "smtp.ornek.net",
+            "anthropic_api_key": "sk-test",
+        }
+        base.update(overrides)
+        return Settings(**base)  # type: ignore[arg-type]
+
+    def test_dogru_yapilandirmada_hata_yok(self) -> None:
+        errors, _ = self._settings().production_problems()
+        assert errors == []
+
+    def test_varsayilan_jwt_sirri_hata(self) -> None:
+        from overload_api.config import _DEFAULT_JWT_SECRET
+
+        errors, _ = self._settings(jwt_secret=_DEFAULT_JWT_SECRET).production_problems()
+        # Değer depoda yazılı: herkes kendine geçerli bir jeton üretebilir.
+        assert any("JWT_SECRET" in problem for problem in errors)
+
+    def test_yerel_frontend_adresi_hata(self) -> None:
+        errors, _ = self._settings(
+            frontend_url="http://localhost:3000"
+        ).production_problems()
+        # CORS yalnızca bu adresi kabul ediyor; tarayıcı her isteği engeller.
+        assert any("FRONTEND_URL" in problem for problem in errors)
+
+    def test_smtp_eksikligi_uyari_hata_degil(self) -> None:
+        errors, warnings = self._settings(smtp_host=None).production_problems()
+        # E-posta olmadan uygulama çalışmaya devam ediyor; varsayılan bir
+        # sırla çalışmamalı. Ayrım tam olarak bu.
+        assert errors == []
+        assert any("SMTP_HOST" in problem for problem in warnings)
+
+    def test_ai_anahtari_eksikligi_uyari(self) -> None:
+        errors, warnings = self._settings(anthropic_api_key=None).production_problems()
+        assert errors == []
+        assert any("ANTHROPIC_API_KEY" in problem for problem in warnings)

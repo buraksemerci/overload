@@ -213,7 +213,7 @@ Testler backend'i taklit ediyor; veritabanı gerekmiyor.
 
 ---
 
-## 11. GitHub ve dağıtım (sonraya bırakılabilir)
+## 11. GitHub ve dağıtım
 
 Yerelde çalıştığını doğruladıktan sonra:
 
@@ -222,11 +222,12 @@ gh auth login
 gh repo create overload --private --source=. --push
 ```
 
-Sonra:
-- **Vercel** → GitHub reposunu bağla, kök dizin `apps/web`
-- **Railway / Render** → aynı repo, kök dizin `apps/api`
-- Her iki platformda da `.env` değişkenlerini panel üzerinden gir
-- GitHub Actions CI zaten hazır (`.github/workflows/ci.yml`), ilk push'ta çalışır
+Dağıtımın tamamı ayrı bir belgede: **[docs/dagitim.md](dagitim.md)**. Orada
+platform adımları, zorunlu ortam değişkenleri ve atlanması en kolay iki şey
+(yeni JWT sırrı, `--proxy-headers`) tek tek yazıyor.
+
+GitHub Actions CI zaten hazır (`.github/workflows/ci.yml`), ilk push'ta
+çalışır.
 
 ---
 

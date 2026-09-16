@@ -109,5 +109,7 @@ gerekenler kalıyor:
       idi. Çıkış artık gerçekten çıkış.
 - [x] Kullanıcı başına AI bütçesi ve `/account`taki "AI sınırı" kartı — BİTTİ
 - [x] Hesap silme — BİTTİ
-- [ ] Dağıtım: web + API + Postgres, alan adı, yedek
+- [x] Dağıtım REHBERİ ve üretim denetimleri — BİTTİ
+      ([docs/dagitim.md](docs/dagitim.md)). Dağıtımın kendisi hesap açmayı
+      gerektiriyor; kod tarafında hazır.
 - [ ] Anthropic anahtarıyla AI katmanının uçtan uca doğrulanması

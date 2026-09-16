@@ -14,6 +14,7 @@ sistemi. Spor, beslenme, vücut takibi ve AI destekli koçluk tek çatı altınd
 ## Hızlı başlangıç
 
 Kurulum adımları ve hesap açma rehberi: **[docs/kurulum.md](docs/kurulum.md)**
+Kendi çevrene açmak (dağıtım): **[docs/dagitim.md](docs/dagitim.md)**
 
 ```bash
 docker compose up -d                                    # yerel Postgres

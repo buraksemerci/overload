@@ -87,6 +87,45 @@ test.describe("karşılama", () => {
     }
   });
 
+  test("anlatı ilerledikçe görünen metin ekranda kalıyor", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    // Kaydırma konumu ANLATI BÖLÜMÜNE göre ölçülüyor, sayfanın tamamına
+    // göre değil: üstündeki "bugün" katmanı mobilde daha uzun ve sabit bir
+    // yüzde iki ekranda iki farklı sahneye denk geliyor.
+    const scene = await page.evaluate(() => {
+      const root = document.querySelector("main .sticky")?.parentElement ?? null;
+      if (root === null) return null;
+      return {
+        top: root.getBoundingClientRect().top + window.scrollY,
+        height: root.getBoundingClientRect().height,
+      };
+    });
+    expect(scene).not.toBeNull();
+    const viewport = page.viewportSize()!.height;
+
+    // Dört metin aynı ızgara hücresini paylaşıyor. Kap ızgara olmazsa alt
+    // alta diziliyorlar ve görünür olan ekranın dışına çıkıyor — bir kez
+    // öyle oldu ve sahne sessizce yazısız kaldı.
+    for (const fraction of [0.1, 0.35, 0.6]) {
+      await page.evaluate((y) => window.scrollTo(0, y), scene!.top + scene!.height * fraction);
+      await page.waitForTimeout(900);
+
+      const box = await page.evaluate(() => {
+        const visible = Array.from(document.querySelectorAll("main h2")).find((element) => {
+          const cell = element.closest("[style*='opacity']");
+          return cell !== null && getComputedStyle(cell).opacity === "1";
+        });
+        return visible?.getBoundingClientRect().top ?? null;
+      });
+
+      expect(box).not.toBeNull();
+      expect(box!).toBeGreaterThan(0);
+      expect(box!).toBeLessThan(viewport);
+    }
+  });
+
   test("hareket azaltmada anlatı düz kartlara düşüyor", async ({ browser }) => {
     // Sıkıştırılmış bir sahnede zorunlu kaydırma, hareket duyarlılığı olan
     // kullanıcı için kullanılamaz bir deneyim. Aynı içerik, kaydırmaya

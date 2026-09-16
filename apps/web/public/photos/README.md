@@ -101,16 +101,19 @@ dokuyla çalışıyor ve düzgün görünüyor.
 ### Karşılama anlatısı
 
 Karşılama ekranındaki dört kare **Higgsfield ile üretildi** (Unsplash değil).
-Aynı kareler `public/video/story.mp4`in anahtar kareleri olarak da
-kullanıldı: video, bu dört görüntü arasında üretilen üç geçiş parçasının
-birleşimi.
+Aynı kareler `public/video/story.mp4`in dönüm noktaları: video, bu dört
+görüntü arasında üretilen üç geçiş parçasının birleşimi.
 
-| Slug | Faz |
+| Slug | Kameranın olduğu yer |
 |---|---|
-| `story-outdoor` | Sabah — dışarıda koşu |
-| `story-gym` | Antrenman — salonda ağırlık |
-| `story-meal` | Sonrası — öğün |
-| `story-phone` | Zamanla — telefonda panel |
+| `story-entry` | Kapıdan giren kişinin arkası |
+| `story-gym` | Zeminde ilerlerken, rafta çalışan birinin yanı |
+| `story-meal` | Dipteki bar, öğününü yiyen kişi |
+| `story-phone` | Elindeki telefonun ekranı |
+
+Dördü de **aynı salon**: üretim istemlerinde mekân (uzun kemerli pencereler
+solda, siyah raf sırası sağda, dipte beton-meşe bar) kelimesi kelimesine
+tekrarlandı. Kesme yok; kamera boydan boya tek seferde ilerliyor.
 
 Bu dördü yalnızca **yedek**: video yüklenemezse anlatı onlara düşüyor.
 Videonun kendisi `scripts/story-video.mjs` ile hazırlanıyor.

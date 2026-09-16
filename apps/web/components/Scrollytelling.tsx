@@ -6,9 +6,16 @@
  * --------------------------------------------------------------------------
  * NE ANLATIYOR
  * --------------------------------------------------------------------------
- * Tek kesintisiz çekim: dışarıda ısınma, salonda ağırlık, sonrasında öğün,
- * ve elde telefonda birikmiş veri. Uygulamanın ne işe yaradığını anlatmanın
- * en kısa yolu bu — özellik listesi değil, bir gün.
+ * Tek kesintisiz çekim, tek mekân: kamera kapıdan içeri giren kişinin
+ * yanından geçiyor, salonun zeminini boydan boya kat ediyor, rafların
+ * arasında çalışan birinin yanından geçip dipteki bara varıyor, orada
+ * öğününü yiyen kişi telefonu eline alınca ekrana yaklaşıyor. Uygulamanın
+ * ne işe yaradığını anlatmanın en kısa yolu bu — özellik listesi değil,
+ * bir gün.
+ *
+ * Kesme YOK. Dört kare Higgsfield'da aynı salon tarif edilerek üretildi ve
+ * aralarındaki geçişler `start_image` + `end_image` ile zincirlendi; bu
+ * yüzden video ilerlerken mekân değişmiyor, yalnızca kamera ilerliyor.
  *
  * Her fazın metni o fazın zaman aralığında beliriyor ve ilgili bölüme
  * bağlanıyor. Anlatı aynı zamanda gezinme.
@@ -71,8 +78,8 @@ interface Phase {
 
 const PHASES: readonly Phase[] = [
   {
-    photo: "story-outdoor",
-    eyebrow: "Sabah",
+    photo: "story-entry",
+    eyebrow: "Giriş",
     title: "Gün bir kararla başlıyor",
     body: "Bugün ne yapacağın belli: aktif programın hangi günde olduğunu biliyor ve seni orada karşılıyor.",
     href: "/workout",
@@ -92,7 +99,7 @@ const PHASES: readonly Phase[] = [
   },
   {
     photo: "story-meal",
-    eyebrow: "Sonrası",
+    eyebrow: "Barda",
     title: "Kalan kalorin tek sayı",
     body: "Ne yediğini kaydediyorsun, geriye ne kaldığını söylüyor. Makrolar isteyince açılıyor.",
     href: "/nutrition",
@@ -253,24 +260,28 @@ export function Scrollytelling() {
           aria-hidden
           className="absolute inset-0"
           style={{
+            // İki perde üst üste biniyor; sol alt köşede ikisi birden
+            // çalışıyor. Değerler o köşeye göre seçildi: tek tek bakıldığında
+            // zayıf görünüyorlar ama çarpıldıkları yer yazının durduğu yer.
             background:
-              "linear-gradient(to top, oklch(12% 0.01 115 / 0.85) 0%, oklch(12% 0.01 115 / 0.4) 48%, oklch(12% 0.01 115 / 0.12) 100%)," +
-              "linear-gradient(to right, oklch(12% 0.01 115 / 0.72) 0%, oklch(12% 0.01 115 / 0.3) 38%, transparent 62%)",
+              "linear-gradient(to top, oklch(12% 0.01 115 / 0.74) 0%, oklch(12% 0.01 115 / 0.28) 46%, transparent 100%)," +
+              "linear-gradient(to right, oklch(12% 0.01 115 / 0.58) 0%, oklch(12% 0.01 115 / 0.2) 36%, transparent 60%)",
           }}
         />
 
         <div className="absolute inset-0 flex items-end">
-          <div className="mx-auto w-full max-w-[84rem] px-5 pb-16 sm:px-8 lg:pb-24">
+          {/* `grid` BU KAPTA olmak zorunda. Dört metin aynı hücreyi
+              paylaşıyor ve yalnızca opaklıkları değişiyor; kap ızgara
+              olmazsa `col-start-1 row-start-1` hiçbir şey yapmıyor ve
+              dördü alt alta diziliyor — görünür olanı ekranın dışına
+              itiyor. Bir kez öyle oldu, `e2e/welcome.spec.ts` artık
+              görünür metnin ekranda kaldığını ölçüyor. */}
+          <div className="mx-auto grid w-full max-w-[84rem] px-5 pb-16 sm:px-8 lg:pb-24">
             {PHASES.map((phase, index) => (
               <div
                 key={phase.photo}
-                // Hepsi aynı ızgara hücresinde: metinler üst üste duruyor
-                // ve yalnızca opaklık değişiyor. Akışta sırayla dizilse
-                // her geçişte sahne zıplardı.
-                className="col-start-1 row-start-1 grid"
+                className="col-start-1 row-start-1 self-end"
                 style={{
-                  gridArea: "1 / 1",
-                  display: "grid",
                   opacity: index === active ? 1 : 0,
                   pointerEvents: index === active ? "auto" : "none",
                   transition: "opacity var(--dur-long) var(--ease-out)",

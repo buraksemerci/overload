@@ -27,22 +27,25 @@ Bunlar tek tek ekranlarda tartışılmıyor; kabul edilmiş kurallar.
 - [x] Üst gezinme + fotoğraflı açılır panel
 - [x] Tasarım denetimleri (`lib/design-tokens.test.ts`, `e2e/design-rules`)
 
-### 1. Karşılama ekranı (`/`) — ÖZEL GÖREV
-Şu an "panel" (bugünün özeti). İstenen: **siteye giriş kapısı**.
-- [ ] Kullanıcıyı adıyla karşılama
-- [ ] GSAP ScrollTrigger ile scrollytelling, dört faz:
-  1. Dışarıda koşu/antrenman
-  2. Salonda ağırlık
-  3. Antrenman sonrası öğün
-  4. Kamera telefona yaklaşıyor, ekranda uygulamanın paneli
-- [ ] Her fazın altında o bölüme giden bento kartlar
-- [ ] Görseller Higgsfield ile üretiliyor
-- [ ] Mevcut "bugünün özeti" içeriği `/panel` rotasına taşınıyor
+### 1. Karşılama ekranı (`/`) — BİTTİ
+- [x] Kullanıcıyı adıyla karşılama
+- [x] Kaydırmaya bağlı video: kaydırma yüzdesi `currentTime`e yazılıyor
+- [x] Tek kesintisiz çekim, tek mekân — salona giriş, zeminde ilerleme,
+      bardaki öğün, telefona yaklaşma. Kesme yok.
+- [x] Her fazın altında o bölüme giden bağlantı
+- [x] Görseller ve video Higgsfield ile üretiliyor
+- [x] Video yokken fotoğraf karelerine, hareket azaltmada düz kartlara düşüş
 
-### 2. Profil (`/account`)
-- [ ] Bento: kimlik kartı (fotoğraf + ad + e-posta), ölçüler, aktivite,
-      oturum, AI sınırı
-- [ ] Form alanları kart içinde gruplu, tek sütun yığını değil
+### 2. Profil (`/account`) — BİTTİ
+- [x] Kimlik kapak kartı (fotoğraf + ad + e-posta + baş harf)
+- [x] Bento: Kimlik / Vücut / Aktivite / Saat dilimi ayrı kartlarda —
+      hangi bilginin neyi etkilediği kartın başlığında
+- [x] Kaydet çubuğu yalnızca değişiklik varken, yanında "geri al"
+- [x] Son tartı gösteriliyor ama buradan DEĞİŞTİRİLEMİYOR (kilo `/weight`de)
+
+**AI sınırı kartı yok** çünkü gösterilecek veri yok: kullanıcı başına AI
+bütçesi henüz uygulanmadı. Uydurma bir sayı göstermektense kart hiç
+konmadı; bütçe geldiğinde buraya eklenecek.
 
 ### 3. Antrenman
 - [ ] `/workout` — akış zaten iyi; kart dili hizalanacak

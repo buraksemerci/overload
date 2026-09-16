@@ -11,6 +11,7 @@
 
 import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
+import { Page } from "@/components/Layout";
 import { api, streamChat } from "@/lib/api";
 import { uploadPhoto } from "@/lib/upload";
 
@@ -33,16 +34,27 @@ const ACTION_LABELS: Record<string, string> = {
   add_exercise_to_library: "Yeni hareket önerisi",
 };
 
+/** Boş sohbetteki öneriler. Üçü de uygulamanın üç ayrı işini gösteriyor:
+ *  kayıt, soru, üretim. */
+const EXAMPLES = [
+  "Bugün 300gr tavuk ve 150gr pilav yedim",
+  "Chest press'te bugün ne kadar kaldırayım?",
+  "Haftada 4 gün için üst/alt split programı kur",
+] as const;
+
 export default function ChatPage() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [resolved, setResolved] = useState<Record<string, "approved" | "rejected">>({});
+  const [resolved, setResolved] = useState<
+    Record<string, "approved" | "rejected">
+  >({});
   const [photo, setPhoto] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const send = useCallback(async () => {
     const message = input.trim();
@@ -86,7 +98,8 @@ export default function ChatPage() {
           setTurns((t) => {
             const next = [...t];
             const last = next[next.length - 1];
-            if (last) next[next.length - 1] = { ...last, text: last.text + text };
+            if (last)
+              next[next.length - 1] = { ...last, text: last.text + text };
             return next;
           });
         } else if (event.type === "pending_action") {
@@ -95,7 +108,10 @@ export default function ChatPage() {
             const next = [...t];
             const last = next[next.length - 1];
             if (last) {
-              next[next.length - 1] = { ...last, pending: [...(last.pending ?? []), action] };
+              next[next.length - 1] = {
+                ...last,
+                pending: [...(last.pending ?? []), action],
+              };
             }
             return next;
           });
@@ -104,192 +120,238 @@ export default function ChatPage() {
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Beklenmeyen bir hata oldu.");
+      setError(
+        err instanceof Error ? err.message : "Beklenmeyen bir hata oldu.",
+      );
     } finally {
       setBusy(false);
       abortRef.current = null;
     }
   }, [input, busy, photo]);
 
-  const resolve = useCallback(async (id: string, decision: "approve" | "reject") => {
-    try {
-      await api.post(`/chat/pending-actions/${id}/${decision}`);
-      setResolved((r) => ({ ...r, [id]: decision === "approve" ? "approved" : "rejected" }));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Onay işlemi başarısız.");
-    }
-  }, []);
+  const resolve = useCallback(
+    async (id: string, decision: "approve" | "reject") => {
+      try {
+        await api.post(`/chat/pending-actions/${id}/${decision}`);
+        setResolved((r) => ({
+          ...r,
+          [id]: decision === "approve" ? "approved" : "rejected",
+        }));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Onay işlemi başarısız.");
+      }
+    },
+    [],
+  );
 
   return (
-    <div className="flex min-h-[calc(100dvh-10rem)] flex-col">
-      <h1 className="text-xl lg:text-2xl">Asistan</h1>
-      <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
-        Antrenman, beslenme ve programın hakkında konuş. Veri değiştiren öneriler onayına sunulur.
-      </p>
+    /* `Page flush`: diğer ekranlarla aynı genişlik ve aynı sol kenar. Sohbet
+       tek başına tam genişlikti ve başlığı diğer sayfaların başlıklarıyla
+       hizasızdı. `flush` dikey ritmi bu ekrana bırakıyor — burada yükseklik
+       bir sütun düzeni, kart dizisi değil. */
+    <Page flush>
+      <div className="flex min-h-[calc(100dvh-10rem)] flex-col">
+        <h1 className="text-xl lg:text-2xl">Asistan</h1>
+        <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
+          Antrenman, beslenme ve programın hakkında konuş. Veri değiştiren
+          öneriler onayına sunulur.
+        </p>
 
-      <div className="mt-6 flex-1 space-y-4">
-        {turns.length === 0 && (
-          <div className="card p-4 text-sm text-[var(--color-ink-muted)]">
-            <p className="mb-2 text-[var(--color-ink)]">Örnek:</p>
-            <ul className="space-y-1">
-              <li>&ldquo;Bugün 300gr tavuk ve 150gr pilav yedim&rdquo;</li>
-              <li>&ldquo;Chest press&apos;te bugün ne kadar kaldırayım?&rdquo;</li>
-              <li>&ldquo;Haftada 4 gün için üst/alt split programı kur&rdquo;</li>
-            </ul>
-          </div>
-        )}
+        <div className="mt-6 flex flex-1 flex-col gap-4">
+          {turns.length === 0 && (
+            /* Örnekler TIKLANABİLİR. Alıntı işaretleri içinde duran üç cümle,
+             ne yazılabileceğini anlatıyordu ama yazmayı hâlâ kullanıcıya
+             bırakıyordu. Dokununca alan doluyor ve imleç orada. */
+            <div className="flex flex-1 flex-col items-start justify-center gap-2 py-8">
+              <p className="label mb-1">Şunları deneyebilirsin</p>
+              {EXAMPLES.map((example) => (
+                <button
+                  key={example}
+                  type="button"
+                  onClick={() => {
+                    setInput(example);
+                    inputRef.current?.focus();
+                  }}
+                  className="card px-4 py-3 text-left text-sm transition-colors hover:bg-[var(--color-surface-raised)]"
+                  style={{ transitionDuration: "var(--dur-micro)" }}
+                >
+                  {example}
+                </button>
+              ))}
+            </div>
+          )}
 
-        {turns.map((turn, i) => (
-          <div key={i} className={turn.role === "user" ? "flex justify-end" : ""}>
+          {turns.map((turn, i) => (
             <div
-              className={
-                turn.role === "user"
-                  ? "max-w-[85%] rounded-[5px] bg-[var(--color-surface-raised)] px-3 py-2 text-sm"
-                  : "w-full text-sm"
-              }
+              key={i}
+              className={turn.role === "user" ? "flex justify-end" : ""}
             >
-              {turn.text ? (
-                <p className="whitespace-pre-wrap">{turn.text}</p>
-              ) : (
-                busy && i === turns.length - 1 && (
-                  <p className="text-[var(--color-ink-faint)]">Düşünüyor…</p>
-                )
-              )}
+              <div
+                className={
+                  turn.role === "user"
+                    ? "max-w-[85%] bg-[var(--color-surface-raised)] px-3 py-2 text-sm"
+                    : "w-full text-sm"
+                }
+              >
+                {turn.text ? (
+                  <p className="whitespace-pre-wrap">{turn.text}</p>
+                ) : (
+                  busy &&
+                  i === turns.length - 1 && (
+                    <p className="text-[var(--color-ink-faint)]">Düşünüyor…</p>
+                  )
+                )}
 
-              {turn.pending?.map((action) => {
-                const state = resolved[action.id];
-                return (
-                  <div
-                    key={action.id}
-                    className="card mt-3 border-[var(--color-accent)]/40 p-3"
-                  >
-                    <p className="text-2xs uppercase tracking-wide text-[var(--color-ink-faint)]">
-                      {ACTION_LABELS[action.action_type] ?? action.action_type} · onayın gerekiyor
-                    </p>
-                    <p className="mt-1.5 text-sm">{action.summary}</p>
+                {turn.pending?.map((action) => {
+                  const state = resolved[action.id];
+                  return (
+                    <div
+                      key={action.id}
+                      className="card mt-3 border-[var(--color-accent)]/40 p-3"
+                    >
+                      <p className="text-2xs uppercase tracking-wide text-[var(--color-ink-faint)]">
+                        {ACTION_LABELS[action.action_type] ??
+                          action.action_type}{" "}
+                        · onayın gerekiyor
+                      </p>
+                      <p className="mt-1.5 text-sm">{action.summary}</p>
 
-                    {state === undefined ? (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {/* Program önerileri doğrudan onaylanmıyor: Bölüm 4.1
+                      {state === undefined ? (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {/* Program önerileri doğrudan onaylanmıyor: Bölüm 4.1
                             tam ekran bir "gözden geçir" adımı şart koşuyor.
                             28 hareketlik bir programı tek satırlık özete bakıp
                             onaylamak zaten kör onay olurdu. */}
-                        {action.action_type === "propose_program" ? (
-                          <Link
-                            href={`/programs/review/${action.id}`}
-                            className="btn btn-primary"
-                          >
-                            Gözden geçir ve onayla
-                          </Link>
-                        ) : (
+                          {action.action_type === "propose_program" ? (
+                            <Link
+                              href={`/programs/review/${action.id}`}
+                              className="btn btn-primary"
+                            >
+                              Gözden geçir ve onayla
+                            </Link>
+                          ) : (
+                            <button
+                              className="btn btn-primary"
+                              onClick={() => resolve(action.id, "approve")}
+                            >
+                              Onayla
+                            </button>
+                          )}
                           <button
-                            className="btn btn-primary"
-                            onClick={() => resolve(action.id, "approve")}
+                            className="btn btn-ghost"
+                            onClick={() => resolve(action.id, "reject")}
                           >
-                            Onayla
+                            Reddet
                           </button>
-                        )}
-                        <button
-                          className="btn btn-ghost"
-                          onClick={() => resolve(action.id, "reject")}
+                        </div>
+                      ) : (
+                        <p
+                          className="mt-2 text-xs"
+                          style={{
+                            color:
+                              state === "approved"
+                                ? "var(--color-accent-deep)"
+                                : "var(--color-ink-faint)",
+                          }}
                         >
-                          Reddet
-                        </button>
-                      </div>
-                    ) : (
-                      <p
-                        className="mt-2 text-xs"
-                        style={{
-                          color:
-                            state === "approved"
-                              ? "var(--color-accent-deep)"
-                              : "var(--color-ink-faint)",
-                        }}
-                      >
-                        {state === "approved" ? "✓ Uygulandı" : "Reddedildi"}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
+                          {state === "approved" ? "✓ Uygulandı" : "Reddedildi"}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
 
-        {error && (
-          <p className="text-sm" style={{ color: "var(--color-danger)" }}>
-            {error}
-          </p>
-        )}
-      </div>
+          {error && (
+            <p className="text-sm" style={{ color: "var(--color-danger)" }}>
+              {error}
+            </p>
+          )}
+        </div>
 
-      <div className="sticky bottom-20 mt-4 sm:bottom-0">
-        {photo && (
-          <div className="card mb-2 flex items-center gap-2 px-3 py-2 text-xs">
-            <span className="min-w-0 flex-1 truncate">{photo.name}</span>
-            <span className="tnum shrink-0 text-[var(--color-ink-faint)]">
-              {(photo.size / 1024 / 1024).toFixed(1)} MB
-            </span>
-            <button
-              onClick={() => {
-                setPhoto(null);
-                if (fileRef.current) fileRef.current.value = "";
-              }}
-              aria-label="Fotoğrafı kaldır"
-              className="shrink-0 text-[var(--color-ink-faint)] hover:text-[var(--color-danger)]"
-            >
-              ✕
-            </button>
-          </div>
-        )}
+        <div className="sticky bottom-20 mt-4 sm:bottom-0">
+          {photo && (
+            <div className="card mb-2 flex items-center gap-2 px-3 py-2 text-xs">
+              <span className="min-w-0 flex-1 truncate">{photo.name}</span>
+              <span className="tnum shrink-0 text-[var(--color-ink-faint)]">
+                {(photo.size / 1024 / 1024).toFixed(1)} MB
+              </span>
+              <button
+                onClick={() => {
+                  setPhoto(null);
+                  if (fileRef.current) fileRef.current.value = "";
+                }}
+                aria-label="Fotoğrafı kaldır"
+                className="shrink-0 text-[var(--color-ink-faint)] hover:text-[var(--color-danger)]"
+              >
+                ✕
+              </button>
+            </div>
+          )}
 
-        <form
-          className="flex gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void send();
-          }}
-        >
-          {/* `capture` telefonda doğrudan kamerayı açıyor — tabaktaki yemeği
+          <form
+            className="flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void send();
+            }}
+          >
+            {/* `capture` telefonda doğrudan kamerayı açıyor — tabaktaki yemeği
               kaydetmenin en kısa yolu. Masaüstünde yok sayılıyor. */}
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/heic"
-            capture="environment"
-            className="hidden"
-            onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
-          />
-          <button
-            type="button"
-            aria-label="Fotoğraf ekle"
-            onClick={() => fileRef.current?.click()}
-            disabled={busy}
-            className="field grid size-10 shrink-0 place-items-center text-[var(--color-ink-muted)] disabled:opacity-40"
-          >
-            {/* Emoji YERİNE simge: emoji her platformda farklı çiziliyor ve
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/heic"
+              capture="environment"
+              className="hidden"
+              onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
+            />
+            <button
+              type="button"
+              aria-label="Fotoğraf ekle"
+              onClick={() => fileRef.current?.click()}
+              disabled={busy}
+              className="field grid size-10 shrink-0 place-items-center text-[var(--color-ink-muted)] disabled:opacity-40"
+            >
+              {/* Emoji YERİNE simge: emoji her platformda farklı çiziliyor ve
                 yanındaki nötr arayüzün içinde renkli bir leke bırakıyor. */}
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h1.2a2 2 0 0 0 1.7-.95l.5-.8A2 2 0 0 1 10.6 3h2.8a2 2 0 0 1 1.7.95l.5.8A2 2 0 0 0 17.3 6h1.2A2.5 2.5 0 0 1 21 8.5v9A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5z" />
-              <circle cx="12" cy="13" r="3.4" />
-            </svg>
-          </button>
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={photo ? "Not ekle (isteğe bağlı)…" : "Bir şey sor ya da anlat…"}
-            className="field min-w-0 flex-1 px-3 py-2.5 text-sm"
-            disabled={busy}
-          />
-          <button
-            type="submit"
-            className="btn btn-primary shrink-0"
-            disabled={busy || (!input.trim() && !photo)}
-          >
-            {uploading ? "Yükleniyor…" : "Gönder"}
-          </button>
-        </form>
+              <svg
+                width="17"
+                height="17"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h1.2a2 2 0 0 0 1.7-.95l.5-.8A2 2 0 0 1 10.6 3h2.8a2 2 0 0 1 1.7.95l.5.8A2 2 0 0 0 17.3 6h1.2A2.5 2.5 0 0 1 21 8.5v9A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5z" />
+                <circle cx="12" cy="13" r="3.4" />
+              </svg>
+            </button>
+            <input
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={
+                photo ? "Not ekle (isteğe bağlı)…" : "Bir şey sor ya da anlat…"
+              }
+              className="field min-w-0 flex-1 px-3 py-2.5 text-sm"
+              disabled={busy}
+            />
+            <button
+              type="submit"
+              className="btn btn-primary shrink-0"
+              disabled={busy || (!input.trim() && !photo)}
+            >
+              {uploading ? "Yükleniyor…" : "Gönder"}
+            </button>
+          </form>
+        </div>
       </div>
-    </div>
+    </Page>
   );
 }

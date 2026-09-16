@@ -144,12 +144,12 @@ export default function CoachPage() {
             çalışan bir işle oluşturuluyor — ilk haftan dolduğunda burada
             olacak.
           </p>
-          <p className="mt-3 text-2xs text-[var(--color-ink-faint)]">
-            Elle tetiklemek için:{" "}
-            <code className="font-mono">
-              python -m overload_api.scripts.weekly_reports run
-            </code>
-          </p>
+          {/* Buradaki "elle tetiklemek için: python -m ..." satırı KALDIRILDI.
+              Kullanıcıya verilebilecek bir talimat değil — uygulamayı
+              kullanan kişinin sunucuda komut çalıştırma imkânı yok ve
+              yapamayacağı bir şeyi söylemek, ekranda bir hata olduğunu
+              düşündürüyor. Betiğin kendisi duruyor:
+              `apps/api/src/overload_api/scripts/weekly_reports.py`. */}
         </Section>
       ) : (
         <article className="card p-6 lg:p-10">

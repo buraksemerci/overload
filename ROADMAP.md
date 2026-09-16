@@ -72,9 +72,10 @@ konmadı; bütçe geldiğinde buraya eklenecek.
 - [ ] `/weight` — hero + grafik
 - [ ] `/soreness` — BİTTİ
 
-### 6. Asistan
-- [ ] `/chat` — sohbet yüzeyi, kart dili
-- [ ] `/coach` — haftalık rapor
+### 6. Asistan — BİTTİ
+- [x] `/chat` — boş sohbetteki örnekler tıklanabilir; genişlik diğer
+      ekranlarla aynı
+- [x] `/coach` — kullanıcıya verilemeyecek geliştirici talimatı kaldırıldı
 
 ### 7. Kapanış
 - [ ] Bütün ekranlarda tasarım denetimi yeşil

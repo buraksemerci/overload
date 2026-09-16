@@ -94,6 +94,35 @@ async def current(session: AsyncSession, user_id: uuid.UUID, timezone: str) -> B
     )
 
 
+def ensure_verified(is_verified: bool) -> None:
+    """Doğrulanmamış hesap AI'yı kullanamıyor — ama yalnızca doğrulama
+    MÜMKÜNSE.
+
+    Korunması gereken şey ücretli katman: bir e-posta adresi doğrulamadan
+    sınırsız model çağrısı yapabilmek, atılabilir adreslerle faturayı
+    büyütmenin en kolay yolu.
+
+    Kapı `SMTP_HOST` tanımlıyken açılıyor. Tanımlı değilken doğrulama
+    e-postası GÖNDERİLEMİYOR: kapıyı o durumda da uygulamak, kullanıcıyı
+    yerine getiremeyeceği bir koşula bağlamak olurdu. Yani sınır tam olarak
+    sağlanabilir olduğu anda var.
+
+    Uygulamanın geri kalanı doğrulamadan bağımsız çalışıyor. Girişi tümden
+    kapatmak (fastapi-users'ın `requires_verification`ı) e-posta gönderimi
+    bozulduğunda herkesi dışarıda bırakırdı.
+    """
+    if is_verified or get_settings().smtp_host is None:
+        return
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail=(
+            "Asistanı kullanmak için e-posta adresini doğrulaman gerekiyor. "
+            "Hesap ekranından yeni bir doğrulama bağlantısı isteyebilirsin."
+        ),
+    )
+
+
 async def ensure_available(
     session: AsyncSession, user_id: uuid.UUID, timezone: str
 ) -> None:

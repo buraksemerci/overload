@@ -82,6 +82,7 @@ async def stream_chat(payload: ChatRequest, db: DbSession, user: CurrentUser) ->
     # Bütçe kontrolü AKIŞ BAŞLAMADAN önce. İçeride yapılsaydı istemci 200 ve
     # bir SSE hata olayı alırdı; dışarıda yapılınca gerçek bir 429 dönüyor ve
     # `Retry-After` mantığı istemcide sıradan bir hata gibi ele alınabiliyor.
+    budget.ensure_verified(user.is_verified)
     await budget.ensure_available(db, user.id, user.timezone)
 
     # Anahtar -> ön-imzalı URL. Anthropic görseli bu adresten çekiyor, bu yüzden

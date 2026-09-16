@@ -99,7 +99,10 @@ gerekenler kalıyor:
 - [x] E-posta gönderimi (doğrulama, parola sıfırlama) — BİTTİ.
       `SMTP_HOST` boşken mesajlar sunucu günlüğüne yazılıyor; gerçek gönderim
       için tek yapılması gereken o değişkeni doldurmak.
-- [ ] Doğrulanmamış hesabın kapsamının sınırlanması
+- [x] Doğrulanmamış hesabın kapsamı — BİTTİ. Asistan kapalı, uygulamanın
+      geri kalanı açık. Kapı yalnızca `SMTP_HOST` tanımlıyken uygulanıyor:
+      doğrulama e-postası gönderilemiyorken doğrulama şart koşmak, kullanıcıyı
+      yerine getiremeyeceği bir koşula bağlamak olurdu.
 - [x] Giriş denemesi sınırı — BİTTİ
 - [ ] Oturum: yenileme jetonu
 - [x] Kullanıcı başına AI bütçesi ve `/account`taki "AI sınırı" kartı — BİTTİ

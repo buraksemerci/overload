@@ -99,3 +99,39 @@ async def test_kullanim_ucu_bugunu_donduruyor(
     # sanmamalı.
     assert body["request_limit"] > 0
     assert body["token_limit"] > 0
+
+
+@pytest.mark.asyncio
+async def test_dogrulanmamis_hesap_smtp_varken_engelleniyor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Atılabilir adreslerle sınırsız model çağrısı, faturayı büyütmenin en
+    kolay yolu."""
+    from fastapi import HTTPException
+
+    from overload_api.config import get_settings
+    from overload_api.services.ai import budget
+
+    monkeypatch.setattr(get_settings(), "smtp_host", "smtp.ornek.test", raising=False)
+
+    with pytest.raises(HTTPException) as caught:
+        budget.ensure_verified(False)
+    assert caught.value.status_code == 403
+    # Kullanıcı ne yapacağını bilmeli.
+    assert "doğrulama" in str(caught.value.detail).lower()
+
+    # Doğrulanmış hesap geçiyor.
+    budget.ensure_verified(True)
+
+
+@pytest.mark.asyncio
+async def test_smtp_yokken_dogrulama_sart_kosulmuyor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Doğrulama e-postası gönderilemiyorken doğrulama şart koşmak,
+    kullanıcıyı yerine getiremeyeceği bir koşula bağlamak olurdu."""
+    from overload_api.config import get_settings
+    from overload_api.services.ai import budget
+
+    monkeypatch.setattr(get_settings(), "smtp_host", None, raising=False)
+    budget.ensure_verified(False)  # istisna YOK

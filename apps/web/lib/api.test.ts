@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { streamChat } from "./api";
+import { api, streamChat } from "./api";
 
 /**
  * SSE çerçeve ayrıştırıcısının testleri.
@@ -98,5 +98,39 @@ describe("streamChat", () => {
       vi.fn(async () => new Response(null, { status: 401 })),
     );
     await expect(collect()).rejects.toThrow(/başlatılamadı/);
+  });
+});
+
+/**
+ * Boş gövdeli yanıtlar.
+ *
+ * `fastapi-users`ın doğrulama ve parola sıfırlama uçları 202 + BOŞ gövde
+ * dönüyor. İstemci yalnızca 204'ü özel durum sayıyordu ve doğrudan `json()`
+ * çağırıyordu: "Unexpected end of JSON input" ile patlıyor, başarılı bir
+ * istek başarısız görünüyordu.
+ */
+describe("boş gövde", () => {
+  it("202 + boş gövde hata değil", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("", { status: 202 })),
+    );
+    await expect(api.post("/auth/request-verify-token", { email: "a@b.c" })).resolves.toBeUndefined();
+  });
+
+  it("204 de hata değil", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(null, { status: 204 })),
+    );
+    await expect(api.delete("/users/me", { password: "x" })).resolves.toBeUndefined();
+  });
+
+  it("dolu gövde hâlâ ayrıştırılıyor", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 })),
+    );
+    await expect(api.get("/health")).resolves.toEqual({ ok: true });
   });
 });

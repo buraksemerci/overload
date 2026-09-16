@@ -342,6 +342,8 @@ export default function AccountPage() {
         {save.isError && <ErrorBox error={save.error} />}
       </form>
 
+      <Verification email={me.data?.email ?? ""} verified={me.data?.is_verified ?? true} />
+
       <AiBudget />
 
       <Section bare>
@@ -365,6 +367,59 @@ export default function AccountPage() {
 
       <DeleteAccount />
     </Page>
+  );
+}
+
+/**
+ * E-posta doğrulama durumu.
+ *
+ * Yalnızca doğrulanmamış hesapta görünüyor: "doğrulandı ✓" satırı her gün
+ * hesap ekranını açan kişi için bir kez bile işe yaramıyor.
+ *
+ * Doğrulama uygulamanın TAMAMINI kilitlemiyor — yalnızca asistanı. Girişi
+ * tümden kapatmak, e-posta gönderimi bozulduğunda herkesi dışarıda bırakırdı.
+ * Metin bunu açıkça söylüyor ki kullanıcı ne kaybettiğini bilsin.
+ */
+function Verification({ email, verified }: { email: string; verified: boolean }) {
+  const [sent, setSent] = useState(false);
+  const resend = useMutation({
+    mutationFn: () => api.post<void>("/auth/request-verify-token", { email }),
+    onSuccess: () => setSent(true),
+  });
+
+  if (verified) return null;
+
+  return (
+    <Section bare>
+      <div className="card p-6" style={{ borderColor: "var(--color-warning)" }}>
+        <p className="display text-base">E-posta adresin doğrulanmadı</p>
+        <p className="mt-2 max-w-[62ch] text-sm text-[var(--color-ink-muted)]">
+          Kaydolurken <strong>{email}</strong> adresine bir bağlantı gönderdik.
+          Doğrulayana kadar asistan kapalı; uygulamanın geri kalanı çalışmaya
+          devam ediyor.
+        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            className="btn btn-ghost"
+            disabled={resend.isPending || sent}
+            onClick={() => resend.mutate()}
+          >
+            {resend.isPending ? "Gönderiliyor…" : "Bağlantıyı tekrar gönder"}
+          </button>
+          {sent && (
+            <span className="text-xs text-[var(--color-ink-muted)]" role="status">
+              Gönderildi. Gelen kutunu kontrol et.
+            </span>
+          )}
+        </div>
+        {resend.isError && (
+          <div className="mt-4">
+            <ErrorBox error={resend.error} />
+          </div>
+        )}
+      </div>
+    </Section>
   );
 }
 

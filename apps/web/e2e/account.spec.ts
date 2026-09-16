@@ -122,3 +122,73 @@ test.describe("AI sınırı", () => {
     await expect(page.getByText(/Yarın sıfırlanıyor/)).toBeVisible();
   });
 });
+
+test.describe("e-posta doğrulama uyarısı", () => {
+  test.beforeEach(async ({ page }) => {
+    await signIn(page);
+    await mockApi(page);
+  });
+
+  test("doğrulanmış hesapta uyarı yok", async ({ page }) => {
+    // "Doğrulandı ✓" satırı her gün hesap ekranını açan kişi için bir kez
+    // bile işe yaramıyor.
+    await page.goto("/account");
+    await page.waitForLoadState("networkidle");
+    await expect(page.getByText("E-posta adresin doğrulanmadı")).toHaveCount(0);
+  });
+
+  test("doğrulanmamış hesapta ne kaybedildiği yazıyor", async ({ page }) => {
+    await page.route(`${API}/users/me`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: "00000000-0000-0000-0000-000000000001",
+          email: "yeni@ornek.test",
+          display_name: "Yeni",
+          timezone: "Europe/Istanbul",
+          is_active: true,
+          is_superuser: false,
+          is_verified: false,
+        }),
+      }),
+    );
+    await page.goto("/account");
+    await page.waitForLoadState("networkidle");
+
+    await expect(page.getByText("E-posta adresin doğrulanmadı")).toBeVisible();
+    // Kaybedilen şey ASİSTAN; uygulamanın geri kalanı çalışıyor.
+    await expect(page.getByText(/asistan kapalı/)).toBeVisible();
+    await expect(page.getByText("yeni@ornek.test").first()).toBeVisible();
+  });
+
+  test("tekrar gönder isteği adresi taşıyor", async ({ page }) => {
+    await page.route(`${API}/users/me`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: "00000000-0000-0000-0000-000000000001",
+          email: "yeni@ornek.test",
+          display_name: "Yeni",
+          timezone: "Europe/Istanbul",
+          is_active: true,
+          is_superuser: false,
+          is_verified: false,
+        }),
+      }),
+    );
+    let body: unknown = null;
+    await page.route(`${API}/auth/request-verify-token`, (route) => {
+      body = route.request().postDataJSON();
+      return route.fulfill({ status: 202, body: "" });
+    });
+
+    await page.goto("/account");
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("button", { name: "Bağlantıyı tekrar gönder" }).click();
+
+    await expect.poll(() => body).toEqual({ email: "yeni@ornek.test" });
+    await expect(page.getByText(/Gelen kutunu kontrol et/)).toBeVisible();
+  });
+});

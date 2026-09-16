@@ -68,8 +68,13 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new ApiError(response.status, message, detail);
   }
 
-  if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
+  /* Gövde BOŞ olabilir ve bu yalnızca 204'e özgü değil: `fastapi-users`ın
+     doğrulama ve parola sıfırlama uçları 202 + boş gövde dönüyor. Doğrudan
+     `json()` çağırmak orada "Unexpected end of JSON input" ile patlıyordu ve
+     başarılı bir istek başarısız görünüyordu. */
+  const text = await response.text();
+  if (text.length === 0) return undefined as T;
+  return JSON.parse(text) as T;
 }
 
 export const api = {

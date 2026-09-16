@@ -451,7 +451,7 @@ async def complete_session(session_id: uuid.UUID, db: DbSession, user: CurrentUs
         raise HTTPException(status.HTTP_409_CONFLICT, "Bu antrenman zaten kapanmış.")
     if not workout.set_logs:
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             "Hiç set kaydı olmayan antrenman kapatılamaz. Silmek istiyorsan DELETE kullan.",
         )
 
@@ -657,7 +657,11 @@ async def workout_history(
         .scalars()
         .all()
     ):
-        assert record.workout_session_id is not None  # sorgu NULL'ları dışlıyor
+        # Sorgu NULL'ları dışlıyor; yine de `assert` KULLANILMIYOR: Python
+        # `-O` ile koştuğunda assert'ler tamamen atılıyor ve sözde koruma
+        # üretimde hiç çalışmıyor.
+        if record.workout_session_id is None:
+            continue
         by_session.setdefault(record.workout_session_id, []).append(record)
 
     return [

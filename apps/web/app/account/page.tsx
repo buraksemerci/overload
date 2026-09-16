@@ -360,7 +360,114 @@ export default function AccountPage() {
           </button>
         </div>
       </Section>
+
+      <DeleteAccount />
     </Page>
+  );
+}
+
+/**
+ * Hesap silme.
+ *
+ * --------------------------------------------------------------------------
+ * KAPALI DURUYOR
+ * --------------------------------------------------------------------------
+ * Ekranın en altında ve tek satır. Geri alınamaz bir işlemin, hesabını
+ * düzenlemeye gelen kullanıcının gözünün önünde durmasının bir sebebi yok.
+ *
+ * --------------------------------------------------------------------------
+ * PAROLA İSTİYOR
+ * --------------------------------------------------------------------------
+ * "Emin misin?" diye soran bir kutu yeterli değil: açık bir oturumu ele
+ * geçiren biri de "evet" diyebilir. Parola, bu oturumun gerçekten hesap
+ * sahibine ait olduğunun tek kanıtı. Sunucu da aynı şeyi ayrıca doğruluyor —
+ * buradaki alan bir kolaylık değil, isteğin parçası.
+ */
+function DeleteAccount() {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [password, setPassword] = useState("");
+
+  const remove = useMutation({
+    mutationFn: (value: string) => api.delete<void>("/users/me", { password: value }),
+    onSuccess: () => {
+      logout();
+      router.replace("/login");
+    },
+  });
+
+  if (!open) {
+    return (
+      <Section bare>
+        <button
+          type="button"
+          className="btn btn-quiet -ml-2.5"
+          style={{ color: "var(--color-ink-faint)" }}
+          onClick={() => setOpen(true)}
+        >
+          Hesabımı sil
+        </button>
+      </Section>
+    );
+  }
+
+  return (
+    <Section bare>
+      <div
+        className="card p-6"
+        style={{ borderColor: "var(--color-danger)" }}
+      >
+        <p className="display text-base">Hesabını silmek üzeresin</p>
+        <p className="mt-2 max-w-[62ch] text-sm text-[var(--color-ink-muted)]">
+          Bütün antrenmanların, öğün kayıtların, ölçümlerin, programların ve
+          yüklediğin fotoğraflar kalıcı olarak silinir.{" "}
+          <strong>Bu işlem geri alınamaz.</strong>
+        </p>
+
+        <form
+          className="mt-5 flex flex-wrap items-end gap-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            remove.mutate(password);
+          }}
+        >
+          <label className="flex min-w-[14rem] flex-col gap-1.5">
+            <span className="label">Parolan</span>
+            <input
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              className="field h-11 w-full px-3 text-sm"
+            />
+          </label>
+          <button
+            type="submit"
+            className="btn btn-ghost"
+            style={{ color: "var(--color-danger)", borderColor: "var(--color-danger)" }}
+            disabled={password.length === 0 || remove.isPending}
+          >
+            {remove.isPending ? "Siliniyor…" : "Hesabı kalıcı olarak sil"}
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => {
+              setOpen(false);
+              setPassword("");
+            }}
+          >
+            Vazgeç
+          </button>
+        </form>
+
+        {remove.isError && (
+          <div className="mt-4">
+            <ErrorBox error={remove.error} />
+          </div>
+        )}
+      </div>
+    </Section>
   );
 }
 

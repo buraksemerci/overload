@@ -141,7 +141,7 @@ async def _muscle_by_slug(db: DbSession, slug: str) -> MuscleGroup:
             (await db.execute(select(MuscleGroup.slug).order_by(MuscleGroup.slug))).scalars().all()
         )
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             f"'{slug}' diye bir kas grubu yok. Geçerli slug'lar: {', '.join(known)}",
         )
     return mg

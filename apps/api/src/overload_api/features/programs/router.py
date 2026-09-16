@@ -231,7 +231,7 @@ async def _validate_exercises(db: DbSession, user: CurrentUser, ids: set[uuid.UU
     )
     if missing := ids - found:
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             f"Şu hareketler kütüphanede yok ya da erişilemiyor: {sorted(str(m) for m in missing)}",
         )
 
@@ -448,7 +448,7 @@ async def replace_days(
     _require_own(program, user)
 
     if not payload:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "En az bir gün gerekli.")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "En az bir gün gerekli.")
     await _validate_exercises(db, user, {ex.exercise_id for d in payload for ex in d.exercises})
 
     for day in list(program.days):

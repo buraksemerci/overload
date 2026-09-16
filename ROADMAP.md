@@ -98,8 +98,9 @@ gerekenler kalıyor:
 
 - [ ] E-posta gönderimi (doğrulama, parola sıfırlama) ve doğrulanmamış
       hesabın kapsamının sınırlanması
-- [ ] Oturum: yenileme jetonu ve giriş denemesi sınırı
+- [x] Giriş denemesi sınırı — BİTTİ
+- [ ] Oturum: yenileme jetonu
 - [ ] Kullanıcı başına AI bütçesi — bu gelince `/account`a "AI sınırı" kartı
-- [ ] Hesap silme (KVKK/GDPR)
+- [x] Hesap silme — BİTTİ
 - [ ] Dağıtım: web + API + Postgres, alan adı, yedek
 - [ ] Anthropic anahtarıyla AI katmanının uçtan uca doğrulanması

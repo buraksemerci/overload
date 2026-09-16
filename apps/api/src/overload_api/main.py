@@ -17,9 +17,11 @@ from fastapi_users import schemas
 from pydantic import BaseModel, Field
 
 from overload_api.config import get_settings
+from overload_api.core.rate_limit import RateLimitMiddleware
 from overload_api.core.security import auth_backend, fastapi_users
 from overload_api.db.models.user import ActivityLevel, Sex
 from overload_api.db.session import dispose_engine
+from overload_api.features.account.router import router as account_router
 from overload_api.features.body.router import router as body_router
 from overload_api.features.chat.router import router as chat_router
 from overload_api.features.coach.router import router as coach_router
@@ -87,6 +89,12 @@ app = FastAPI(
     openapi_url="/openapi.json",
 )
 
+# Sınır CORS'tan ÖNCE eklenmiş görünüyor ama Starlette katmanları ters
+# sırayla sarıyor: sonra eklenen dışta kalıyor. CORS'un dışta olması gerekiyor
+# ki 429 yanıtı da CORS başlıklarını taşısın — yoksa tarayıcı yanıtı okuyamıyor
+# ve kullanıcı "çok fazla deneme" yerine ağ hatası görüyor.
+app.add_middleware(RateLimitMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -109,6 +117,14 @@ app.include_router(
 app.include_router(fastapi_users.get_reset_password_router(), prefix="/auth", tags=["auth"])
 # Hesap ayarları (bölüm 4.3'ün sabit sınırı): SADECE buradan değişir.
 # AI'nın bu endpoint'lere karşılık gelen bir tool'u yok.
+# Hesap silme, kullanıcı router'ından ÖNCE.
+#
+# `fastapi-users` DELETE'i yalnızca süper kullanıcıya açıyor ve yolu
+# `/users/{id}`. FastAPI rotaları kayıt sırasına göre eşleştirdiği için
+# `/users/me`e gelen bir DELETE o kalıba takılıyor, süper kullanıcı kontrolüne
+# çarpıyor ve 401 dönüyordu. Kendi hesabını silmek bir yönetim işlemi değil,
+# bir hak: önce bu router.
+app.include_router(account_router)
 app.include_router(
     fastapi_users.get_users_router(UserRead, UserUpdate), prefix="/users", tags=["account"]
 )

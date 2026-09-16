@@ -203,3 +203,50 @@ async def exists(key: str) -> bool:
     except (BotoCoreError, ClientError) as exc:
         logger.error("R2 head_object başarısız (%s): %s", key, exc)
         raise MediaError("Dosya doğrulanamadı.") from exc
+
+
+async def delete_user_objects(user_id: uuid.UUID) -> int:
+    """Bir kullanıcının bütün nesnelerini siler; silinen sayısını döndürür.
+
+    Hesap silme akışı için. Anahtar düzeni `{user_id}/...` olduğu için tek bir
+    ön ekle listelenip toplu silinebiliyor.
+
+    **Veritabanı değil, nesne deposu.** Kullanıcı satırı silinince ilişkili
+    kayıtlar `ON DELETE CASCADE` ile gidiyor ama R2'deki dosyalar yabancı
+    anahtar tanımıyor: kimsenin işaret etmediği fotoğraflar orada kalırdı.
+
+    Yapılandırma yoksa sessizce 0 dönüyor — geliştirme kurulumunda R2 hiç
+    bağlanmamış olabiliyor ve bu, hesap silmeyi engellememeli.
+    """
+    if not is_configured():
+        return 0
+
+    settings = get_settings()
+    prefix = f"{user_id}/"
+
+    def _purge() -> int:
+        client = _client()
+        removed = 0
+        token: str | None = None
+        while True:
+            kwargs: dict[str, Any] = {"Bucket": settings.r2_bucket_name, "Prefix": prefix}
+            if token is not None:
+                kwargs["ContinuationToken"] = token
+            page = client.list_objects_v2(**kwargs)
+            keys = [{"Key": item["Key"]} for item in page.get("Contents", [])]
+            if keys:
+                # `delete_objects` çağrı başına en fazla 1000 anahtar alıyor;
+                # `list_objects_v2` da zaten en fazla 1000 döndürüyor.
+                client.delete_objects(
+                    Bucket=settings.r2_bucket_name, Delete={"Objects": keys, "Quiet": True}
+                )
+                removed += len(keys)
+            if not page.get("IsTruncated"):
+                return removed
+            token = page.get("NextContinuationToken")
+
+    try:
+        return await asyncio.to_thread(_purge)
+    except (BotoCoreError, ClientError) as exc:
+        logger.error("R2 kullanıcı nesneleri silinemedi (%s): %s", user_id, exc)
+        raise MediaError("Dosyalar silinemedi.") from exc

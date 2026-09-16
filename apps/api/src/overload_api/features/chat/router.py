@@ -225,7 +225,7 @@ async def approve_action(action_id: uuid.UUID, db: DbSession, user: CurrentUser)
             )
         )
         await db.flush()
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
 
     pending.status = PendingActionStatus.approved
     pending.resolved_at = now

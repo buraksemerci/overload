@@ -404,7 +404,7 @@ async def nutrition_target(
     target = await _current_target(db, user, goal)
     if target is None:
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             "Hedef hesaplanamıyor: boy, doğum tarihi, cinsiyet ve en az bir kilo "
             "kaydı gerekli. Hesap Ayarları'ndan tamamlayabilirsin.",
         )

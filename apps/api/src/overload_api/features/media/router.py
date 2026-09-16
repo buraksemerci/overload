@@ -64,7 +64,7 @@ async def create_upload_url(payload: UploadUrlIn, user: CurrentUser) -> UploadUr
         key = r2.build_key(user.id, payload.kind, payload.content_type, today_in(user.timezone))
         url = r2.presigned_put(key, payload.content_type)
     except r2.MediaError as exc:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
 
     return UploadUrlOut(
         key=key,

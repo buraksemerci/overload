@@ -1,7 +1,18 @@
 "use client";
 
 /**
- * Karşılama ekranının anlatı bölümü — kaydırmaya bağlı video.
+ * Giriş ekranının anlatı bölümü — kaydırmaya bağlı video.
+ *
+ * --------------------------------------------------------------------------
+ * NEREDE DURUYOR VE NEDEN ORADA
+ * --------------------------------------------------------------------------
+ * Önce panelde (`/`) duruyordu. Yanlış yerdi: anlatı "bu uygulama ne işe
+ * yarıyor" sorusunu cevaplıyor ve o soruyu zaten kullanan biri aylar önce
+ * bir kez sordu. Her gün açtığı ekranda beş ekran boyu videoyu geçmek
+ * zorunda kalıyordu.
+ *
+ * O soru YALNIZCA giriş ekranında canlı: oraya gelen kişinin ya hesabı yok
+ * ya da uygulamayı yeni duydu. Anlatı taşındı, panel günlük işine döndü.
  *
  * --------------------------------------------------------------------------
  * NE ANLATIYOR
@@ -16,9 +27,6 @@
  * Kesme YOK. Dört kare Higgsfield'da aynı salon tarif edilerek üretildi ve
  * aralarındaki geçişler `start_image` + `end_image` ile zincirlendi; bu
  * yüzden video ilerlerken mekân değişmiyor, yalnızca kamera ilerliyor.
- *
- * Her fazın metni o fazın zaman aralığında beliriyor ve ilgili bölüme
- * bağlanıyor. Anlatı aynı zamanda gezinme.
  *
  * --------------------------------------------------------------------------
  * KAYDIRMA VİDEONUN ZAMANI
@@ -58,10 +66,7 @@
  */
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import Link from "next/link";
 import { Photo } from "@/components/Photo";
-
-type Href = React.ComponentProps<typeof Link>["href"];
 
 interface Phase {
   /** Video yokken kullanılan kare. */
@@ -69,51 +74,53 @@ interface Phase {
   eyebrow: string;
   title: string;
   body: string;
-  href: Href;
-  cta: string;
   /** Anlatının hangi bölümünde görünüyor (0-1 arası kaydırma ilerlemesi). */
   from: number;
   to: number;
 }
 
+/**
+ * Metinler HENÜZ HESABI OLMAYAN birine yazılmış.
+ *
+ * Önce panelde duruyorlardı ve "aktif programın hangi günde olduğunu biliyor"
+ * gibi cümleler kuruyorlardı — zaten kullanan birine uygulamayı anlatmak.
+ * Burada okuyan kişi uygulamayı hiç görmemiş olabilir; her faz bir SORUYA
+ * cevap veriyor: ne zaman, ne kadar, ne yedim, ne kazandım.
+ *
+ * Faz başına düğme YOK. Dördü de aynı yere ("hesap aç") gitmek zorunda
+ * olurdu ve aynı çağrıyı dört kez tekrarlamak onu davet olmaktan çıkarıp
+ * gürültüye çeviriyor. Çağrı bir tane ve anlatının sonunda.
+ */
 const PHASES: readonly Phase[] = [
   {
     photo: "story-entry",
-    eyebrow: "Giriş",
-    title: "Gün bir kararla başlıyor",
-    body: "Bugün ne yapacağın belli: aktif programın hangi günde olduğunu biliyor ve seni orada karşılıyor.",
-    href: "/workout",
-    cta: "Bugünkü antrenman",
+    eyebrow: "Salona girerken",
+    title: "Bugün ne yapacağını bilerek gir",
+    body: "Programın hangi günde olduğunu uygulama hatırlıyor. Kapıdan girdiğinde karar verilmiş oluyor.",
     from: 0,
     to: 0.26,
   },
   {
     photo: "story-gym",
-    eyebrow: "Antrenman",
-    title: "Kaç kilo kaldıracağını söylüyor",
-    body: "Her set için somut bir hedef. Geçmişin ilerliyorsa ağırlık artıyor, tıkandıysan deload öneriyor.",
-    href: "/programs",
-    cta: "Programlar",
+    eyebrow: "Rafın başında",
+    title: "Kaç kilo kaldıracağın yazıyor",
+    body: "Her set için somut bir sayı. Geçen sefer ilerlediysen ağırlık artıyor, tıkandıysan deload öneriyor. Tahmin yok.",
     from: 0.3,
     to: 0.55,
   },
   {
     photo: "story-meal",
-    eyebrow: "Barda",
+    eyebrow: "Sonrasında",
     title: "Kalan kalorin tek sayı",
-    body: "Ne yediğini kaydediyorsun, geriye ne kaldığını söylüyor. Makrolar isteyince açılıyor.",
-    href: "/nutrition",
-    cta: "Beslenme",
+    body: "Ne yediğini yazıyorsun, geriye ne kaldığını söylüyor. Makro tablosu isteyince açılıyor, istemeyince görünmüyor.",
     from: 0.59,
     to: 0.8,
   },
   {
     photo: "story-phone",
-    eyebrow: "Zamanla",
-    title: "Birikim görünür hâle geliyor",
-    body: "Kaç ton kaldırdın, hangi kas eksik kaldı, hangi gün rekor kırdın. Hepsi tek yerde.",
-    href: "/progress",
-    cta: "İlerleme",
+    eyebrow: "Haftalar sonra",
+    title: "Ne kazandığın görünür oluyor",
+    body: "Kaç ton kaldırdın, hangi kas geride kaldı, hangi gün rekor kırdın. Hepsi birikiyor.",
     from: 0.84,
     to: 1,
   },
@@ -228,7 +235,10 @@ export function Scrollytelling() {
 
   if (reduced !== false) {
     return (
-      <div className="flex flex-col gap-2">
+      /* `data-story`: testlerin sahneyi bulma kancası. Önce `.sticky`ye
+         bakılıyordu ama giriş ekranındaki yapışkan üst çubuk da o sınıfı
+         taşıyor ve "sahne yapışkan değil" kontrolü yanlış öğeyi buluyordu. */
+      <div data-story className="flex flex-col gap-2">
         {PHASES.map((phase) => (
           <FlatCard key={phase.photo} phase={phase} />
         ))}
@@ -237,7 +247,7 @@ export function Scrollytelling() {
   }
 
   return (
-    <div ref={root} style={{ height: `${SCROLL_SCREENS * 100}vh` }}>
+    <div data-story ref={root} style={{ height: `${SCROLL_SCREENS * 100}vh` }}>
       <div className="sticky top-0 h-dvh overflow-hidden bg-[oklch(12%_0.01_115)]">
         <video
           ref={video}
@@ -351,13 +361,6 @@ function Caption({ phase }: { phase: Phase }) {
       >
         {phase.body}
       </p>
-      {/* Volt DEĞİL, cam. Dört fazın dördü de aynı anda DOM'da ve hepsi volt
-          olsaydı ekran başına bir volt kuralı tek başına dört kez kırılırdı.
-          Ayrıca volt, günün eylemine ait: anlatı yönlendiriyor, eylem
-          çağırmıyor. */}
-      <Link href={phase.href} className="btn btn-on-photo mt-5">
-        {phase.cta}
-      </Link>
     </div>
   );
 }

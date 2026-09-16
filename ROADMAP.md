@@ -27,14 +27,19 @@ Bunlar tek tek ekranlarda tartışılmıyor; kabul edilmiş kurallar.
 - [x] Üst gezinme + fotoğraflı açılır panel
 - [x] Tasarım denetimleri (`lib/design-tokens.test.ts`, `e2e/design-rules`)
 
-### 1. Karşılama ekranı (`/`) — BİTTİ
-- [x] Kullanıcıyı adıyla karşılama
+### 1. Panel (`/`) ve tanıtım (`/login`) — BİTTİ
+- [x] Panel: adla karşılama, günün tek işi, üç gösterge, son antrenmanlar,
+      bölüm kartları. Her blok TEK soruya cevap veriyor.
 - [x] Kaydırmaya bağlı video: kaydırma yüzdesi `currentTime`e yazılıyor
 - [x] Tek kesintisiz çekim, tek mekân — salona giriş, zeminde ilerleme,
       bardaki öğün, telefona yaklaşma. Kesme yok.
-- [x] Her fazın altında o bölüme giden bağlantı
 - [x] Görseller ve video Higgsfield ile üretiliyor
 - [x] Video yokken fotoğraf karelerine, hareket azaltmada düz kartlara düşüş
+
+**Anlatı panelden GİRİŞ EKRANINA taşındı.** "Bu uygulama ne işe yarıyor"
+sorusunu cevaplıyor ve o soru yalnızca oturumu olmayan kişide canlı; panelde
+her gün açan kullanıcıyı beş ekran boyu videoyu geçmeye zorluyordu. Giriş
+ekranı artık tanıtım + form: önce anlat, sonra iste.
 
 ### 2. Profil (`/account`) — BİTTİ
 - [x] Kimlik kapak kartı (fotoğraf + ad + e-posta + baş harf)

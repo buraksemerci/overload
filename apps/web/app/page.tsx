@@ -8,18 +8,23 @@
  * --------------------------------------------------------------------------
  * 1. **Bugün** — kullanıcı adıyla karşılanıyor, altında o an yapılacak tek
  *    iş ve üç gösterge. Buraya her gün gelen kişi için ekranın tamamı bu.
- * 2. **Anlatı** — aşağı kaydırınca bir günün dört ânı geçiyor ve her biri
- *    ilgili bölüme bağlanıyor. Uygulamayı ilk kez açan için burası harita.
- * 3. **Bölümler** — anlatının altında dört ana bölüme giden bento kartlar.
+ * 2. **Son antrenmanlar** — "şimdi ne yapayım"dan sonraki soru: "geçen sefer
+ *    ne yapmıştım". Üç satır.
+ * 3. **Bölümler** — dört ana bölüme giden bento kartlar.
  *
- * Sıra kasıtlı: her gün gelen kişi kaydırmak zorunda kalmıyor, yeni gelen
- * kişi aşağı inince ne olduğunu öğreniyor.
+ * Her blok TEK soruya cevap veriyor ve sıraları o soruların sırası.
+ *
+ * --------------------------------------------------------------------------
+ * ANLATI BURADAN GİTTİ
+ * --------------------------------------------------------------------------
+ * Ortada kaydırmaya bağlı bir video vardı ve yanlış yerdeydi: "bu uygulama
+ * ne işe yarıyor" sorusunu cevaplıyordu, oysa buraya gelen kişi o soruyu
+ * aylar önce bir kez sordu ve her gün beş ekran boyu videoyu geçmek zorunda
+ * kalıyordu. Anlatı giriş ekranına taşındı (`app/login/page.tsx`) — orada
+ * soru gerçekten canlı.
  *
  * --------------------------------------------------------------------------
  * SADELİK BÜTÇESİ — "Bugün" katmanının tek kuralı
- *
- * --------------------------------------------------------------------------
- * SADELİK BÜTÇESİ — bu ekranın tek kuralı
  * --------------------------------------------------------------------------
  * Bir büyük kart, en fazla üç küçük gösterge. Başka hiçbir şey.
  *
@@ -44,9 +49,9 @@
 import Link from "next/link";
 import { Page } from "@/components/Layout";
 import { Photo } from "@/components/Photo";
-import { Scrollytelling } from "@/components/Scrollytelling";
 import { ErrorBox, Loading, fmt } from "@/components/States";
 import {
+  useHistory,
   useMe,
   useNutritionDay,
   useSessions,
@@ -130,30 +135,89 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* --- Anlatı ------------------------------------------------------
-          TAM GENİŞLİK: sahne ekranın tamamını kaplamak zorunda. `Page` kabı
-          80rem'de duruyor ve negatif kenar boşluğu yalnızca dolguyu geri
-          alıyordu — sahne 1440px'lik bir ekranda iki yanında beyaz şeritle
-          kalıyor, bir video oynatıcı gibi duruyordu.
-
-          `50% - 50vw` kabın ortasından ekranın kenarına kadar geri çekiyor.
-          `100vw` kaydırma çubuğunu da sayıyor; taşmayı `body`deki
-          `overflow-x: clip` kesiyor. */}
-      <div
-        className="mt-16"
-        style={{ width: "100vw", marginInline: "calc(50% - 50vw)" }}
-      >
-        <Scrollytelling />
-      </div>
+      {/* --- Son antrenmanlar --------------------------------------------
+          "Şimdi ne yapayım"dan sonraki soru "geçen sefer ne yapmıştım".
+          Üç satır yetiyor: dördüncüsü geçmiş ekranının işi. */}
+      <RecentSessions />
 
       {/* --- Bölümler ---------------------------------------------------- */}
-      <section className="mt-16">
+      <section className="mt-12">
         <h2 className="label mb-3">Bölümler</h2>
         <SectionGrid />
       </section>
     </Page>
   );
 }
+
+/* --- Son antrenmanlar ------------------------------------------------------
+   Panelin ikinci sorusu. "Şimdi ne yapayım" büyük kartta cevaplanıyor;
+   hemen ardından gelen soru "geçen sefer ne yapmıştım" ve cevabı tek satırda
+   veriliyor: gün, kaç set, kaç kilo.
+
+   ÜÇ SATIR. Dördüncüsü geçmiş ekranının işi ve o ekran zaten bir bağlantı
+   uzaklıkta. Panelin kuralı değişmedi: her blok TEK soruya cevap veriyor. */
+
+function RecentSessions() {
+  const history = useHistory(3);
+  const rows = history.data ?? [];
+
+  // Hiç antrenman yoksa blok tümden YOK. Boş bir "henüz antrenman yok"
+  // kutusu, zaten üstteki büyük kartın söylediği şeyi tekrar ediyor.
+  if (rows.length === 0) return null;
+
+  return (
+    <section className="reveal mt-12" style={{ "--i": 3 } as React.CSSProperties}>
+      <div className="mb-3 flex items-baseline justify-between gap-3">
+        <h2 className="label">Son antrenmanlar</h2>
+        <Link href="/history" className="link text-xs">
+          Tümü
+        </Link>
+      </div>
+
+      <ul className="flex flex-col gap-1.5">
+        {rows.map((session) => (
+          <li key={session.id}>
+            <Link
+              href="/history"
+              className="card flex items-center gap-4 px-4 py-3 transition-colors hover:bg-[var(--color-surface-raised)]"
+              style={{ transitionDuration: "var(--dur-micro)" }}
+            >
+              <span className="min-w-0 flex-1">
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="truncate text-sm font-medium">
+                    {session.day_label ?? dayName(session.started_at)}
+                  </span>
+                  {session.records.length > 0 && (
+                    <span className="badge badge-accent">
+                      {session.records.length > 1
+                        ? `${session.records.length} REKOR`
+                        : "REKOR"}
+                    </span>
+                  )}
+                </span>
+                <span className="tnum mt-0.5 block text-2xs text-[var(--color-ink-faint)]">
+                  {shortDate(session.started_at)} · {session.total_sets} set
+                </span>
+              </span>
+              <span className="tnum shrink-0 text-right text-sm">
+                {fmt(Number.parseFloat(session.volume_kg) || 0, 0)}
+                <span className="ml-1 text-2xs text-[var(--color-ink-faint)]">kg</span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+const dayName = (iso: string): string =>
+  new Date(iso)
+    .toLocaleDateString("tr-TR", { weekday: "long" })
+    .replace(/^./, (c) => c.toLocaleUpperCase("tr-TR"));
+
+const shortDate = (iso: string): string =>
+  new Date(iso).toLocaleDateString("tr-TR", { day: "numeric", month: "long" });
 
 /* --- Bölüm kartları -------------------------------------------------------
    Bento: kartlar eşit değil. İlk kart iki sütun kaplıyor çünkü uygulamanın

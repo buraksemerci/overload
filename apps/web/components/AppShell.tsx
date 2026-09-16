@@ -371,7 +371,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [open, close]);
 
   if (CHROMELESS.has(pathname)) {
-    return <main className="px-6 py-10">{children}</main>;
+    /* Giriş ekranı kendi dolgusunu yönetiyor: tam genişlik bir anlatı
+       sahnesiyle başlıyor ve üstünde yapışkan bir çubuk var. Dışarıdan
+       verilen 2.5rem'lik üst dolgu, çubuğu ekranın tepesinden aşağı
+       itiyordu. Diğer oturumsuz ekranlar (parola kurtarma) sıradan metin;
+       onlar dolguyu koruyor. */
+    const bare = pathname === "/login";
+    return <main className={bare ? "px-6" : "px-6 py-10"}>{children}</main>;
   }
 
   const isActive = (href: Href) => {

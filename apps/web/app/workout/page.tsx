@@ -675,10 +675,14 @@ function Celebration({
       {/* Bitiş anı ekranın en az veri taşıyan yeri ve en çok hak edilmiş
           olanı: fotoğraf burada kutlamanın kendisi. */}
       <section className="card overflow-hidden">
-        <Photo slug="celebration" ratio="21 / 9" scrim>
-          <div className="flex size-full items-end p-6 lg:p-8">
-            <p className="display text-xl" style={{ color: "oklch(99% 0 0)" }}>
+        <Photo slug="celebration" ratio="2 / 1" scrim>
+          <div className="flex size-full flex-col justify-end gap-2 p-6 lg:p-10">
+            <p className="display text-2xl" style={{ color: "oklch(99% 0 0)" }}>
               {doneCount} set tamamlandı
+            </p>
+            <p className="text-sm" style={{ color: "oklch(90% 0.01 115)" }}>
+              Hacim birikiyor. Bir sonraki seansta motor ağırlıkları buna göre
+              önerecek.
             </p>
           </div>
         </Photo>

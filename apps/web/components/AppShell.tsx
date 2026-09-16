@@ -109,6 +109,7 @@ const TONES = {
     bar: "oklch(99% 0 0)",
     barDim: "oklch(99% 0 0 / 0.6)",
     divider: "oklch(99% 0 0 / 0.26)",
+    shadow: "on-photo-dark",
   },
   light: {
     surface: "oklch(96.5% 0.006 115)",
@@ -117,6 +118,7 @@ const TONES = {
     bar: "oklch(18% 0.014 115)",
     barDim: "oklch(18% 0.014 115 / 0.55)",
     divider: "oklch(18% 0.014 115 / 0.2)",
+    shadow: "on-photo-light",
   },
 } as const;
 
@@ -575,43 +577,33 @@ function PhotoBackdrop({
     >
       {/* --- Fotoğraf: soldan %75'e ------------------------------------------
           Sol kenarda geçiş YOK — görsel ekranın kenarına dayanıyor. Sağda
-          panelin %50'sinden %75'ine kadar zemine soluyor; maske kutu-yerel
-          koordinatta 2/3 ile 1 arasında çalışıyor (kutu panelin %75'i).
+          panelin %60'ından %85'ine kadar zemine soluyor; kutu panelin %85'i
+          olduğu için maske kutu-yerel koordinatta %70.6 ile %100 arasında
+          çalışıyor.
 
-          Metin bu solma bandının üzerinde başlıyor, yani okunduğu yerde
-          fotoğraf çoktan zemine karışmış oluyor. */}
+          Menü yazısı %50'den başlıyor, yani solmanın ÖNÜNDE — bir bölümü
+          tam opak görselin üstünde duruyor. Bilinçli: istenen "yazılar
+          fotoğrafın üstünde olsun". Okunurluğu perde değil gölge taşıyor
+          (bkz. `.on-photo-*`); perde fotoğrafı örterdi. */}
       <div
-        className="absolute inset-y-0 left-0 w-3/4"
+        className="absolute inset-y-0 left-0"
         style={{
+          width: "85%",
           maskImage:
-            "linear-gradient(to right, #000 0%, #000 66.7%, transparent 100%)",
+            "linear-gradient(to right, #000 0%, #000 70.6%, transparent 100%)",
           WebkitMaskImage:
-            "linear-gradient(to right, #000 0%, #000 66.7%, transparent 100%)",
+            "linear-gradient(to right, #000 0%, #000 70.6%, transparent 100%)",
         }}
       >
         <Photo slug={group.photo} fill className="size-full" />
       </div>
-
-      {/* Metnin altındaki yumuşak perde.
-          Maske fotoğrafı %50-%75 arasında zemine soluyor ama solmanın
-          BAŞLADIĞI yerde görsel hâlâ tam opak. Menü tam orada başlıyor ve
-          "İlerleme" karenin en parlak bölgesine denk geldiğinde okunmuyordu.
-          Bu perde yalnızca metnin durduğu şeritte çalışıyor: fotoğrafın
-          uzandığı yeri değiştirmiyor, üstündeki yazıyı taşıyor. */}
-      <div
-        aria-hidden
-        className="absolute inset-y-0 right-0 left-1/2"
-        style={{
-          background: `linear-gradient(to right, transparent 0%, ${tone.surface} 34%)`,
-        }}
-      />
 
       {/* --- Menü: ekranın yarısından sonra, alt alta --------------------- */}
       <div
         className="absolute inset-y-0 right-0 left-1/2 flex flex-col justify-center pr-8 pl-6 xl:pr-16"
         style={{ paddingTop: BAR_HEIGHT }}
       >
-        <p className="label" style={{ color: tone.label }}>
+        <p className={`label ${tone.shadow}`} style={{ color: tone.label }}>
           {group.title}
         </p>
 
@@ -631,7 +623,7 @@ function PhotoBackdrop({
                   href={item.href}
                   onClick={onNavigate}
                   aria-current={active ? "page" : undefined}
-                  className="photo-link display inline-block py-1 text-2xl leading-tight tracking-tight"
+                  className={`photo-link display ${tone.shadow} inline-block py-1 text-2xl leading-tight tracking-tight`}
                   style={{ color: tone.title }}
                 >
                   {item.label}

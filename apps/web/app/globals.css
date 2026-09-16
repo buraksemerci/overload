@@ -435,6 +435,25 @@
     opacity: 0.82;
     transition: opacity var(--dur-micro) var(--ease-out);
   }
+
+  /* --- Fotoğrafın ÜSTÜNDEKİ yazının gölgesi -----------------------------
+     Perde (scrim) yerine gölge. Perde, fotoğrafın bir bölümünü örtüyor ve
+     "fotoğraf baskın olsun" isteğini geri alıyordu; gölge yalnızca
+     harflerin çevresinde çalışıyor, görselin tamamı görünür kalıyor.
+
+     İki yön var çünkü panelin tonu görsele göre değişiyor: koyu görselde
+     koyu gölge, aydınlık görselde açık gölge. */
+  .on-photo-dark {
+    text-shadow:
+      0 1px 2px oklch(0% 0 0 / 0.6),
+      0 2px 16px oklch(0% 0 0 / 0.55);
+  }
+
+  .on-photo-light {
+    text-shadow:
+      0 1px 2px oklch(100% 0 0 / 0.85),
+      0 2px 16px oklch(100% 0 0 / 0.8);
+  }
   .photo-link:hover,
   .photo-link:focus-visible,
   .photo-link[aria-current="page"] {
@@ -454,6 +473,21 @@
   .photo-link:focus-visible > .rule,
   .photo-link[aria-current="page"] > .rule {
     transform: scaleX(1);
+  }
+
+  /* --- Fotoğraf üstündeki ikincil düğme --------------------------------
+     `btn-ghost` kenarlığı ve metni `--color-ink` — koyu bir görselin
+     üzerinde ikisi de kayboluyor. Bu varyant camdan: saydam zemin, açık
+     kenarlık, açık metin. Volt birincil düğme fotoğraf üstünde zaten
+     okunuyor, onun karşılığına gerek yok. */
+  .btn-on-photo {
+    background: transparent;
+    border: 1px solid oklch(99% 0 0 / 0.45);
+    color: oklch(99% 0 0);
+  }
+  .btn-on-photo:hover {
+    background: oklch(99% 0 0 / 0.14);
+    border-color: oklch(99% 0 0 / 0.7);
   }
 
   .badge-warning {

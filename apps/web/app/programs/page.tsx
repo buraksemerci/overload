@@ -253,38 +253,48 @@ function ActiveProgram({
   program: ProgramSummary;
   onOpen: () => void;
 }) {
+  /* Fotoğraf solda, içerik sağda bir sütundaydı — kart ikiye bölünüyor ve
+     görsel bir yan öğeye dönüşüyordu. Şimdi fotoğraf kartın TAMAMI ve
+     rozet, ad, özet, düğmeler onun üstünde. Etkileşim yüzeyi görselin
+     kendisi. */
   return (
     <section className="card overflow-hidden">
-      <div className="flex flex-col gap-0 sm:flex-row sm:items-stretch">
-        <Photo
-          slug={GOAL_PHOTO[program.goal] ?? "goal-general-fitness"}
-          ratio="16 / 9"
-          className="sm:w-[24rem] sm:shrink-0"
-        />
-
-        <div className="flex min-w-0 flex-1 flex-col justify-between gap-4 p-6">
+      <Photo
+        slug={GOAL_PHOTO[program.goal] ?? "goal-general-fitness"}
+        ratio="21 / 9"
+        scrim
+      >
+        <div className="flex size-full flex-col justify-end gap-3 p-6 lg:p-10">
           <div className="min-w-0">
             <span className="badge badge-accent">AKTİF</span>
-            <h2 className="display mt-2.5 text-lg">{program.name}</h2>
-            <p className="tnum mt-1 text-sm text-[var(--color-ink-muted)]">
+            <h2
+              className="display mt-2.5 text-xl lg:text-2xl"
+              style={{ color: "oklch(99% 0 0)" }}
+            >
+              {program.name}
+            </h2>
+            <p
+              className="tnum mt-1 text-sm"
+              style={{ color: "oklch(88% 0.01 115)" }}
+            >
               {summary(program)}
             </p>
-            <Attribution program={program} />
+            <Attribution program={program} onPhoto />
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/workout" className="btn btn-primary">
               Bugünkü antrenman
             </Link>
-            <button type="button" className="btn btn-ghost" onClick={onOpen}>
+            <button type="button" className="btn btn-on-photo" onClick={onOpen}>
               Günleri gör
             </button>
-            <Link href={`/programs/${program.id}/edit`} className="btn btn-quiet">
+            <Link href={`/programs/${program.id}/edit`} className="btn btn-on-photo">
               Düzenle
             </Link>
           </div>
         </div>
-      </div>
+      </Photo>
     </section>
   );
 }
@@ -329,65 +339,81 @@ function TemplateCard({
   onOpen: () => void;
   onStart: () => void;
 }) {
+  /* Ad fotoğrafta, geri kalan altındaki beyaz şeritteydi: kart "kapak +
+     içerik" diye ikiye bölünüyordu. Hepsi tek katmanda. */
   return (
-    <div className="card flex h-full flex-col overflow-hidden">
-      {/* Fotoğrafın üstündeki ad: perde ŞART, fotoğrafın açık mı koyu mu
-          olduğu bilinmiyor. */}
-      <Photo slug={GOAL_PHOTO[template.goal] ?? "goal-general-fitness"} ratio="3 / 2" scrim>
-        <div className="flex size-full flex-col justify-end p-4">
-          <p className="text-sm font-semibold" style={{ color: "oklch(99% 0 0)" }}>
-            {template.name}
-          </p>
-          <p className="tnum text-2xs" style={{ color: "oklch(88% 0.01 115)" }}>
-            haftada {template.days_per_week} gün
-          </p>
+    <div className="card h-full overflow-hidden">
+      <Photo
+        slug={GOAL_PHOTO[template.goal] ?? "goal-general-fitness"}
+        ratio="3 / 4"
+        scrim
+      >
+        <div className="flex size-full flex-col justify-end gap-2.5 p-5">
+          <div className="min-w-0">
+            <p
+              className="tnum text-2xs"
+              style={{ color: "oklch(84% 0.01 115)" }}
+            >
+              {GOAL_LABEL[template.goal] ?? template.goal} ·{" "}
+              {LEVEL_LABEL[template.level] ?? template.level}
+            </p>
+            <p
+              className="display mt-1 text-lg leading-tight"
+              style={{ color: "oklch(99% 0 0)" }}
+            >
+              {template.name}
+            </p>
+            <p className="tnum mt-0.5 text-xs" style={{ color: "oklch(84% 0.01 115)" }}>
+              haftada {template.days_per_week} gün
+            </p>
+            <Attribution program={template} onPhoto />
+          </div>
+
+          <div className="mt-1 flex items-center gap-2">
+            <button
+              type="button"
+              className="btn btn-primary flex-1"
+              disabled={pending}
+              onClick={onStart}
+            >
+              {pending ? "…" : "Başlat"}
+            </button>
+            <button
+              type="button"
+              className="btn btn-on-photo"
+              onClick={onOpen}
+              aria-label={`${template.name} günlerini gör`}
+            >
+              Gör
+            </button>
+          </div>
         </div>
       </Photo>
-
-      <div className="flex flex-1 flex-col justify-between gap-3 p-4">
-        <div className="min-w-0">
-          <p className="tnum text-2xs text-[var(--color-ink-faint)]">
-            {GOAL_LABEL[template.goal] ?? template.goal} ·{" "}
-            {LEVEL_LABEL[template.level] ?? template.level}
-          </p>
-          <Attribution program={template} />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="btn btn-ghost flex-1"
-            disabled={pending}
-            onClick={onStart}
-          >
-            {pending ? "…" : "Başlat"}
-          </button>
-          <button
-            type="button"
-            className="btn btn-quiet"
-            onClick={onOpen}
-            aria-label={`${template.name} günlerini gör`}
-          >
-            Gör
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
 
 /** Şablonlarda orijinal yaratıcıya atıf ZORUNLU (bkz. THIRD-PARTY-NOTICES). */
-function Attribution({ program }: { program: ProgramSummary }) {
+function Attribution({
+  program,
+  onPhoto = false,
+}: {
+  program: ProgramSummary;
+  onPhoto?: boolean;
+}) {
   if (!program.source_name) return null;
   return (
-    <p className="mt-1.5 text-2xs text-[var(--color-ink-faint)]">
+    <p
+      className="mt-1.5 text-2xs"
+      style={{ color: onPhoto ? "oklch(80% 0.01 115)" : "var(--color-ink-faint)" }}
+    >
       Kaynak:{" "}
       {program.source_url ? (
         <a
           href={program.source_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="underline hover:text-[var(--color-ink)]"
+          className="underline"
         >
           {program.source_name}
         </a>

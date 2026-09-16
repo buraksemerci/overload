@@ -24,16 +24,23 @@ yuva atlanıyor ve diğerleri yine üretiliyor.
 
 - **`cover`** — kutuyu doldur, taşanı kes. Kart ve şeritlerde. `position`
   konunun kadrajda kalacağı tarafı seçiyor.
-- **`inside`** — hiç kırpma, kutuya sığdır. Gezinme panelinde fotoğrafın
-  tamamı görünüyor.
+- **`inside`** — hiç kırpma, kutuya sığdır. Şu an kullanılmıyor ama betikte
+  duruyor; bir yuvada kırpmasız bir kare gerekirse hazır.
 
 ## Yuvalar
 
 ### Gezinme panelleri
 
-Panel çok geniş (≈3:1) ve fotoğrafın **tamamı** görünüyor — kırpılmıyor. Bu
-yüzden hepsi yatay kare; dikey bir fotoğraf burada ince bir şeride dönüşüyor.
-Kenarlar maskeyle zemine karışıyor (`<Photo feather>`).
+Fotoğraf panelin **sol %85'ini** kaplıyor: sol kenara dayalı, dikey boşluk
+yok. **%60 ile %85 arasında** zemine soluyor (maske). Menü yazıları %50'den
+başlıyor, yani bir bölümü tam opak görselin üstünde — okunurluğu perde değil
+gölge taşıyor (`.on-photo-*`), çünkü perde fotoğrafı örterdi.
+
+Kutu geniş (≈2.3) olduğu için hepsi **yatay** kare; dikey bir kaynak bu
+kırpmada konuyu tamamen kaybediyor. `position` her kare için ayrı seçildi.
+
+Panelin zemin tonu fotoğrafa göre (`tone: "dark" | "light"`): görsel o renge
+soluyor ve üst çubuğun bütün renkleri onunla birlikte dönüyor.
 
 | Slug | Kare |
 |---|---|
@@ -62,7 +69,9 @@ cümlesini bir davete çeviriyor.
 
 ### Program şablonları
 
-`goal` alanına göre seçiliyor. 3/2 kart.
+`goal` alanına göre seçiliyor. 3/4 **dikey** kart: içerik (ad, özet, iki düğme) fotoğrafın üstünde duruyor
+ve yatay bir kart o metni taşıyacak yüksekliği bırakmıyordu. Aktif program
+kartı aynı dosyaları 21/9 olarak kullanıyor.
 
 | Slug | Kare |
 |---|---|

@@ -63,11 +63,16 @@ const JOBS = [
   { slug: "empty-nutrition", file: "salad.jpg", fit: "cover", width: 1800, height: 771, position: "center" },
   { slug: "empty-history", file: "gym.jpg", fit: "cover", width: 1800, height: 771, position: "top" },
 
-  // --- Program şablonları: 3/2 kart ----------------------------------------
-  { slug: "goal-strength", file: "deadlift.jpg", fit: "cover", width: 900, height: 600, position: "center" },
-  { slug: "goal-hypertrophy", file: "incline dumbell chestpress.jpg", fit: "cover", width: 900, height: 600, position: "top" },
-  { slug: "goal-powerbuilding", file: "barbell rack.jpg", fit: "cover", width: 900, height: 600, position: "center" },
-  { slug: "goal-general-fitness", file: "home workout.jpg", fit: "cover", width: 900, height: 600, position: "top" },
+  // --- Program şablonları: 3/4 DİKEY kart -----------------------------------
+  // Kartın içeriği (ad, özet, iki düğme) fotoğrafın üstünde duruyor; yatay
+  // bir kart o metni taşıyacak yüksekliği bırakmıyordu.
+  //
+  // Aktif program kartı aynı dosyaları 21/9 olarak kullanıyor: `cover` orada
+  // dikey kareyi yatay şeride kırpıyor ve konu ortada kaldığı için çalışıyor.
+  { slug: "goal-strength", file: "deadlift.jpg", fit: "cover", width: 800, height: 1067, position: "center" },
+  { slug: "goal-hypertrophy", file: "incline dumbell chestpress.jpg", fit: "cover", width: 800, height: 1067, position: "top" },
+  { slug: "goal-powerbuilding", file: "barbell rack.jpg", fit: "cover", width: 800, height: 1067, position: "center" },
+  { slug: "goal-general-fitness", file: "home workout.jpg", fit: "cover", width: 800, height: 1067, position: "top" },
 
   // --- Ekipman kartları: 3/2 -----------------------------------------------
   // Kettlebell ve direnç bandı KASITLI olarak boş: elde o ekipmanın fotoğrafı

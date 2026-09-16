@@ -56,23 +56,32 @@ export function Empty({
   photo?: string;
 }) {
   if (photo) {
+    /* Başlık, açıklama ve eylem HEPSİ fotoğrafın üstünde.
+       Önce başlık görselde, açıklama ve düğme altındaki beyaz şeritteydi —
+       yani kart "kapak + içerik" diye ikiye bölünüyordu ve fotoğraf bir
+       başlık süsüne dönüyordu. Tek katmanda toplanınca görselin kendisi
+       etkileşim yüzeyi oluyor. */
     return (
       <section className="card overflow-hidden">
-        <Photo slug={photo} ratio="21 / 9" scrim>
-          <div className="flex size-full items-end p-6 lg:p-8">
-            <p className="display text-lg lg:text-xl" style={{ color: "oklch(99% 0 0)" }}>
+        <Photo slug={photo} ratio="2 / 1" scrim>
+          <div className="flex size-full flex-col justify-end gap-3 p-6 lg:p-10">
+            <p
+              className="display max-w-[24ch] text-xl lg:text-2xl"
+              style={{ color: "oklch(99% 0 0)" }}
+            >
               {title}
             </p>
+            {hint && (
+              <p
+                className="max-w-[52ch] text-sm"
+                style={{ color: "oklch(90% 0.01 115)" }}
+              >
+                {hint}
+              </p>
+            )}
+            {action && <div className="mt-1 flex flex-wrap gap-2">{action}</div>}
           </div>
         </Photo>
-        {(hint || action) && (
-          <div className="flex flex-wrap items-center justify-between gap-4 p-6 lg:px-8">
-            {hint && (
-              <p className="max-w-[54ch] text-sm text-[var(--color-ink-muted)]">{hint}</p>
-            )}
-            {action && <div className="shrink-0">{action}</div>}
-          </div>
-        )}
       </section>
     );
   }

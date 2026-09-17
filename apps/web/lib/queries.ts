@@ -664,6 +664,25 @@ export function useDeleteSet(): UseMutationResult<
   });
 }
 
+/**
+ * Açık seansı siler — "bu antrenmanı hiç yapmadım".
+ *
+ * Yanlış güne başlamak ya da yanlışlıkla "başlat"a basmak sık: bitirme düğmesi
+ * hiç set girilmemişken kapalı olduğu için seans açık kalıyor ve panel her gün
+ * "devam ediyor" diyordu. Uç nokta zaten vardı (`DELETE /workouts/sessions`),
+ * arayüzde karşılığı yoktu.
+ */
+export function useDeleteSession(): UseMutationResult<unknown, Error, string> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (sessionId) => api.delete(`/workouts/sessions/${sessionId}`),
+    onSuccess: () => {
+      // Bugünkü antrenman, seri ve geçmiş hepsi değişti.
+      void client.invalidateQueries({ queryKey: keys.workouts });
+    },
+  });
+}
+
 export function useCompleteSession(): UseMutationResult<
   { session: WorkoutSession; new_records: PersonalRecordRow[] },
   Error,

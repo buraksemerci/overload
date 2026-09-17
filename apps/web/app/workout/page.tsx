@@ -45,12 +45,14 @@ import {
   type RestState,
 } from "@/components/RestTimer";
 import { Photo } from "@/components/Photo";
+import { Sheet } from "@/components/Sheet";
 import { ErrorBox, fmt } from "@/components/States";
 import { formatElapsed, useHotkeys, useNow, useWakeLock } from "@/lib/device";
 import { prLabel, prUnit } from "@/lib/labels";
 import { barFor, plateLoad, weightStep } from "@/lib/plates";
 import {
   useCompleteSession,
+  useDeleteSession,
   useDeleteSet,
   useLogSet,
   useSession,
@@ -119,6 +121,7 @@ export default function WorkoutPage() {
   const session = useSession(sessionId);
   const logSet = useLogSet();
   const deleteSet = useDeleteSet();
+  const deleteSession = useDeleteSession();
   const complete = useCompleteSession();
 
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
@@ -130,6 +133,8 @@ export default function WorkoutPage() {
    * ekranda o slotun açılmasıydı.
    */
   const [extra, setExtra] = useState<Record<string, number>>({});
+  /** İptal onayı açık mı? Yıkıcı iş: tek dokunuşla olmuyor. */
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const [rest, setRest] = useState<RestState | null>(null);
   const [jump, setJump] = useState<number | null>(null);
   const [newRecords, setNewRecords] = useState<PersonalRecordRow[] | null>(null);
@@ -311,6 +316,24 @@ export default function WorkoutPage() {
     setJump(null);
   };
 
+  /** Seansı tümden sil. Onay panelinden geçiyor. */
+  const cancelSession = async () => {
+    if (!sessionId) return;
+    await deleteSession.mutateAsync(sessionId);
+    try {
+      window.localStorage.removeItem(draftStorageKey(sessionId));
+    } catch {
+      // yok say
+    }
+    setConfirmCancel(false);
+    setSessionId(null);
+    setDrafts({});
+    setDraftsFor(null);
+    setExtra({});
+    setJump(null);
+    setRest(null);
+  };
+
   const finish = async () => {
     if (!sessionId) return;
     const result = await complete.mutateAsync(sessionId);
@@ -369,13 +392,24 @@ export default function WorkoutPage() {
               Programlara git
             </Link>
           ) : sessionId !== null ? (
-            <button
-              className="btn btn-on-photo"
-              disabled={doneCount === 0 || complete.isPending}
-              onClick={() => void finish()}
-            >
-              {complete.isPending ? "Kapatılıyor…" : "Antrenmanı bitir"}
-            </button>
+            <>
+              <button
+                className="btn btn-on-photo"
+                disabled={doneCount === 0 || complete.isPending}
+                onClick={() => void finish()}
+              >
+                {complete.isPending ? "Kapatılıyor…" : "Antrenmanı bitir"}
+              </button>
+              {/* Bitirme düğmesi hiç set yokken kapalı; iptal olmayınca seans
+                  sonsuza kadar açık kalıyordu. */}
+              <button
+                className="btn btn-quiet"
+                style={{ color: "var(--color-on-night-muted)" }}
+                onClick={() => setConfirmCancel(true)}
+              >
+                İptal et
+              </button>
+            </>
           ) : undefined
         }
       >
@@ -413,6 +447,34 @@ export default function WorkoutPage() {
           <div aria-busy="true" className="h-[13.5rem] sm:h-[8.75rem]" />
         ) : null}
       </Hero>
+
+      {confirmCancel && sessionId !== null && (
+        <Sheet title="Antrenmanı iptal et" onClose={() => setConfirmCancel(false)} width="26rem">
+          <p className="text-base leading-relaxed">
+            {doneCount > 0
+              ? `Bu seansta kaydettiğin ${doneCount} set silinir ve antrenman hiç yapılmamış sayılır.`
+              : "Bu seans hiç yapılmamış sayılır. Kaydedilmiş set yok."}
+          </p>
+          <div className="mt-6 flex flex-wrap gap-2">
+            <button
+              className="btn btn-ghost"
+              disabled={deleteSession.isPending}
+              onClick={() => void cancelSession()}
+              style={{ color: "var(--color-danger)", borderColor: "var(--color-danger)" }}
+            >
+              {deleteSession.isPending ? "Siliniyor…" : "Evet, iptal et"}
+            </button>
+            <button className="btn btn-quiet" onClick={() => setConfirmCancel(false)}>
+              Vazgeç
+            </button>
+          </div>
+          {deleteSession.isError && (
+            <div className="mt-4">
+              <ErrorBox error={deleteSession.error} />
+            </div>
+          )}
+        </Sheet>
+      )}
 
       {startSession.isError && <ErrorBox error={startSession.error} />}
       {logSet.isError && <ErrorBox error={logSet.error} />}

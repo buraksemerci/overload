@@ -648,6 +648,44 @@ test.describe("antrenman modu", () => {
     await expect(page.getByRole("button", { name: "Seti güncelle" })).toBeVisible();
   });
 
+  test("yanlışlıkla başlatılan antrenman iptal edilebiliyor", async ({ page }) => {
+    /* Bitirme düğmesi hiç set yokken kapalı. İptal olmayınca seans sonsuza
+       kadar açık kalıyor ve panel her gün "devam ediyor" diyordu. */
+    const sessionId = "44444444-4444-4444-4444-444444444444";
+    let deleted = false;
+    const empty = {
+      id: sessionId,
+      program_day_id: null,
+      started_at: new Date().toISOString(),
+      completed_at: null,
+      notes: null,
+      is_deload: false,
+      sets: [],
+    };
+    await page.route("http://localhost:8000/workouts/sessions", (route) =>
+      route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify(empty) }),
+    );
+    await page.route(`http://localhost:8000/workouts/sessions/${sessionId}`, (route) => {
+      if (route.request().method() === "DELETE") {
+        deleted = true;
+        return route.fulfill({ status: 204, body: "" });
+      }
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(empty) });
+    });
+
+    await page.goto("/workout");
+    await page.getByRole("button", { name: "Antrenmanı başlat" }).click();
+    await expect(page.getByText("Set 1 / 2")).toBeVisible();
+
+    await page.getByRole("button", { name: "İptal et" }).click();
+    await expect(page.getByRole("dialog", { name: "Antrenmanı iptal et" })).toBeVisible();
+    await page.getByRole("button", { name: "Evet, iptal et" }).click();
+
+    await expect.poll(() => deleted).toBe(true);
+    // Seans kapandı: ekran yeniden başlangıç sahnesinde.
+    await expect(page.getByRole("button", { name: "Antrenmanı başlat" })).toBeVisible();
+  });
+
   test("fazladan açılan set geri alınabiliyor", async ({ page }) => {
     const sessionId = "44444444-4444-4444-4444-444444444444";
     const empty = {

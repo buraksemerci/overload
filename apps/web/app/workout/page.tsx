@@ -71,6 +71,15 @@ interface Draft {
   weight: string;
   reps: string;
   rir: string;
+  /**
+   * Isınma seti mi?
+   *
+   * Isınma setleri hacme, rekora ve ilerleme motoruna GİRMİYOR (sunucu
+   * `is_warmup` alanına bakıyor). Ekranda kaydedilebilmeleri gerekiyordu:
+   * kullanıcı ısınmasını da yazmak istiyor ama o setler "bugün 5 set yaptım"
+   * sayısını şişirmemeli. Eski taslaklarda alan yok — `?` o yüzden.
+   */
+  warmup?: boolean;
 }
 
 /** "100.00" -> "100", "42.50" -> "42,5". Alana geri yazılabilir biçim. */
@@ -228,6 +237,7 @@ export default function WorkoutPage() {
         weight: weightText(logged.weight_kg),
         reps: String(logged.reps),
         rir: logged.rir === null ? "" : String(logged.rir),
+        warmup: logged.is_warmup,
       };
     }
 
@@ -262,6 +272,7 @@ export default function WorkoutPage() {
       weight_kg: values.weight ? parseWeight(values.weight) : 0,
       reps: Number.parseInt(values.reps, 10),
       rir: values.rir === "" ? null : Number.parseInt(values.rir, 10),
+      is_warmup: values.warmup === true,
       technique: step.exercise.technique,
     });
 
@@ -717,6 +728,20 @@ function SetStage({
             />
           </label>
         </div>
+
+        {/* Isınma seti hacme ve rekora sayılmıyor; kayıt yine de tutuluyor.
+            Düğme alanların ALTINDA: her sette sorulan bir soru değil. */}
+        <button
+          type="button"
+          aria-pressed={values.warmup === true}
+          onClick={() => onChange({ warmup: !(values.warmup === true) })}
+          className="btn btn-quiet -mt-2 text-sm"
+          style={{
+            color: values.warmup === true ? "var(--color-warning)" : undefined,
+          }}
+        >
+          {values.warmup === true ? "✓ Isınma seti — hacme sayılmıyor" : "Isınma seti olarak işaretle"}
+        </button>
 
         {bar !== null && Number.isFinite(weight) && weight > 0 && <Plates weight={weight} bar={bar} />}
 

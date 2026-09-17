@@ -89,6 +89,8 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 - [x] Kod geliştirmeleri: ekran uyanık kalıyor (Wake Lock), titreşim, plaka
       hesaplayıcı (`lib/plates.ts` + test), ±15 sn dinlenme, ağırlık adımı ekipmana göre,
       yarım kalan set taslakları yerelde saklanıyor, önceki seti tekrarla
+- [x] Isınma seti işaretlenebiliyor: kayıt tutuluyor ama hacme, rekora ve ilerleme
+      motoruna girmiyor (sunucu `is_warmup` alanına bakıyordu, arayüzde karşılığı yoktu)
 - [x] Plana bir set daha eklenebiliyor (haritadaki "+"): sunucu plan dışı sırayı
       zaten kabul ediyordu, ekranda slot açılmıyordu. Kaydedilmiş fazladan setler
       sayfa yenilense de görünüyor (sunucudaki en yüksek sıradan türetiliyor).

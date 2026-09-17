@@ -648,6 +648,41 @@ test.describe("antrenman modu", () => {
     await expect(page.getByRole("button", { name: "Seti güncelle" })).toBeVisible();
   });
 
+  test("ısınma seti işaretlenip kaydediliyor", async ({ page }) => {
+    /* Isınma setleri hacme, rekora ve ilerleme motoruna girmiyor (sunucu
+       `is_warmup` alanına bakıyor) ama kaydedilebilmeleri gerekiyor. */
+    const sessionId = "44444444-4444-4444-4444-444444444444";
+    let body: Record<string, unknown> | null = null;
+    await page.route("http://localhost:8000/workouts/sessions", (route) =>
+      route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: sessionId,
+          program_day_id: null,
+          started_at: new Date().toISOString(),
+          completed_at: null,
+          notes: null,
+          is_deload: false,
+          sets: [],
+        }),
+      }),
+    );
+    await page.route(`http://localhost:8000/workouts/sessions/${sessionId}/sets`, (route) => {
+      body = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ status: 201, contentType: "application/json", body: "{}" });
+    });
+
+    await page.goto("/workout");
+    await page.getByRole("button", { name: "Antrenmanı başlat" }).click();
+    await page.getByRole("button", { name: "Isınma seti olarak işaretle" }).click();
+    await expect(page.getByRole("button", { name: /Isınma seti — hacme sayılmıyor/ })).toBeVisible();
+    await page.getByRole("button", { name: "Seti kaydet" }).click();
+
+    await expect.poll(() => body).not.toBeNull();
+    expect(body).toMatchObject({ is_warmup: true, set_number: 1 });
+  });
+
   test("plana bir set daha eklenebiliyor", async ({ page }) => {
     /* "Bugün bir set daha" salonda sık verilen bir karar. Sunucu plan dışı
        sıra numarasını zaten kabul ediyordu; eksik olan ekranda o slotun

@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { chooseRendition, createSeeker, type Seekable } from "./storyVideo";
+import {
+  applyZoom,
+  chooseRendition,
+  coverBox,
+  createSeeker,
+  finaleZoom,
+  frameToPage,
+  partialZoom,
+  visiblePart,
+  type Seekable,
+} from "./storyVideo";
 
 describe("chooseRendition", () => {
   it("1080p dizüstünde küçük dosya", () => {
@@ -115,5 +125,90 @@ describe("createSeeker", () => {
     video.finishSeek();
 
     expect(video.writes).toEqual([1]);
+  });
+});
+
+describe("final yakınlaşması", () => {
+  // Ölçüye yakın bir telefon ekranı: karenin ortasında, dar ve uzun.
+  const SCREEN = { x: 0.38, y: 0.06, width: 0.24, height: 0.84 };
+
+  it("cover kutusu pencereyi örtüyor", () => {
+    const portrait = coverBox({ width: 390, height: 844 }, 16 / 9);
+    expect(portrait.height).toBe(844);
+    expect(portrait.width).toBeCloseTo(1500.4, 0);
+    expect(portrait.left).toBeCloseTo(-555.2, 0);
+
+    const wide = coverBox({ width: 2560, height: 1080 }, 16 / 9);
+    expect(wide.width).toBe(2560);
+    expect(wide.top).toBeLessThan(0);
+  });
+
+  it("geniş ekranda yakınlaşmıyor", () => {
+    const view = { width: 1920, height: 1080 };
+    const media = coverBox(view, 16 / 9);
+    const screen = frameToPage(media, SCREEN);
+    // 0,24 × 1920 = 461 px: form rahat sığıyor.
+    expect(finaleZoom(view, media, screen).scale).toBe(1);
+  });
+
+  it("dar kalan ekranı formun sığacağı kadar büyütüyor", () => {
+    const view = { width: 1280, height: 720 };
+    const media = coverBox(view, 16 / 9);
+    const screen = frameToPage(media, SCREEN);
+    const zoom = finaleZoom(view, media, screen);
+
+    expect(zoom.scale).toBeGreaterThan(1);
+    expect(applyZoom(screen, zoom).width).toBeCloseTo(340, 0);
+  });
+
+  it("küçük telefonda pencereden geniş olacak kadar büyütmüyor", () => {
+    const view = { width: 320, height: 568 };
+    const media = coverBox(view, 16 / 9);
+    const screen = frameToPage(media, SCREEN);
+    const zoomed = applyZoom(screen, finaleZoom(view, media, screen));
+
+    expect(zoomed.width).toBeLessThanOrEqual(320 - 24 + 0.01);
+  });
+
+  it("yakınlaştıktan sonra görüntü pencereyi hâlâ örtüyor", () => {
+    // Telefon karenin kenarına yakın olsa bile ortalamak için kaydırmak koyu
+    // bir şerit açmamalı.
+    for (const view of [
+      { width: 1280, height: 720 },
+      { width: 1366, height: 768 },
+      { width: 360, height: 640 },
+    ]) {
+      const media = coverBox(view, 16 / 9);
+      const screen = frameToPage(media, { ...SCREEN, x: 0.02 });
+      const covered = applyZoom(media, finaleZoom(view, media, screen));
+
+      expect(covered.left).toBeLessThanOrEqual(0.01);
+      expect(covered.top).toBeLessThanOrEqual(0.01);
+      expect(covered.left + covered.width).toBeGreaterThanOrEqual(view.width - 0.01);
+      expect(covered.top + covered.height).toBeGreaterThanOrEqual(view.height - 0.01);
+    }
+  });
+
+  it("hiçbir zaman uzaklaşmıyor", () => {
+    const view = { width: 390, height: 844 };
+    const media = coverBox(view, 16 / 9);
+    const huge = { left: 0, top: 0, width: 600, height: 900 };
+    expect(finaleZoom(view, media, huge).scale).toBe(1);
+  });
+
+  it("yakınlaşmanın bir kısmı aradaki değer", () => {
+    const zoom = { scale: 2, x: -100, y: -40 };
+    expect(partialZoom(zoom, 0.5)).toEqual({ scale: 1.5, x: -50, y: -20 });
+    expect(partialZoom(zoom, 0).scale).toBe(1);
+  });
+
+  it("görünen kısım pencereyle kesişim", () => {
+    expect(
+      visiblePart(
+        { left: 10, top: -100, width: 340, height: 900 },
+        { width: 360, height: 640 },
+        12,
+      ),
+    ).toEqual({ left: 12, top: 12, width: 336, height: 616 });
   });
 });

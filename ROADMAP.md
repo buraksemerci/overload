@@ -41,9 +41,20 @@ sorusunu cevaplıyor ve o soru yalnızca oturumu olmayan kişide canlı; panelde
 her gün açan kullanıcıyı beş ekran boyu videoyu geçmeye zorluyordu. Giriş
 ekranı artık tanıtım + form: önce anlat, sonra iste.
 
-**Form anlatının FİNALİNDE.** Önce videodan sonra ayrı, düz bir bölümdü ve
-sönük bir kapanış gibi kalıyordu. Şimdi video telefon ekranında duruyor ve
-form o karenin üstünde bir kartta; oraya inilene kadar `inert`.
+**Form telefonun EKRANINDA.** Önce videodan sonra ayrı, düz bir bölümdü ve
+sönük bir kapanış gibi kalıyordu; sonra son karenin üstünde bir cam karttı.
+Şimdi kamera telefona yaklaşıyor ve form telefon ekranının içinde beliriyor
+(köşeler, çentik ekranınkiyle aynı; oraya inilene kadar `inert`).
+
+- [x] Telefonun bir elden ötekine "ışınlandığı" geçiş kesildi; telefona
+      yaklaşan yeni bir segment tam o kareden başlıyor
+- [x] Kadın telefonu eline aldığı andan itibaren ekranda formun BULANIK
+      görüntüsü (`scripts/story-screen.py`): videoya dile bağlı yazı
+      gömülmüyor, form belirince bulanık görüntü netleşiyor
+- [x] Telefon kalkarken odak ele çekiliyor — arka plandaki rafların
+      kayması görünmüyor; tutma bölümünde telefon dikleştiriliyor
+- [x] Form sabit tasarım genişliğinde bir "uygulama ekranı" olarak telefonun
+      boyuna ölçekleniyor; alçak pencerede sahne biraz daha yakınlaşıyor
 
 ### 1b. Tanışma akışı (`/onboarding`) — BİTTİ
 - [x] Kayıttan hemen sonra; akıştan önce açılmış hesaplara da bir kez

@@ -28,6 +28,24 @@
  * aralarındaki geçişler `start_image` + `end_image` ile zincirlendi; bu
  * yüzden video ilerlerken mekân değişmiyor, yalnızca kamera ilerliyor.
  *
+ * Son geçiş bir kez bu vaadi bozdu: bitiş karesi başka birinin eliydi ve
+ * model ikisini birbirine erittiği için telefon bir elden ötekine
+ * ışınlanıyordu. O segment erimeden önce kesildi ve telefona yaklaşan yeni bir
+ * segment tam o kareden başlatıldı (`scripts/story-video.mjs`).
+ *
+ * --------------------------------------------------------------------------
+ * FİNAL: FORM TELEFONUN EKRANINDA
+ * --------------------------------------------------------------------------
+ * Kadın telefonu eline aldığı andan itibaren ekranda giriş formunun BULANIK
+ * görüntüsü var (`scripts/story-screen.py` her kareye yerleştiriyor). Video
+ * telefon ekranı ortada biterken duruyor ve çağıranın verdiği içerik (giriş
+ * formu) o görüntünün tam üstüne oturup netleşiyor. Videoda okunur yazı yok:
+ * uygulama başka bir dile çevrildiğinde video Türkçe, form başka dilde
+ * kalmasın. Ekranın karedeki yeri bir kez ölçüldü (`PHONE`);
+ * sayfadaki yeri her pencere boyutu için hesaplanıyor çünkü `object-cover`
+ * pencerenin oranına göre farklı kırpıyor. Telefon formu taşıyamayacak kadar
+ * küçük kalıyorsa sahne biraz daha yakınlaşıyor (`lib/storyVideo.ts`).
+ *
  * --------------------------------------------------------------------------
  * KAYDIRMA VİDEONUN ZAMANI
  * --------------------------------------------------------------------------
@@ -76,7 +94,21 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Photo } from "@/components/Photo";
-import { chooseRendition, createSeeker, type Rendition } from "@/lib/storyVideo";
+import {
+  applyZoom,
+  chooseRendition,
+  coverBox,
+  createSeeker,
+  FINALE_OPTIONS,
+  finaleZoom,
+  frameToPage,
+  partialZoom,
+  visiblePart,
+  type Box,
+  type FrameRect,
+  type Rendition,
+  type Zoom,
+} from "@/lib/storyVideo";
 
 interface Phase {
   /** Video yokken kullanılan kare. */
@@ -90,6 +122,10 @@ interface Phase {
 }
 
 /**
+ * Aralıklar video zamanına oranla. Her faz aynı KAREDE başlayıp bitiyor —
+ * video uzadıkça (son segment eklendi) oranlar değişti, sahneler değişmedi:
+ * giriş 0-97, salon 112-205, bar 219-298, telefon 312-465. kare.
+ *
  * Metinler HENÜZ HESABI OLMAYAN birine yazılmış.
  *
  * Önce panelde duruyorlardı ve "aktif programın hangi günde olduğunu biliyor"
@@ -108,30 +144,30 @@ const PHASES: readonly Phase[] = [
     title: "Bugün ne yapacağını bilerek gir",
     body: "Programın hangi günde olduğunu uygulama hatırlıyor. Kapıdan girdiğinde karar verilmiş oluyor.",
     from: 0,
-    to: 0.26,
+    to: 0.209,
   },
   {
     photo: "story-gym",
     eyebrow: "Rafın başında",
     title: "Kaç kilo kaldıracağın yazıyor",
     body: "Her set için somut bir sayı. Geçen sefer ilerlediysen ağırlık artıyor, tıkandıysan deload öneriyor. Tahmin yok.",
-    from: 0.3,
-    to: 0.55,
+    from: 0.241,
+    to: 0.441,
   },
   {
     photo: "story-meal",
     eyebrow: "Sonrasında",
     title: "Kalan kalorin tek sayı",
     body: "Ne yediğini yazıyorsun, geriye ne kaldığını söylüyor. Makro tablosu isteyince açılıyor, istemeyince görünmüyor.",
-    from: 0.59,
-    to: 0.8,
+    from: 0.471,
+    to: 0.641,
   },
   {
     photo: "story-phone",
     eyebrow: "Haftalar sonra",
     title: "Ne kazandığın görünür oluyor",
     body: "Kaç ton kaldırdın, hangi kas geride kaldı, hangi gün rekor kırdın. Hepsi birikiyor.",
-    from: 0.84,
+    from: 0.671,
     to: 1,
   },
 ];
@@ -167,7 +203,9 @@ let rendition: Rendition | null = null;
 const getRendition = (): Rendition => {
   if (rendition === null) {
     const connection = (
-      navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }
+      navigator as Navigator & {
+        connection?: { saveData?: boolean; effectiveType?: string };
+      }
     ).connection;
     rendition = chooseRendition({
       width: window.innerWidth,
@@ -186,8 +224,13 @@ const NEVER = () => () => {};
 /** Sunucuda ekran yok: dosya istemcide seçiliyor. */
 const getServerRendition = (): Rendition | null => null;
 
-/** Anlatının kapladığı kaydırma yüksekliği. Ekran boyu cinsinden. */
-const SCROLL_SCREENS = 6;
+/**
+ * Anlatının kapladığı kaydırma yüksekliği. Ekran boyu cinsinden.
+ *
+ * Video 15,5 saniyeden 19,4 saniyeye uzayınca bu da uzadı: aynı kaydırma
+ * mesafesinde daha uzun video, sahnelerin daha hızlı geçmesi demekti.
+ */
+const SCROLL_SCREENS = 7.5;
 
 /**
  * Kaydırmanın hangi noktasında video bitiyor.
@@ -198,8 +241,115 @@ const SCROLL_SCREENS = 6;
  */
 const VIDEO_END = 0.8;
 
-/** Finalin belirdiği nokta: son fazın metni çekildikten biraz sonra. */
-const FINALE_FROM = 0.86;
+/**
+ * Sahnenin ek yakınlaşmasının başladığı nokta — videonun kendi yakınlaşması
+ * yavaşlarken. İkisi üst üste biniyor ki kamera bir an durup sonra yeniden
+ * yürümüş gibi görünmesin.
+ */
+const ZOOM_FROM = 0.74;
+
+/** Yakınlaşma bittiği anda form beliriyor. */
+const FINALE_FROM = 0.88;
+
+/** Videonun oranı. Sahne `object-cover` ile kırpılıyor. */
+const VIDEO_ASPECT = 16 / 9;
+
+/**
+ * Son karede telefon ekranı — ölçüldü, kareye oranla.
+ *
+ * `~/Downloads/hf2/story-4.png` (işlenmiş videonun son karesi, 2560×1440):
+ * ekran 943-1563 × 75-1311 piksel, çentik 1131-1375 × 75-118. Köşe yarıçapı
+ * ekranın alt kenarındaki eğriden hesaplandı (~54 px). Video yeniden
+ * işlenirse bu değerler YENİDEN ölçülmeli: form ekranın dışına taşar.
+ */
+const PHONE = {
+  screen: {
+    x: 943 / 2560,
+    y: 75 / 1440,
+    width: 621 / 2560,
+    height: 1237 / 1440,
+  },
+  notch: { x: 1131 / 2560, y: 75 / 1440, width: 245 / 2560, height: 44 / 1440 },
+  /** Ekran genişliğine oranla. */
+  radius: 54 / 620,
+} satisfies { screen: FrameRect; notch: FrameRect; radius: number };
+
+/**
+ * Telefon ekranının TASARIM genişliği, CSS pikseli.
+ *
+ * Form bu genişlikte bir "uygulama ekranına" dizilip telefonun gerçek boyuna
+ * ölçekleniyor — pencereye göre değil. Önce doğrudan telefon ekranının
+ * kutusuna yerleşiyordu ve formun ekrana oranı pencereye göre değişiyordu:
+ * 1080p'de ekranın %80'i, 1440p'de %60'ı. Videodaki telefon ekranında bu
+ * formun BULANIK bir görüntüsü var (`scripts/story-screen.py`); form belirince
+ * bulanık görüntünün tam üstüne oturması için ikisinin aynı tasarımda olması
+ * şart.
+ */
+const DESIGN_WIDTH = 390;
+const DESIGN_HEIGHT = (DESIGN_WIDTH * (PHONE.screen.height * 1440)) / (PHONE.screen.width * 2560);
+
+/** Formun telefon ekranındaki yeri — pencere boyutuna göre hesaplanmış. */
+interface FinaleLayout {
+  /** Yakınlaşma bittiğinde. Kaydırmayla bunun bir kısmı uygulanıyor. */
+  zoom: Zoom;
+  /** Telefon ekranı, yakınlaşma sonrası. */
+  screen: Box;
+  notch: Box;
+  radius: number;
+  /** Tasarım genişliğinden telefonun gerçek boyuna ölçek. */
+  scale: number;
+  /**
+   * Ekranın pencerede görünen, çentiğin altında kalan kısmı — TASARIM
+   * biriminde, ekranın sol üstüne göre. Form burada ortalanıyor; alçak bir
+   * pencerede ekran taşarsa form görünen kısımda kalıyor.
+   */
+  content: Box;
+}
+
+function finaleLayout(view: { width: number; height: number }): FinaleLayout {
+  const media = coverBox(view, VIDEO_ASPECT);
+  const screen = frameToPage(media, PHONE.screen);
+  const zoom = finaleZoom(view, media, screen);
+  const zoomedScreen = applyZoom(screen, zoom);
+  const notch = applyZoom(frameToPage(media, PHONE.notch), zoom);
+  const scale = zoomedScreen.width / DESIGN_WIDTH;
+
+  const visible = visiblePart(zoomedScreen, view, FINALE_OPTIONS.margin);
+  const top = Math.max(visible.top, notch.top + notch.height);
+  const bottom = visible.top + visible.height;
+
+  return {
+    zoom,
+    screen: zoomedScreen,
+    notch,
+    radius: PHONE.radius * zoomedScreen.width,
+    scale,
+    content: {
+      left: (visible.left - zoomedScreen.left) / scale,
+      top: (top - zoomedScreen.top) / scale,
+      width: visible.width / scale,
+      height: Math.max(bottom - top, 0) / scale,
+    },
+  };
+}
+
+/** Yumuşak başlayıp yumuşak biten geçiş. */
+const smoothstep = (t: number) => t * t * (3 - 2 * t);
+
+/**
+ * Sahnenin ek yakınlaşmasını uygular — React'i DOLAŞMADAN.
+ *
+ * Kaydırmanın her karesinde çağrılıyor; bir durum güncellemesi her karede
+ * bütün sahneyi yeniden çizdirirdi. Dönüşüm doğrudan katmana yazılıyor.
+ */
+function paintZoom(layer: HTMLElement | null, layout: FinaleLayout | null, t: number): void {
+  if (layer === null || layout === null) return;
+  const zoom = partialZoom(layout.zoom, t);
+  layer.style.transform =
+    zoom.scale === 1 && zoom.x === 0 && zoom.y === 0
+      ? ""
+      : `translate3d(${zoom.x}px, ${zoom.y}px, 0) scale(${zoom.scale})`;
+}
 
 interface Props {
   /**
@@ -216,8 +366,17 @@ interface Props {
 
 export function Scrollytelling({ finale, onFinaleChange }: Props) {
   const root = useRef<HTMLDivElement>(null);
+  const stage = useRef<HTMLDivElement>(null);
+  const zoomLayer = useRef<HTMLDivElement>(null);
   const video = useRef<HTMLVideoElement>(null);
   const hasFinale = finale !== undefined;
+
+  /** Formun telefon ekranındaki yeri. Pencere boyutu değişince yeniden. */
+  const [layout, setLayout] = useState<FinaleLayout | null>(null);
+  /* Aynı değerin ref kopyası ve yakınlaşmanın son hâli: kaydırma döngüsü
+     bunları her karede okuyor ve bir render beklememeli. */
+  const layoutRef = useRef<FinaleLayout | null>(null);
+  const zoomT = useRef(0);
 
   /* Geri çağırmanın güncel hâli bir ref'te: GSAP kurulumu yalnızca hareket
      tercihi değişince yeniden yapılıyor ve çağıranın her render'da yeni bir
@@ -246,6 +405,26 @@ export function Scrollytelling({ finale, onFinaleChange }: Props) {
   const [active, setActive] = useState(0);
   /** Final görünüyor mu. */
   const [finaleActive, setFinaleActive] = useState(false);
+
+  /* Pencere boyutu değiştikçe telefon ekranının yeri yeniden hesaplanıyor.
+     `ResizeObserver` gözlemeye başladığı anda bir kez de kendiliğinden
+     çağırıyor: ilk ölçüm için ayrıca bir çağrı gerekmiyor. */
+  useEffect(() => {
+    if (reduced !== false || !hasFinale || stage.current === null) return;
+    const element = stage.current;
+
+    const observer = new ResizeObserver(() => {
+      const next = finaleLayout({
+        width: element.clientWidth,
+        height: element.clientHeight,
+      });
+      layoutRef.current = next;
+      setLayout(next);
+      paintZoom(zoomLayer.current, next, zoomT.current);
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [reduced, hasFinale]);
 
   useEffect(() => {
     if (reduced !== false || root.current === null) return;
@@ -301,9 +480,7 @@ export function Scrollytelling({ finale, onFinaleChange }: Props) {
             if (element !== null && Number.isFinite(element.duration)) {
               // `duration - 0.05`: tam sona yazmak bazı tarayıcılarda
               // `ended` tetikleyip son kareyi boşaltıyor.
-              seeker.seek(
-                Math.min(videoProgress * element.duration, element.duration - 0.05),
-              );
+              seeker.seek(Math.min(videoProgress * element.duration, element.duration - 0.05));
             }
 
             const index = PHASES.findIndex(
@@ -312,6 +489,15 @@ export function Scrollytelling({ finale, onFinaleChange }: Props) {
             // Aralıkların arasına düşen kaydırma konumunda son faz kalıyor:
             // metin bir an kaybolup geri gelmiyor.
             if (index !== -1) setActive(index);
+
+            if (hasFinale) {
+              const t = Math.min(
+                Math.max((state.progress - ZOOM_FROM) / (FINALE_FROM - ZOOM_FROM), 0),
+                1,
+              );
+              zoomT.current = smoothstep(t);
+              paintZoom(zoomLayer.current, layoutRef.current, zoomT.current);
+            }
 
             const inFinale = hasFinale && state.progress >= FINALE_FROM;
             if (inFinale !== lastFinale) {
@@ -352,7 +538,13 @@ export function Scrollytelling({ finale, onFinaleChange }: Props) {
             <div aria-hidden className="absolute inset-0">
               <Photo slug="story-phone" fill scrim className="size-full" />
             </div>
-            <div className="relative flex px-5 py-16 sm:px-8 lg:px-12">{finale}</div>
+            <div className="relative flex justify-center px-5 py-16 sm:px-8 lg:px-12">
+              {/* Burada telefona oturtulmuyor: kart kaydırmaya bağlı değil ve
+                  fotoğraf kartın yüksekliğine göre kırpılıyor. Zemini kendi. */}
+              <div className="w-full max-w-sm" style={{ background: "var(--color-ground)" }}>
+                {finale}
+              </div>
+            </div>
           </section>
         )}
       </div>
@@ -361,31 +553,43 @@ export function Scrollytelling({ finale, onFinaleChange }: Props) {
 
   return (
     <div data-story ref={root} style={{ height: `${SCROLL_SCREENS * 100}vh` }}>
-      <div className="sticky top-0 h-dvh overflow-hidden bg-[oklch(12%_0.01_115)]">
-        <video
-          ref={video}
-          // `muted` + `playsInline` ŞART: sessiz olmayan bir video iOS'ta
-          // hiç yüklenmiyor, `playsInline` olmadan tam ekrana atlıyor.
-          muted
-          playsInline
-          preload="auto"
-          // `autoPlay` YOK: video kendi kendine oynamıyor, zamanını
-          // kaydırma sürüyor.
-          onLoadedMetadata={() => setHasVideo(true)}
-          // Dosya istemcide ekrana göre seçiliyor (1080p ya da kaynağın
-          // 1440p'si); sunucuda `src` yok.
-          src={src ?? undefined}
-          className="absolute inset-0 size-full object-cover"
-          style={{ opacity: hasVideo ? 1 : 0 }}
-        />
+      <div ref={stage} className="sticky top-0 h-dvh overflow-hidden bg-[oklch(12%_0.01_115)]">
+        {/* Yakınlaşma katmanı: finalde telefon ekranı formu taşıyacak boya
+            gelene kadar büyütülüyor. Video ile yedek fotoğraf AYNI katmanda —
+            ikisi de aynı kare, aynı yerde durmalı. */}
+        <div
+          ref={zoomLayer}
+          className="absolute inset-0"
+          style={{
+            transformOrigin: "0 0",
+            willChange: hasFinale ? "transform" : undefined,
+          }}
+        >
+          <video
+            ref={video}
+            // `muted` + `playsInline` ŞART: sessiz olmayan bir video iOS'ta
+            // hiç yüklenmiyor, `playsInline` olmadan tam ekrana atlıyor.
+            muted
+            playsInline
+            preload="auto"
+            // `autoPlay` YOK: video kendi kendine oynamıyor, zamanını
+            // kaydırma sürüyor.
+            onLoadedMetadata={() => setHasVideo(true)}
+            // Dosya istemcide ekrana göre seçiliyor (1080p ya da kaynağın
+            // 1440p'si); sunucuda `src` yok.
+            src={src ?? undefined}
+            className="absolute inset-0 size-full object-cover"
+            style={{ opacity: hasVideo ? 1 : 0 }}
+          />
 
-        {/* Video yoksa fotoğraf karesi. Aynı ilke `Photo` bileşeninde de
+          {/* Video yoksa fotoğraf karesi. Aynı ilke `Photo` bileşeninde de
             geçerli: dosya eksikken ekran bozulmuyor. */}
-        {!hasVideo && (
-          <div className="absolute inset-0">
-            <Photo slug={PHASES[active]!.photo} fill className="size-full" />
-          </div>
-        )}
+          {!hasVideo && (
+            <div className="absolute inset-0">
+              <Photo slug={PHASES[active]!.photo} fill className="size-full" />
+            </div>
+          )}
+        </div>
 
         {/* Perde İKİ YÖNLÜ.
             Alttan yukarı olan tek başına yetmiyordu: anlatı ilerledikçe
@@ -396,6 +600,10 @@ export function Scrollytelling({ finale, onFinaleChange }: Props) {
           aria-hidden
           className="absolute inset-0"
           style={{
+            // Finalde perde kalkıyor: yazı yok ve telefonu tutan eli
+            // karartmanın bir sebebi kalmıyor.
+            opacity: finaleActive ? 0 : 1,
+            transition: "opacity var(--dur-long) var(--ease-out)",
             // İki perde üst üste biniyor; sol alt köşede ikisi birden
             // çalışıyor. Değerler o köşeye göre seçildi: tek tek bakıldığında
             // zayıf görünüyorlar ama çarpıldıkları yer yazının durduğu yer.
@@ -434,49 +642,105 @@ export function Scrollytelling({ finale, onFinaleChange }: Props) {
           </div>
         </div>
 
-        {/* Final katmanı. `inert`: görünmezken içindeki alanlar sekmeyle
-            odaklanamıyor ve ekran okuyucu onları okumuyor — opaklık tek
-            başına yalnızca gözden saklıyor. Kendi içinde kayabiliyor:
-            telefonda klavye açılınca sahne kısalıyor ve form taşmamalı. */}
-        {hasFinale && (
+        {/* Final katmanı: telefonun ekranı uygulamanın giriş ekranına
+            dönüşüyor. Zemin ekranın kendi köşe yarıçapıyla ve çentiğiyle
+            çiziliyor ki form ekranın ÜSTÜNDE değil İÇİNDE dursun.
+
+            `inert`: görünmezken içindeki alanlar sekmeyle odaklanamıyor ve
+            ekran okuyucu onları okumuyor — opaklık tek başına yalnızca gözden
+            saklıyor. İçerik kendi içinde kayabiliyor: telefonda klavye
+            açılınca sahne kısalıyor ve form taşmamalı. */}
+        {hasFinale && layout !== null && (
           <div
-            className="absolute inset-0 overflow-y-auto"
+            className="pointer-events-none absolute inset-0"
             inert={!finaleActive}
             style={{
               opacity: finaleActive ? 1 : 0,
-              pointerEvents: finaleActive ? "auto" : "none",
               transition: "opacity var(--dur-long) var(--ease-out)",
             }}
           >
-            <div className="mx-auto flex min-h-full w-full max-w-[84rem] items-center justify-center px-5 py-24 sm:px-8 lg:justify-start">
-              {finale}
+            <div
+              aria-hidden
+              data-phone-screen
+              className="absolute"
+              style={{
+                ...boxStyle(layout.screen),
+                borderRadius: layout.radius,
+                background: "var(--color-ground)",
+              }}
+            />
+            <div
+              aria-hidden
+              className="absolute"
+              style={{
+                ...boxStyle(layout.notch),
+                borderBottomLeftRadius: layout.notch.height / 2,
+                borderBottomRightRadius: layout.notch.height / 2,
+                background: "oklch(8% 0 0)",
+              }}
+            />
+            {/* Tasarım genişliğindeki uygulama ekranı, telefonun boyuna
+                ölçeklenmiş. Belirirken bulanıktan nete geçiyor: videodaki
+                ekranda aynı formun bulanık görüntüsü var ve form onun
+                netleşmesi gibi görünüyor. */}
+            <div
+              className="absolute"
+              style={{
+                left: layout.screen.left,
+                top: layout.screen.top,
+                width: DESIGN_WIDTH,
+                height: DESIGN_HEIGHT,
+                transform: `scale(${layout.scale})`,
+                transformOrigin: "0 0",
+              }}
+            >
+              <div
+                className="absolute overflow-y-auto"
+                style={{
+                  ...boxStyle(layout.content),
+                  pointerEvents: finaleActive ? "auto" : "none",
+                  filter: finaleActive ? "blur(0)" : "blur(6px)",
+                  transition: "filter var(--dur-long) var(--ease-out)",
+                }}
+              >
+                <div className="flex min-h-full w-full items-center justify-center">{finale}</div>
+              </div>
             </div>
           </div>
         )}
 
-        <ProgressDots
-          count={PHASES.length + (hasFinale ? 1 : 0)}
-          active={finaleActive ? PHASES.length : active}
-        />
+        {/* Finalde çekiliyor: dar bir telefonda ekranın kenarına biniyordu ve
+            anlatının bittiğini zaten form söylüyor. */}
+        <div
+          style={{
+            opacity: finaleActive ? 0 : 1,
+            transition: "opacity var(--dur-short) var(--ease-out)",
+          }}
+        >
+          <ProgressDots count={PHASES.length} active={active} />
+        </div>
       </div>
     </div>
   );
 }
 
-/** Kaç sahne var ve hangisindeyiz. Kaydırmanın sonu olduğunu da söylüyor. */
+const boxStyle = (box: Box): React.CSSProperties => ({
+  left: box.left,
+  top: box.top,
+  width: box.width,
+  height: box.height,
+});
+
+/** Kaç sahne var ve hangisindeyiz. */
 function ProgressDots({ count, active }: { count: number; active: number }) {
   return (
-    <div
-      aria-hidden
-      className="absolute top-1/2 right-6 flex -translate-y-1/2 flex-col gap-2"
-    >
+    <div aria-hidden className="absolute top-1/2 right-6 flex -translate-y-1/2 flex-col gap-2">
       {Array.from({ length: count }, (_, index) => (
         <span
           key={index}
           className="h-6 w-[2px] transition-colors"
           style={{
-            background:
-              index === active ? "var(--color-accent)" : "oklch(99% 0 0 / 0.3)",
+            background: index === active ? "var(--color-accent)" : "oklch(99% 0 0 / 0.3)",
             transitionDuration: "var(--dur-short)",
           }}
         />

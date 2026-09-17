@@ -13,15 +13,15 @@
  * --------------------------------------------------------------------------
  * FORM ANLATININ SONUCU
  * --------------------------------------------------------------------------
- * Kaydırdıkça bir günün dört ânı geçiyor; video telefon ekranında bitiyor ve
- * form o karenin üstüne çıkıyor. Önce anlatıdan sonra ayrı, açık zeminli bir
- * bölümdü: videodan sonra sönük bir kapanış gibi kalıyordu. Şimdi anlatının
- * vardığı yer — "bu uygulama bu; başla".
+ * Kaydırdıkça bir günün dört ânı geçiyor; kamera telefona yaklaşıyor ve form
+ * TELEFONUN EKRANINDA beliriyor — uygulamanın ekranı giriş ekranına dönüşüyor.
+ * Önce anlatıdan sonra ayrı, açık zeminli bir bölümdü ve videodan sonra sönük
+ * bir kapanış gibi kalıyordu; sonra videonun üstünde, telefonun yanında bir
+ * cam karttı. Şimdi anlatının vardığı yer — "bu uygulama bu; başla".
  *
- * Form bir KART içinde, doğrudan videonun üstünde değil. Yazılması gereken
- * bir yüzeyin arkasında hareketli görüntü olunca alanlar okunmuyor; kart
- * kendi zeminini taşıyor, video çevresinde görünmeye devam ediyor. Masaüstünde
- * kart solda duruyor: sağdaki telefon ekranı açık kalıyor.
+ * Formun zemini telefon ekranının kendisi (`components/Scrollytelling.tsx`):
+ * yazılan alanların arkasında hareketli görüntü yok, köşeler ve çentik
+ * ekranınkiyle aynı.
  *
  * --------------------------------------------------------------------------
  * GERİ GELEN KULLANICI
@@ -165,20 +165,16 @@ function AuthCard() {
   }
 
   return (
-    <section
-      id="giris"
-      className="w-full max-w-sm p-7 lg:p-9"
-      style={{
-        // Kart kendi zeminini taşıyor: arkasında hareketli bir görüntü var
-        // ve alanların okunması ona bağlı olmamalı.
-        background: "oklch(98.5% 0.004 115 / 0.94)",
-        backdropFilter: "blur(14px)",
-        WebkitBackdropFilter: "blur(14px)",
-        boxShadow: "0 30px 80px oklch(0% 0 0 / 0.45)",
-      }}
-    >
+    // Zemin YOK: form telefonun ekranında duruyor ve zemini ekranın kendisi
+    // (`Scrollytelling` çiziyor). Önce kendi cam kartı vardı; telefonun
+    // üstünde ikinci bir yüzey, ekranın içinde değil önünde duruyordu.
+    //
+    // Ölçüler pencereye göre DEĞİŞMİYOR (`lg:` yok): form sabit genişlikte bir
+    // telefon ekranına diziliyor ve pencereye göre büyüyen bir başlık,
+    // videodaki bulanık görüntüyle örtüşmezdi.
+    <section id="giris" className="w-full max-w-sm px-6 py-8">
       <p className="label">overload</p>
-      <h2 className="display mt-2 text-2xl lg:text-3xl">Başlamaya hazır mısın?</h2>
+      <h2 className="display mt-2 text-2xl">Başlamaya hazır mısın?</h2>
       <p className="mt-2 text-sm text-[var(--color-ink-muted)]">
         {mode === "login"
           ? "Devam etmek için giriş yap."

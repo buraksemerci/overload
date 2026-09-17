@@ -50,10 +50,26 @@
  * - `-tune film` — gerçek çekim görüntüsünde dokuyu koruyor.
  * - `-an` — ses yok. `muted` olmayan video iOS'ta hiç yüklenmiyor.
  * - `+faststart` — moov başta; dosya inmeden aranabilir.
+ *
+ * --------------------------------------------------------------------------
+ * SON BÖLÜM İŞLENMİŞ
+ * --------------------------------------------------------------------------
+ * `seg-3` (bardaki öğün → telefon) son kareye ulaşmak için yolun sonunda
+ * BAŞKA BİR KİŞİYE geçiyordu: model başlangıç ve bitiş karesindeki iki farklı
+ * eli birbirine eritti ve telefon bir elden diğerine ışınlandı. Segment
+ * erimenin başladığı kareden önce kesildi ve `seg-4` tam o kareden başlayıp
+ * telefona yaklaşıyor.
+ *
+ * İkisi doğrudan birleştirilmiyor: `scripts/story-screen.py` önce telefon
+ * ekranına giriş formunun bulanık görüntüsünü yerleştiriyor, telefon
+ * kalkarken odağı ele çekiyor ve telefonu dikleştiriyor; sonucu `son.mp4`.
+ * Kırpma da orada, kare sayısıyla yapılıyor — zamanla kırpmak B-kareli bir
+ * kaynakta bir iki kare kaydırabiliyordu ve bir kare fazlası erimenin ilk
+ * karesi.
  */
 
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import ffmpeg from "ffmpeg-static";
 
@@ -71,72 +87,76 @@ const RENDITIONS = [
   { name: "story-1440.mp4", width: 2560, crf: 24 },
 ];
 
-/** Dosya adındaki sıra numarası. `seg-10` `seg-2`den sonra gelmeli. */
-function segmentNumber(name) {
-  const match = name.match(/\d+/);
-  return match === null ? 0 : Number(match[0]);
-}
+/**
+ * Sırayla birleştirilen parçalar. `son.mp4` işlenmiş son bölüm (yukarıya bakın);
+ * `seg-3` ve `seg-4` onun girdisi, burada KULLANILMIYOR.
+ */
+const SEGMENTS = ["seg-1.mp4", "seg-2.mp4", "son.mp4"];
 
-const segments = readdirSync(SRC)
-  .filter((name) => /^seg-\d+\.mp4$/.test(name))
-  .sort((a, b) => segmentNumber(a) - segmentNumber(b))
-  .map((name) => resolve(SRC, name));
+/** Kaynağın çözünürlüğü. Her segment birleşmeden önce buna getiriliyor. */
+const SOURCE = { width: 2560, height: 1440 };
 
-if (segments.length === 0) {
-  console.error(`${SRC} içinde seg-*.mp4 yok.`);
+const segments = SEGMENTS.filter((name) => existsSync(resolve(SRC, name)));
+if (segments.length !== SEGMENTS.length) {
+  const missing = SEGMENTS.filter((name) => !segments.includes(name));
+  console.error(`${SRC} içinde eksik: ${missing.join(", ")}`);
+  if (missing.includes("son.mp4")) {
+    console.error("Önce: python scripts/story-screen.py <klasör> <ekran.png>");
+  }
   process.exit(1);
 }
 
 mkdirSync(OUT_DIR, { recursive: true });
 
-const listFile = join(OUT_DIR, "_concat.txt");
-writeFileSync(
-  listFile,
-  segments.map((path) => `file '${path.replace(/\\/g, "/")}'`).join("\n"),
-);
+/**
+ * Her segment aynı biçime getirilip uç uca ekleniyor: aynı çözünürlük,
+ * 24 fps, sıfırdan başlayan zaman damgaları. Üretilen bir segment kaynaktan
+ * birkaç piksel farklı çıkarsa `concat` süzgeci birleştirmeyi reddediyor.
+ */
+const filter = [
+  ...segments.map(
+    (_, index) =>
+      `[${index}:v]setpts=PTS-STARTPTS,fps=24,` +
+      `scale=${SOURCE.width}:${SOURCE.height}:flags=lanczos,setsar=1,format=yuv420p[s${index}]`,
+  ),
+  `${segments.map((_, index) => `[s${index}]`).join("")}concat=n=${segments.length}:v=1:a=0[story]`,
+].join(";");
 
-try {
-  for (const rendition of RENDITIONS) {
-    const out = join(OUT_DIR, rendition.name);
-    const args = [
-      "-y",
-      "-f",
-      "concat",
-      "-safe",
-      "0",
-      "-i",
-      listFile,
-      "-an",
-      "-vf",
-      `scale=${rendition.width}:-2:flags=lanczos`,
-      "-r",
-      "24",
-      "-c:v",
-      "libx264",
-      "-preset",
-      "slow",
-      "-tune",
-      "film",
-      "-crf",
-      String(rendition.crf),
-      // Her kare anahtar kare: kaydırmayla ileri geri atlarken tek kare çözülüyor.
-      "-g",
-      "1",
-      "-keyint_min",
-      "1",
-      "-sc_threshold",
-      "0",
-      "-pix_fmt",
-      "yuv420p",
-      "-movflags",
-      "+faststart",
-      out,
-    ];
+for (const rendition of RENDITIONS) {
+  const out = join(OUT_DIR, rendition.name);
+  const args = [
+    "-y",
+    ...segments.flatMap((name) => ["-i", resolve(SRC, name)]),
+    "-filter_complex",
+    `${filter};[story]scale=${rendition.width}:-2:flags=lanczos[out]`,
+    "-map",
+    "[out]",
+    "-an",
+    "-r",
+    "24",
+    "-c:v",
+    "libx264",
+    "-preset",
+    "slow",
+    "-tune",
+    "film",
+    "-crf",
+    String(rendition.crf),
+    // Her kare anahtar kare: kaydırmayla ileri geri atlarken tek kare çözülüyor.
+    "-g",
+    "1",
+    "-keyint_min",
+    "1",
+    "-sc_threshold",
+    "0",
+    "-pix_fmt",
+    "yuv420p",
+    "-movflags",
+    "+faststart",
+    out,
+  ];
 
-    console.log(`${rendition.name} kodlanıyor…`);
-    execFileSync(ffmpeg, args, { stdio: ["ignore", "ignore", "inherit"] });
-    console.log(`  ${Math.round(statSync(out).size / 1024)} KB`);
-  }
-} finally {
-  rmSync(listFile, { force: true });
+  console.log(`${rendition.name} kodlanıyor…`);
+  execFileSync(ffmpeg, args, { stdio: ["ignore", "ignore", "inherit"] });
+  console.log(`  ${Math.round(statSync(out).size / 1024)} KB`);
 }

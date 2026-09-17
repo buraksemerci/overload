@@ -112,3 +112,155 @@ export function createSeeker(video: Seekable, fps: number) {
     },
   };
 }
+
+/* --- Final: telefona yakınlaşma ------------------------------------------------ */
+
+/**
+ * Anlatı telefon ekranında bitiyor ve giriş formu O EKRANIN ÜSTÜNE oturuyor.
+ *
+ * Formu pencerenin ortasına koymak yetmiyor: sahne `object-cover` ile
+ * kırpılıyor ve telefonun penceredeki yeri pencerenin oranına göre değişiyor.
+ * Dikey bir telefonda videonun iki yanı kesiliyor, geniş bir monitörde üstü
+ * ve altı. Telefon ekranının karedeki yeri bir kez ölçülüyor (kareye oranla),
+ * gerisi her pencere boyutu için buradan hesaplanıyor.
+ *
+ * Telefon küçük kalıyorsa (alçak bir pencere, küçük bir telefon) sahne biraz
+ * daha yakınlaşıyor — videonun kendi yakınlaşmasının devamı gibi. Form dar
+ * bir ekrana sığdırılmak için KÜÇÜLTÜLMÜYOR: yazı okunur kalmalı.
+ */
+
+export interface Size {
+  width: number;
+  height: number;
+}
+
+/** Sayfadaki bir kutu, CSS pikseli. */
+export interface Box {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+/** Karedeki bir bölge, karenin genişliğine ve yüksekliğine oranla (0-1). */
+export interface FrameRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** Sahnenin ek yakınlaşması: `p' = scale · p + (x, y)`, orijin sol üst. */
+export interface Zoom {
+  scale: number;
+  x: number;
+  y: number;
+}
+
+/** `object-fit: cover` ile basılan görüntünün kutusu. */
+export function coverBox(view: Size, aspect: number): Box {
+  const width = Math.max(view.width, view.height * aspect);
+  const height = width / aspect;
+  return {
+    left: (view.width - width) / 2,
+    top: (view.height - height) / 2,
+    width,
+    height,
+  };
+}
+
+/** Karedeki bir bölgenin sayfadaki kutusu. */
+export function frameToPage(media: Box, rect: FrameRect): Box {
+  return {
+    left: media.left + rect.x * media.width,
+    top: media.top + rect.y * media.height,
+    width: rect.width * media.width,
+    height: rect.height * media.height,
+  };
+}
+
+export function applyZoom(box: Box, zoom: Zoom): Box {
+  return {
+    left: zoom.scale * box.left + zoom.x,
+    top: zoom.scale * box.top + zoom.y,
+    width: zoom.scale * box.width,
+    height: zoom.scale * box.height,
+  };
+}
+
+/** Yakınlaşmanın `t` (0-1) kadarı. `t = 0` hiç yakınlaşma yok. */
+export function partialZoom(zoom: Zoom, t: number): Zoom {
+  return { scale: 1 + (zoom.scale - 1) * t, x: zoom.x * t, y: zoom.y * t };
+}
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+
+export interface FinaleOptions {
+  /** Formun rahat okunduğu en dar ekran genişliği. */
+  minWidth: number;
+  /** Pencere kenarıyla telefon ekranı arasında bırakılan boşluk. */
+  margin: number;
+  /** Bundan fazla yakınlaşma görüntüyü bulanıklaştırıyor. */
+  maxScale: number;
+}
+
+export const FINALE_OPTIONS: FinaleOptions = { minWidth: 340, margin: 12, maxScale: 2 };
+
+/**
+ * Telefon ekranını formu taşıyacak boya getiren son yakınlaşma.
+ *
+ * - Ekran zaten yeterince genişse yakınlaşma YOK (`scale = 1`): geniş bir
+ *   monitörde sahneyi büyütmek yalnızca videoyu bulanıklaştırır.
+ * - Hiçbir zaman uzaklaşmıyor: anlatı bir yaklaşma, geri çekilme değil.
+ * - Ekranın ortası pencerenin ortasına taşınıyor — ama görüntü pencereyi
+ *   TAMAMEN örtmeye devam edecek kadar. Kenarda koyu bir şerit açılması,
+ *   ekranın birkaç piksel kaymasından çok daha görünür.
+ */
+export function finaleZoom(
+  view: Size,
+  media: Box,
+  screen: Box,
+  options: FinaleOptions = FINALE_OPTIONS,
+): Zoom {
+  const widest = view.width - 2 * options.margin;
+  const wanted = Math.min(Math.max(options.minWidth, screen.width), widest);
+  const scale = clamp(wanted / screen.width, 1, options.maxScale);
+
+  const centerX = screen.left + screen.width / 2;
+  const centerY = screen.top + screen.height / 2;
+
+  return {
+    scale,
+    x: clamp(
+      view.width / 2 - scale * centerX,
+      view.width - scale * (media.left + media.width),
+      -scale * media.left,
+    ),
+    y: clamp(
+      view.height / 2 - scale * centerY,
+      view.height - scale * (media.top + media.height),
+      -scale * media.top,
+    ),
+  };
+}
+
+/**
+ * Bir kutunun pencerede görünen kısmı.
+ *
+ * Alçak bir pencerede yakınlaşılmış telefon ekranı üstten ve alttan taşıyor;
+ * form ekranın GÖRÜNEN kısmına yerleşmeli, yoksa gönder düğmesi pencerenin
+ * altında kalır.
+ */
+export function visiblePart(box: Box, view: Size, margin: number): Box {
+  const left = Math.max(box.left, margin);
+  const top = Math.max(box.top, margin);
+  const right = Math.min(box.left + box.width, view.width - margin);
+  const bottom = Math.min(box.top + box.height, view.height - margin);
+  return {
+    left,
+    top,
+    width: Math.max(right - left, 0),
+    height: Math.max(bottom - top, 0),
+  };
+}

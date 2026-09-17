@@ -6,6 +6,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@overload/web", "dev"],
       "port": 3000
+    },
+    {
+      "name": "api",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "cd apps\\api && .venv\\Scripts\\python.exe -m uvicorn overload_api.main:app --reload"],
+      "port": 8000
     }
   ]
 }

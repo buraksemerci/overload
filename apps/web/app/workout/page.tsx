@@ -385,6 +385,7 @@ export default function WorkoutPage() {
               <SetStage
                 step={step}
                 values={valuesFor(step)}
+                logged={findLogged(step.exercise.exercise_id, step.setNumber) !== undefined}
                 previous={
                   step.setNumber > 1
                     ? findLogged(step.exercise.exercise_id, step.setNumber - 1)
@@ -591,6 +592,7 @@ const KIND_LABEL: Record<string, string> = {
 function SetStage({
   step,
   values,
+  logged,
   previous,
   pending,
   onChange,
@@ -598,6 +600,8 @@ function SetStage({
 }: {
   step: Step;
   values: Draft;
+  /** Bu set daha önce kaydedildi mi? Haritadan geri dönülünce düzenleniyor. */
+  logged: boolean;
   previous: WorkoutSet | undefined;
   pending: boolean;
   onChange: (patch: Partial<Draft>) => void;
@@ -630,6 +634,14 @@ function SetStage({
         </p>
         <h2 className="display mt-2 text-2xl lg:text-3xl">{exercise.name}</h2>
         <SetDots total={exercise.target_sets} current={setNumber} />
+        {/* Haritadan geri dönüldüğünde alanlar KAYITLI değerlerle doluyor ve
+            "Seti kaydet" yazısı yeni bir set ekliyormuş gibi duruyordu.
+            Sunucu aynı sırayı üzerine yazıyor; ekran da bunu söylüyor. */}
+        {logged && (
+          <p className="mt-3 text-xs text-[var(--color-ink-muted)]">
+            Bu set kayıtlı — değiştirirsen üzerine yazılır.
+          </p>
+        )}
       </div>
 
       <form
@@ -696,7 +708,7 @@ function SetStage({
 
         <div className="flex flex-wrap items-center justify-center gap-2">
           <button type="submit" className="btn btn-primary px-10 py-4 text-base" disabled={!ready || pending}>
-            {pending ? "Kaydediliyor…" : "Seti kaydet"}
+            {pending ? "Kaydediliyor…" : logged ? "Seti güncelle" : "Seti kaydet"}
           </button>
           {previous && (
             <button

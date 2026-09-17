@@ -592,6 +592,62 @@ test.describe("antrenman modu", () => {
     await expect(save).toBeDisabled();
   });
 
+  test("kayıtlı sete dönünce düğme güncellemeyi söylüyor", async ({ page }) => {
+    /* Sunucu aynı sırayı ÜZERİNE YAZIYOR (yanlış giren düzeltebilsin diye).
+       Ekran bunu söylemeyince "Seti kaydet" yeni bir set ekliyormuş gibi
+       duruyordu ve insanlar geri dönmeye çekiniyordu. */
+    const sessionId = "44444444-4444-4444-4444-444444444444";
+    const savedSet = {
+      id: "55555555-5555-5555-5555-555555555555",
+      exercise_id: "33333333-3333-3333-3333-333333333333",
+      set_number: 1,
+      weight_kg: "42.50",
+      reps: 5,
+      rir: null,
+      is_warmup: false,
+      technique: "rir1",
+    };
+    await page.route("http://localhost:8000/workouts/sessions", (route) =>
+      route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: sessionId,
+          program_day_id: null,
+          started_at: new Date().toISOString(),
+          completed_at: null,
+          notes: null,
+          is_deload: false,
+          sets: [savedSet],
+        }),
+      }),
+    );
+    await page.route(`http://localhost:8000/workouts/sessions/${sessionId}`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: sessionId,
+          program_day_id: null,
+          started_at: new Date().toISOString(),
+          completed_at: null,
+          notes: null,
+          is_deload: false,
+          sets: [savedSet],
+        }),
+      }),
+    );
+
+    await page.goto("/workout");
+    await page.getByRole("button", { name: "Antrenmanı başlat" }).click();
+    // İmleç ikinci sete gidiyor; haritadan birinci sete dönülüyor.
+    await expect(page.getByText("Set 2 / 2")).toBeVisible();
+    await page.getByRole("button", { name: /Plate Loaded Chest Press/ }).first().click();
+
+    await expect(page.getByText("Bu set kayıtlı — değiştirirsen üzerine yazılır.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Seti güncelle" })).toBeVisible();
+  });
+
   test("günün hareketleri sahnenin yanında hep görünüyor", async ({ page }) => {
     await page.route("http://localhost:8000/workouts/sessions", (route) =>
       route.fulfill({

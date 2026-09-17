@@ -89,6 +89,9 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 - [x] Kod geliştirmeleri: ekran uyanık kalıyor (Wake Lock), titreşim, plaka
       hesaplayıcı (`lib/plates.ts` + test), ±15 sn dinlenme, ağırlık adımı ekipmana göre,
       yarım kalan set taslakları yerelde saklanıyor, önceki seti tekrarla
+- [x] Kayıtlı bir sete haritadan dönünce ekran bunu söylüyor ("Bu set kayıtlı —
+      değiştirirsen üzerine yazılır", düğme "Seti güncelle"). Sunucu zaten üzerine
+      yazıyordu; arayüz sessizdi.
 - [x] Klavye kısayolları: Enter seti kaydeder, dinlenmede Enter atlar, ← → ±15 sn;
       ok tuşları alanlarda adım adım değiştirir. Alana yazarken kısayol kapalı
       (`useHotkeys`), kısayol listesi günün hareketleri sütununun altında yazıyor.

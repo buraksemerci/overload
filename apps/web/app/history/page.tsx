@@ -170,7 +170,7 @@ export default function HistoryPage() {
       <Page>
         {hero}
         <Empty
-          photo="empty-history"
+          photo="app-gym-wide"
           title="Henüz tamamlanmış antrenmanın yok"
           hint="İlk seansını bitirdiğinde burada birikmeye başlayacak."
           action={

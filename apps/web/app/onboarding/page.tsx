@@ -172,19 +172,19 @@ const GOAL_OPTIONS: ReadonlyArray<{
   hint: string;
   photo: string;
 }> = [
-  { value: "strength", label: "Güç", hint: "Daha ağır kaldırmak", photo: "goal-strength" },
-  { value: "hypertrophy", label: "Kas", hint: "Kas kütlesi", photo: "goal-hypertrophy" },
+  { value: "strength", label: "Güç", hint: "Daha ağır kaldırmak", photo: "app-plates" },
+  { value: "hypertrophy", label: "Kas", hint: "Kas kütlesi", photo: "app-dumbbells" },
   {
     value: "powerbuilding",
     label: "İkisi birden",
     hint: "Güç ve kas",
-    photo: "goal-powerbuilding",
+    photo: "app-squat",
   },
   {
     value: "general_fitness",
     label: "Genel form",
     hint: "Sağlıklı ve fit",
-    photo: "goal-general-fitness",
+    photo: "app-gym-wide",
   },
 ];
 
@@ -890,7 +890,7 @@ function Result({
             <Photo
               slug={
                 GOAL_OPTIONS.find((g) => g.value === recommendation.template.goal)?.photo ??
-                "goal-general-fitness"
+                "app-gym-wide"
               }
               ratio="21 / 9"
               scrim

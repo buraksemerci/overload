@@ -54,12 +54,18 @@ const LEVEL_LABEL: Record<string, string> = {
   advanced: "İleri",
 };
 
-/** Fotoğraf yuvası adı. `goal` bilinmiyorsa genel forma düşüyor. */
+/**
+ * Fotoğraf yuvası adı. `goal` bilinmiyorsa genel forma düşüyor.
+ *
+ * Kareler uygulamanın geri kalanıyla AYNI salondan: program kartı bantla yan
+ * yana duruyor ve iki ayrı stok fotoğraf dünyası arasındaki geçiş her
+ * seferinde göze çarpıyordu.
+ */
 const GOAL_PHOTO: Record<string, string> = {
-  strength: "goal-strength",
-  hypertrophy: "goal-hypertrophy",
-  powerbuilding: "goal-powerbuilding",
-  general_fitness: "goal-general-fitness",
+  strength: "app-plates",
+  hypertrophy: "app-dumbbells",
+  powerbuilding: "app-squat",
+  general_fitness: "app-gym-wide",
 };
 
 const summary = (program: ProgramSummary): string =>
@@ -92,7 +98,7 @@ export default function ProgramsPage() {
           Aktif program yokken bant genel kalıyor ve altındaki boş durum yol
           gösteriyor. */}
       <Hero
-        photo={active ? (GOAL_PHOTO[active.goal] ?? "goal-general-fitness") : "app-shoes"}
+        photo={active ? (GOAL_PHOTO[active.goal] ?? "app-gym-wide") : "app-shoes"}
         size={active ? "lg" : "md"}
         eyebrow={active ? "Aktif program" : "Antrenman"}
         title={active ? active.name : "Programlar"}
@@ -150,7 +156,7 @@ export default function ProgramsPage() {
         <ErrorBox error={mine.error} onRetry={() => void mine.refetch()} />
       ) : active ? null : (
         <Empty
-          photo="goal-strength"
+          photo="app-shoes"
           title={
             programs.length > 0 ? "Aktif program yok" : "Henüz programın yok"
           }
@@ -355,7 +361,7 @@ function TemplateCard({
   return (
     <div className="card h-full overflow-hidden">
       <Photo
-        slug={GOAL_PHOTO[template.goal] ?? "goal-general-fitness"}
+        slug={GOAL_PHOTO[template.goal] ?? "app-gym-wide"}
         ratio="3 / 4"
         scrim
       >

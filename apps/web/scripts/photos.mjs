@@ -55,12 +55,8 @@ const JOBS = [
   { slug: "hero-login", file: "squat.jpg", fit: "cover", width: 1000, height: 1333, position: "center" },
 
   // --- Boş durumlar: geniş şerit -------------------------------------------
-  { slug: "empty-workout", file: "another deadlift.jpg", fit: "cover", width: 1800, height: 771, position: "center" },
-  { slug: "empty-nutrition", file: "salad.jpg", fit: "cover", width: 1800, height: 771, position: "center" },
-  { slug: "empty-history", file: "gym.jpg", fit: "cover", width: 1800, height: 771, position: "top" },
   // Supplement listesi boşken. Hap kutusu fotoğrafı elde yok; günün masası
   // "her gün tekrarlanan bir şey" fikrini daha iyi taşıyor.
-  { slug: "empty-supplements", file: "breakfast.jpg", fit: "cover", width: 1800, height: 771, position: "center" },
 
   // --- Program şablonları: 3/4 DİKEY kart -----------------------------------
   // Kartın içeriği (ad, özet, iki düğme) fotoğrafın üstünde duruyor; yatay
@@ -68,10 +64,6 @@ const JOBS = [
   //
   // Aktif program kartı aynı dosyaları 21/9 olarak kullanıyor: `cover` orada
   // dikey kareyi yatay şeride kırpıyor ve konu ortada kaldığı için çalışıyor.
-  { slug: "goal-strength", file: "deadlift.jpg", fit: "cover", width: 800, height: 1067, position: "center" },
-  { slug: "goal-hypertrophy", file: "incline dumbell chestpress.jpg", fit: "cover", width: 800, height: 1067, position: "top" },
-  { slug: "goal-powerbuilding", file: "barbell rack.jpg", fit: "cover", width: 800, height: 1067, position: "center" },
-  { slug: "goal-general-fitness", file: "home workout.jpg", fit: "cover", width: 800, height: 1067, position: "top" },
 
   // --- Ekipman kartları: 3/2 -----------------------------------------------
   // Kettlebell ve direnç bandı KASITLI olarak boş: elde o ekipmanın fotoğrafı
@@ -85,17 +77,14 @@ const JOBS = [
   { slug: "equipment-bodyweight", file: "home workout.jpg", fit: "cover", width: 800, height: 533, position: "center" },
 
   // --- Antrenman bitiş ekranı ----------------------------------------------
-  { slug: "celebration", file: "threadmill.jpg", fit: "cover", width: 1800, height: 771, position: "center" },
 
   // --- Antrenman başlangıcı ------------------------------------------------
   // Başlamadan önceki tek ekran. Fotoğraf burada "motivasyon süsü" değil:
   // ekranda başka hiçbir şey yok ve boş bir kart kullanıcıyı bekletiyordu.
-  { slug: "workout-intro", file: "squat.jpg", fit: "cover", width: 1800, height: 771, position: "center" },
 
   // --- Geçmiş: birikim bandı -----------------------------------------------
   // Toplam tonajın zemini. Plakalı bir raf, sayının ne olduğunu tek bakışta
   // söylüyor — grafik ya da ikon yapmaya gerek kalmadan.
-  { slug: "history-total", file: "barbell rack.jpg", fit: "cover", width: 1800, height: 771, position: "center" },
 
   // --- Karşılama ekranı: anlatının dört durağı -----------------------------
   // Higgsfield ile üretildi. Dördü de AYNI salonun içinde: kamera kapıdan

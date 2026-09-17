@@ -24,10 +24,10 @@ afterEach(() => {
 
 describe("Photo", () => {
   it("slug'dan doğru yolu kuruyor", () => {
-    render(<Photo slug="goal-strength" alt="Halter" />);
+    render(<Photo slug="app-plates" alt="Halter" />);
     expect(screen.getByAltText("Halter")).toHaveAttribute(
       "src",
-      "/photos/goal-strength.jpg",
+      "/photos/app-plates.jpg",
     );
   });
 
@@ -47,8 +47,8 @@ describe("Photo", () => {
   });
 
   it("dekoratif fotoğrafın alt metni boş", () => {
-    // Ekran okuyucu "goal-strength.jpg" okumamalı; fotoğraf bilgi taşımıyor.
-    const { container } = render(<Photo slug="goal-strength" />);
+    // Ekran okuyucu "app-plates.jpg" okumamalı; fotoğraf bilgi taşımıyor.
+    const { container } = render(<Photo slug="app-plates" />);
     expect(container.querySelector("img")).toHaveAttribute("alt", "");
   });
 

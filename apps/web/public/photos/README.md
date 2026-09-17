@@ -5,7 +5,7 @@ Bu klasördeki dosyalar `<Photo slug="..." />` bileşeni tarafından
 altındaki nötr işlem katmanı görünüyor. Yani bir fotoğraf eklemek dosyayı bu
 klasöre doğru adla atmaktan ibaret; kod değişmiyor.
 
-Şu an 41 dosya, toplam ~6 MB.
+Şu an 30 dosya, toplam ~5 MB.
 
 ## Hazırlama
 
@@ -47,30 +47,20 @@ uygulamada iki ayrı salon vardı ve geçiş her seferinde kopuyordu.
 |---|---|---|
 | `hero-login` | squat | 3/4 dikey |
 
-### Boş durumlar ve bitiş
+### Boş durumlar, program hedefleri ve bitiş
 
-Geniş şerit (21/9). Boş durum ekranın en ölü ânı; fotoğraf "hiçbir şey yok"
-cümlesini bir davete çeviriyor.
+Bunların hepsi artık **ekran bantlarıyla aynı kareleri** kullanıyor: boş
+durumda `app-gym-wide`, rekor rafında `app-chalk`, program hedeflerinde
+`app-plates` / `app-dumbbells` / `app-squat` / `app-gym-wide`. Ayrı bir
+`empty-*`, `goal-*`, `celebration` seti vardı (Unsplash) ve uygulamanın
+içinde iki farklı salon görünüyordu; o dosyalar silindi.
 
-| Slug | Kare | Nerede |
-|---|---|---|
-| `empty-workout` | deadlift | Bugün — program yok |
-| `empty-nutrition` | salata | Beslenme — öğün boş |
-| `empty-history` | salon | Geçmiş — kayıt yok |
-| `celebration` | koşu bandı | Antrenman bitti |
-
-### Program şablonları
-
-`goal` alanına göre seçiliyor. 3/4 **dikey** kart: içerik (ad, özet, iki düğme) fotoğrafın üstünde duruyor
-ve yatay bir kart o metni taşıyacak yüksekliği bırakmıyordu. Aktif program
-kartı aynı dosyaları 21/9 olarak kullanıyor.
-
-| Slug | Kare |
+| Hedef | Kare |
 |---|---|
-| `goal-strength` | deadlift |
-| `goal-hypertrophy` | incline dumbbell press |
-| `goal-powerbuilding` | barbell rack |
-| `goal-general-fitness` | ev antrenmanı |
+| `strength` | plaka yığını (`app-plates`) |
+| `hypertrophy` | dambıl rafı (`app-dumbbells`) |
+| `powerbuilding` | squat rafı (`app-squat`) |
+| `general_fitness` | salonun tamamı (`app-gym-wide`) |
 
 ### Ekipman kartları
 

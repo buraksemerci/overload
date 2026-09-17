@@ -151,7 +151,7 @@ export default function ProgressPage() {
           liste var. */}
       {shelf.length === 0 && !records.isLoading && !records.isError ? (
         <Empty
-          photo="goal-powerbuilding"
+          photo="app-chalk"
           title="Henüz rekor yok"
           hint="İlk antrenmanını tamamladığında her hareket için dört tür rekor takip edilmeye başlar."
         />

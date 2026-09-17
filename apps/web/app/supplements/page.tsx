@@ -103,7 +103,7 @@ export default function SupplementsPage() {
         <ErrorBox error={today.error} onRetry={() => void today.refetch()} />
       ) : rows.length === 0 ? (
         <Empty
-          photo="empty-supplements"
+          photo="app-supplements"
           title="Henüz supplement tanımlamadın"
           hint="Ekledikten sonra her gün tek dokunuşla işaretleyebilirsin."
           action={

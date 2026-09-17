@@ -17,9 +17,19 @@
  *
  * Kapatma yolları KASITLI olarak üç tane: Escape, dışarı tıklama, kapat
  * düğmesi. Üçü de aynı şeyi yapıyor; hangisini deneyen olursa çalışıyor.
+ *
+ * --------------------------------------------------------------------------
+ * NEDEN PORTAL
+ * --------------------------------------------------------------------------
+ * Panel `<body>`e taşınıyor. `main` üzerinde her zaman bir `filter` duruyor
+ * (panel arkasını bulanıklaştıran sınıf, kapalıyken bile `blur(0)`), ve
+ * filtreli bir öğe `position: fixed` torunları için KONUM KABI oluyor. Yani
+ * sayfa aşağı kaydırılmışken panel ekranın ortasına değil, `main`in ortasına
+ * yerleşiyordu: başlığı görünmeyen, yarısı ekranın dışında kalan bir kutu.
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 export function Sheet({
   title,
@@ -36,6 +46,10 @@ export function Sheet({
   width?: string;
 }) {
   const panel = useRef<HTMLDivElement>(null);
+  // Portal ancak istemcide kurulabiliyor (`document` gerekiyor). Panel zaten
+  // bir etkileşimle açıldığı için ilk render'da görünmemesi sorun değil.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   // Panel kapanınca odak geldiği yere dönmeli; yoksa klavye kullanıcısı
   // sayfanın en başına atılıyor.
   const opener = useRef<Element | null>(null);
@@ -76,7 +90,9 @@ export function Sheet({
     };
   }, [onClose]);
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div
       className="fixed inset-0 flex items-end justify-center sm:items-center"
       style={{ zIndex: "var(--z-modal)" }}
@@ -124,6 +140,7 @@ export function Sheet({
           </footer>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

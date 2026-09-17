@@ -169,6 +169,35 @@ test.describe("seans detayı", () => {
     await expect(dialog.getByText("65")).toBeVisible();
   });
 
+  test("sayfa kaydırılmışken panel ekranın ortasında açılıyor", async ({ page }) => {
+    /* `main` üzerinde her zaman bir filtre var (panel arkasını
+       bulanıklaştıran sınıf, kapalıyken bile `blur(0)`). Filtreli bir öğe
+       `position: fixed` torunları için konum kabı oluyor: panel ekranın
+       değil, `main`in ortasına yerleşiyordu ve sayfa aşağı kaydırılmışken
+       başlığı ekranın dışında kalıyordu. Panel artık `<body>`e taşınıyor. */
+    await mockHistory(page, Array.from({ length: 12 }, (_, index) => session({
+      id: `aaaaaaaa-0000-0000-0000-0000000000${String(index).padStart(2, "0")}`,
+      started_at: `2026-09-${String(28 - index).padStart(2, "0")}T18:00:00`,
+    })));
+    await page.goto("/history");
+    await page.waitForLoadState("networkidle");
+    await page.mouse.wheel(0, 1200);
+
+    await page.getByRole("button", { name: /Pazartesi — Göğüs/ }).first().click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+
+    // Açılış animasyonu bitene kadar panel alttan kayıyor; ölçüm oturduktan
+    // sonra yapılıyor.
+    const viewport = page.viewportSize()!;
+    await expect
+      .poll(async () => {
+        const box = (await dialog.boundingBox())!;
+        return Math.round(box.y) >= 0 && Math.round(box.y + box.height) <= viewport.height + 1;
+      }, { message: "panel ekranın dışına taşıyor" })
+      .toBe(true);
+  });
+
   test("setler HAREKET ADI altında gruplu", async ({ page }) => {
     // Önceki sürümde detay "Set 1 / Set 2 / Set 3" diyordu — hangi harekete
     // ait olduğu yazmadan. Kullanıcının tanıyamadığı kaydın değeri yok.

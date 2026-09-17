@@ -28,7 +28,7 @@
  * yerleşiyordu: başlığı görünmeyen, yarısı ekranın dışında kalan bir kutu.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 
 export function Sheet({
@@ -46,10 +46,16 @@ export function Sheet({
   width?: string;
 }) {
   const panel = useRef<HTMLDivElement>(null);
-  // Portal ancak istemcide kurulabiliyor (`document` gerekiyor). Panel zaten
-  // bir etkileşimle açıldığı için ilk render'da görünmemesi sorun değil.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  /* Portal ancak istemcide kurulabiliyor (`document` gerekiyor). Sunucuda
+     `false`, istemcide `true` — `useSyncExternalStore` bunu etkisiz bir
+     abonelikle veriyor; etki içinde `setState` çağırmaktan (iki render ve
+     lint hatası) daha temiz. Panel zaten bir etkileşimle açıldığı için ilk
+     render'da görünmemesi sorun değil. */
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
   // Panel kapanınca odak geldiği yere dönmeli; yoksa klavye kullanıcısı
   // sayfanın en başına atılıyor.
   const opener = useRef<Element | null>(null);

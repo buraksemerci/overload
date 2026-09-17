@@ -90,8 +90,9 @@ test.describe("geçmiş", () => {
     ]);
     await page.goto("/history");
 
-    await expect(page.getByText("18,4")).toBeVisible();
-    await expect(page.getByText("ton")).toBeVisible();
+    // Bantta hem cümlede hem büyük sayıda geçiyor; ölçülen büyük sayı.
+    await expect(page.getByText("18,4", { exact: true })).toBeVisible();
+    await expect(page.getByText("ton", { exact: true })).toBeVisible();
   });
 
   test("seanslar aya göre gruplanıyor", async ({ page }) => {

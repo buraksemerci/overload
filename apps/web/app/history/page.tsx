@@ -34,12 +34,13 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Page, PageHeader } from "@/components/Layout";
-import { Photo } from "@/components/Photo";
+import { Bars } from "@/components/Charts";
+import { Hero, HeroStat, HeroStats, Page, Section } from "@/components/Layout";
 import { Sheet } from "@/components/Sheet";
 import { ErrorBox, Empty, Loading, fmt } from "@/components/States";
 import { prLabel, prUnit } from "@/lib/labels";
 import { useHistory, type HistoryExercise, type HistorySession } from "@/lib/queries";
+import { shortDay, weeklyVolume } from "@/lib/stats";
 
 const MONTHS = [
   "Ocak",
@@ -106,11 +107,56 @@ export default function HistoryPage() {
     return [...groups.values()];
   }, [history.data]);
 
-  // Bant veri beklemiyor: yüklenirken de aynı yerden açılıyor.
-  if (history.isLoading || history.isError)
+  const rows = history.data;
+
+  const weeks = useMemo(() => {
+    const list = weeklyVolume(rows ?? [], 12);
+    const thisWeek = list.at(-1)?.start.getTime();
+    return list.map((week) => ({
+      label: shortDay(week.start),
+      value: Math.round(week.volume),
+      current: week.start.getTime() === thisWeek,
+    }));
+  }, [rows]);
+
+  // "18.400 kg" bir ölçüm, "18,4 ton" bir başarı. Bir tonun altında ton
+  // demek anlamsız; orada kilogram kalıyor.
+  const total =
+    totals.tonnage >= 1
+      ? { value: fmt(totals.tonnage, 1), unit: "ton" }
+      : { value: fmt(totals.tonnage * 1000, 0), unit: "kg" };
+  const sets = (rows ?? []).reduce((sum, session) => sum + session.total_sets, 0);
+
+  // Bant her durumda ilk: yüklenirken ve hata verirken de ekran aynı yerden
+  // açılıyor, saydam üst çubuk içeriğin üstüne binmiyor.
+  const hero = (
+    <Hero
+      photo="app-chalk"
+      position="right center"
+      size={(rows?.length ?? 0) === 0 ? "md" : "lg"}
+      eyebrow="Antrenman"
+      title="Geçmiş"
+      lead={
+        (rows?.length ?? 0) > 0
+          ? `Son ${rows!.length} seansta ${total.value} ${total.unit} kaldırdın.`
+          : "Tamamlanan her seans buraya düşüyor."
+      }
+    >
+      {rows && rows.length > 0 && (
+        <HeroStats>
+          <HeroStat label="Toplam" value={total.value} unit={total.unit} foot="kaldırılan" />
+          <HeroStat label="Seans" value={rows.length} foot={`bu ay ${totals.sessions}`} />
+          <HeroStat label="Set" value={fmt(sets, 0)} />
+          <HeroStat label="Rekor" value={totals.records} unit="kırıldı" />
+        </HeroStats>
+      )}
+    </Hero>
+  );
+
+  if (history.isLoading || history.isError || !rows)
     return (
       <Page>
-        <PageHeader title="Geçmiş" photo="app-chalk" position="right center" eyebrow="Antrenman" />
+        {hero}
         {history.isError ? (
           <ErrorBox error={history.error} onRetry={() => void history.refetch()} />
         ) : (
@@ -119,12 +165,10 @@ export default function HistoryPage() {
       </Page>
     );
 
-  const rows = history.data ?? [];
-
   if (rows.length === 0) {
     return (
       <Page>
-        <PageHeader title="Geçmiş" photo="app-chalk" position="right center" eyebrow="Antrenman" />
+        {hero}
         <Empty
           photo="empty-history"
           title="Henüz tamamlanmış antrenmanın yok"
@@ -141,52 +185,29 @@ export default function HistoryPage() {
 
   return (
     <Page>
-      <PageHeader title="Geçmiş" photo="app-chalk" position="right center" eyebrow="Antrenman" />
+      {hero}
 
-      {/* --- Birikim ------------------------------------------------------
-          Üç eşit kutu yerine bir büyük iki küçük: tonaj bu ekranın başlığı.
-          Sayı fotoğrafın ÜSTÜNDE duruyor, altında değil — plakalı raf, bu
-          sayının ne olduğunu bir ikondan daha iyi söylüyor. */}
-      <section className="grid gap-2 lg:grid-cols-3">
-        <div className="card overflow-hidden lg:col-span-2">
-          <Photo slug="history-total" ratio="21 / 9" scrim position="center">
-            <div className="flex size-full flex-col justify-end p-6 lg:p-8">
-              <p
-                className="label on-photo-dark"
-                style={{ color: "oklch(88% 0.01 115)" }}
-              >
-                Toplam kaldırılan
-              </p>
-              <p className="on-photo-dark mt-1" style={{ color: "oklch(99% 0 0)" }}>
-                <span className="display tnum text-4xl lg:text-5xl">
-                  {fmt(totals.tonnage, 1)}
-                </span>
-                <span className="ml-2 text-sm">ton</span>
-              </p>
-              <p
-                className="on-photo-dark mt-1 text-xs"
-                style={{ color: "oklch(88% 0.01 115)" }}
-              >
-                {rows.length} seans boyunca
-              </p>
-            </div>
-          </Photo>
-        </div>
-
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
-          <Figure value={fmt(totals.sessions, 0)} unit="seans" note="bu ay" />
-          <Figure value={fmt(totals.records, 0)} unit="rekor" note="kırılan" />
-        </div>
-      </section>
+      {/* --- Ritim --------------------------------------------------------
+          Hafta hafta tonaj: listedeki satırlar "ne yaptım"ı, bu grafik
+          "düzenli miyim"i söylüyor. */}
+      <Section night title="Haftalık tonaj" info="Son 12 hafta. Isınma setleri hariç; boş hafta sıfır olarak duruyor — atlanmış bir hafta grafikte de boşluk bırakmalı.">
+        <Bars
+          night
+          data={weeks}
+          height={200}
+          format={(value) => value.toLocaleString("tr-TR", { maximumFractionDigits: 0 })}
+          unit="kg"
+        />
+      </Section>
 
       {/* --- Seanslar ----------------------------------------------------- */}
       {months.map((month) => (
         <section key={month.label}>
-          <h2 className="label mb-2">{month.label}</h2>
-          <ul className="flex flex-col gap-1.5">
+          <h2 className="display mb-4 text-xl lg:text-2xl">{month.label}</h2>
+          <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {month.sessions.map((session, index) => (
               <li key={session.id} className="reveal" style={{ ["--i" as string]: index }}>
-                <SessionRow session={session} onOpen={() => setOpen(session)} />
+                <SessionCard session={session} onOpen={() => setOpen(session)} />
               </li>
             ))}
           </ul>
@@ -198,55 +219,34 @@ export default function HistoryPage() {
   );
 }
 
+/* --- Seans kartı ---------------------------------------------------------- */
+
 /**
- * Yanındaki fotoğraf kartı kadar uzun duruyor ve içerik ORTALANMIŞ.
- * Yukarı yaslandığında kartın alt yarısı boş bir kutu gibi görünüyordu.
+ * Kart, satır değil: listede dokuz satır aynı görünüyordu ve hangi seansın
+ * ne olduğu ancak okunarak anlaşılıyordu. Kartta gün rakamı büyük, hareket
+ * adları altında — geçmişte gezinirken göz adlara takılıyor.
  */
-function Figure({ value, unit, note }: { value: string; unit: string; note: string }) {
-  return (
-    <div className="card flex flex-col justify-center px-5 py-4">
-      <p>
-        <span className="figure tnum text-xl">{value}</span>
-        <span className="ml-1.5 text-xs text-[var(--color-ink-muted)]">{unit}</span>
-      </p>
-      <p className="mt-0.5 text-2xs text-[var(--color-ink-faint)]">{note}</p>
-    </div>
-  );
-}
-
-/* --- Seans satırı --------------------------------------------------------- */
-
-function SessionRow({
-  session,
-  onOpen,
-}: {
-  session: HistorySession;
-  onOpen: () => void;
-}) {
+function SessionCard({ session, onOpen }: { session: HistorySession; onOpen: () => void }) {
   const date = new Date(session.started_at);
   const title =
     session.day_label ??
     date.toLocaleDateString("tr-TR", { weekday: "long" }).replace(/^./, (c) => c.toUpperCase());
+  const names = session.exercises.map((exercise) => exercise.name);
 
   return (
     <button
       type="button"
       onClick={onOpen}
-      className="card flex w-full items-center gap-4 px-4 py-3 text-left transition-colors hover:bg-[var(--color-surface-raised)]"
-      style={{ transitionDuration: "var(--dur-micro)" }}
+      className="card lift flex h-full w-full flex-col p-5 text-left"
     >
-      {/* Tarih bloğu: gün rakamı büyük, ay küçük. Listeyi tarayarak ilerlemek
-          için tek başına yeterli bir çapa. */}
-      <span className="w-10 shrink-0 text-center">
-        <span className="figure tnum block text-md leading-none">{date.getDate()}</span>
-        <span className="mt-0.5 block text-2xs text-[var(--color-ink-faint)]">
-          {MONTHS_SHORT[date.getMonth()]}
+      <span className="flex items-start justify-between gap-3">
+        <span className="flex items-baseline gap-2">
+          {/* Tarih bloğu: gün rakamı büyük, ay küçük. Listeyi tarayarak
+              ilerlemek için tek başına yeterli bir çapa. */}
+          <span className="display tnum text-3xl leading-none">{date.getDate()}</span>
+          <span className="text-xs text-[var(--color-ink-faint)]">{MONTHS_SHORT[date.getMonth()]}</span>
         </span>
-      </span>
-
-      <span className="min-w-0 flex-1">
-        <span className="flex flex-wrap items-center gap-2">
-          <span className="truncate text-sm font-medium">{title}</span>
+        <span className="flex flex-wrap justify-end gap-1.5">
           {session.records.length > 0 && (
             <span className="badge badge-accent">
               {session.records.length > 1 ? `${session.records.length} REKOR` : "REKOR"}
@@ -254,18 +254,28 @@ function SessionRow({
           )}
           {session.is_deload && <span className="badge badge-warning">deload</span>}
         </span>
-        <span className="tnum mt-0.5 block truncate text-2xs text-[var(--color-ink-faint)]">
-          {session.exercises.length} hareket · {session.total_sets} set
-          {/* `> 0` kontrolü: aynı dakika içinde kapatılan seanslarda "0 dk"
-              yazıyordu — bilgi taşımayan bir alan. */}
-          {session.duration_min !== null && session.duration_min > 0 &&
-            ` · ${session.duration_min} dk`}
-        </span>
       </span>
 
-      <span className="tnum shrink-0 text-right">
-        <span className="block text-sm">{fmt(num(session.volume_kg), 0)}</span>
-        <span className="block text-2xs text-[var(--color-ink-faint)]">kg</span>
+      <span className="mt-4 line-clamp-2 text-base font-medium">{title}</span>
+
+      {names.length > 0 && (
+        <span className="mt-1.5 line-clamp-2 text-sm text-[var(--color-ink-muted)]">
+          {names.slice(0, 3).join(" · ")}
+          {names.length > 3 && ` +${names.length - 3}`}
+        </span>
+      )}
+
+      <span className="tnum mt-auto flex items-baseline justify-between gap-3 border-t border-[var(--color-border)] pt-3 text-xs text-[var(--color-ink-faint)]">
+        <span>
+          {/* Hareket dizisi boş gelebiliyor (özet uç noktası); "0 hareket"
+              yazmak yerine sadece set sayısı kalıyor. */}
+          {session.exercises.length > 0 && `${session.exercises.length} hareket · `}
+          {session.total_sets} set
+          {/* `> 0` kontrolü: aynı dakika içinde kapatılan seanslarda "0 dk"
+              yazıyordu — bilgi taşımayan bir alan. */}
+          {session.duration_min !== null && session.duration_min > 0 && ` · ${session.duration_min} dk`}
+        </span>
+        <span className="text-[var(--color-ink-muted)]">{fmt(num(session.volume_kg), 0)} kg</span>
       </span>
     </button>
   );

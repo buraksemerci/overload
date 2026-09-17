@@ -7,7 +7,7 @@ Bir madde bitince altına kısa bir not düşülüyor.
 yazı) uygulamanın bütün ekranlarında. Koyu tema. Geniş, dolu, sade; grafikler,
 fotoğraflar, ödül alacak kalitede UI/UX.
 
-**Şu an:** `/history` yeniden tasarımı → ardından `/programs`, `/exercises`, `/supplements`, `/coach`.
+**Şu an:** `/programs` → `/exercises` → `/supplements` → `/coach` → boş durumlar, CLS, tam test.
 
 ---
 
@@ -84,7 +84,9 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 - [ ] Klavye kısayolları (Enter = seti kaydet, +/- ağırlık)
 - [~] `/programs` bant (var) + kartlar
 - [~] `/exercises` bant (var) + ekipman karoları + kas etiketleri
-- [~] `/history` bant (var) + haftalık grafik + seans kartları
+- [x] `/history` bant + haftalık tonaj grafiği + seans kartları
+  - Bant: toplam ton, seans (bu ay), set, rekor. Gece karosunda son 12 haftanın tonajı.
+  - Satır yerine kart ızgarası: büyük gün rakamı, hareket adları, rozetler.
 - [x] Program onayı ekranı: bant + gün/hareket/set sayıları + gece karosunda gerekçe
 
 ## 4. Beslenme

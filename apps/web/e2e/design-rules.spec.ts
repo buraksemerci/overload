@@ -315,3 +315,25 @@ test.describe("tasarım kuralları — kimlikli rotalar", () => {
     });
   }
 });
+
+/**
+ * Hareket azaltma tercihi ekranın açılış hareketini tamamen kaldırıyor.
+ *
+ * Genel kural süreyi 150ms'ye indiriyordu ama bandın fotoğrafı yine de
+ * ölçekleniyordu: "azaltılmış" değil, kısaltılmış hareket. Baş dönmesi
+ * (vestibüler) hassasiyeti olan biri için kısa bir yakınlaşma da tetikleyici.
+ */
+test("hareket azaltma tercihinde bandın fotoğrafı hiç hareket etmiyor", async ({ browser }) => {
+  const context = await browser.newContext({ reducedMotion: "reduce" });
+  const page = await context.newPage();
+  await signIn(page);
+  await mockApi(page);
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+
+  const media = page.locator(".hero-media").first();
+  await expect(media).toBeAttached();
+  const animation = await media.evaluate((element) => getComputedStyle(element).animationName);
+  expect(animation).toBe("none");
+  await context.close();
+});

@@ -106,11 +106,17 @@ sayısı tek seferde devasa bağlam gönderen çağrıyı kesiyor.
 - [x] `/supplements` — boş durum bir davet (fotoğraf + cümle + tek eylem);
       liste boşken başlıktaki ikinci "ekle" düğmesi kalkıyor
 
-### 5. Vücut
-- [ ] `/progress` — bento: güç kartı, tutarlılık, rekor rafı
-- [ ] `/muscle-map` — harita + liste dengesi
-- [ ] `/weight` — hero + grafik
-- [ ] `/soreness` — BİTTİ
+### 5. Vücut — BİTTİ
+- [x] `/body` — yeni özet ekranı: tek cümle + dört sayı + harita, kilo, ağrı,
+      güç ve rekor karoları. "Vücut" başlığına tıklayan kişi durumunu tek
+      ekranda görüyor; ayrıntı karolardan açılıyor.
+- [x] `/progress` — bant (ortanca güç seviyesi, en güçlü kaldırış, seri),
+      hareket başına beş basamaklı seviye merdiveni, rekor rafı, tutarlılık
+- [x] `/muscle-map` — gece sahnesinde ön+arka harita, seçili kasın paneli,
+      ön/arka dengesi, iki sütunlu liste
+- [x] `/weight` — bantta tartı girişi (±0,1), hedefe göre haftalık hız bandı,
+      büyük eğri
+- [x] `/soreness` — vücut üzerinde işaretleme; ağrı için ayrı (kehribar) ölçek
 
 ### 6. Asistan — BİTTİ
 - [x] `/chat` — boş sohbetteki örnekler tıklanabilir; genişlik diğer
@@ -130,6 +136,32 @@ sayısı tek seferde devasa bağlam gönderen çağrıyı kesiyor.
       yok ve yanlış bir görsel koymak hiç koymamaktan kötü.
 - [x] `pnpm lint` çalışıyor. `next lint` Next 16'da kaldırılmıştı ve komut
       "lint" adında bir klasör arıyordu; ESLint doğrudan bağlandı.
+
+### 8. Koyu tema ve sinematik dil — BİTTİ
+
+Giriş ekranındaki anlatının dili (karanlık salon, sıcak ışık, tam kadraj
+fotoğraf, büyük display yazı) oturum açıldıktan sonraki bütün ekranlara
+taşındı.
+
+- [x] Koyu tema: belirteçler tersine çevrildi, volt üstündeki yazı için
+      `--color-on-accent`, ısı ölçeği gece sürümü, tema rengi `#0d0e0b`.
+      Giriş anlatısındaki telefon ekranı `.theme-light` ile açık kaldı —
+      videonun içindeki arayüz açık temada çekildi.
+- [x] Her ekran fotoğraflı bir bantla (`Hero`) açılıyor; bant yüklenirken ve
+      hata verirken de basılıyor, böylece saydam üst çubuk hiçbir durumda
+      içeriğin üstüne binmiyor.
+- [x] Grafikler: `Bars`, `Trend`, `Ring`, `Meter` (`components/Charts.tsx`).
+      Hesaplar saf fonksiyonlarda (`lib/stats.ts`) ve birim testli.
+- [x] İçerik genişliği 88rem; bento ızgaraları 12 sütunlu.
+- [x] Antrenman modu: plaka hesabı, ekran uyanık (Wake Lock), titreşim,
+      ±15 sn dinlenme, yarım kalan setlerin yerel taslağı.
+- [x] Parola/doğrulama ekranları fotoğraflı ikili kabukta; tanışma akışının
+      açılışı tam genişlik sahne.
+- [x] Düzen kayması (CLS) 15 ekranda ölçüldü: masaüstünde en yüksek 0,005,
+      390 pikselde 0,024. Bandın içindeki yer tutucular gelecek içerikle aynı
+      yükseklikte.
+- [x] Hareket azaltma tercihinde bandın fotoğrafı hiç hareket etmiyor
+      (`e2e/design-rules`).
 
 ## Sıradaki — ürün değil, yayına hazırlık
 

@@ -834,6 +834,19 @@
     animation-delay: 0ms;
   }
 
+  /* Bandın fotoğrafı yerine oturmuyor, doğrudan yerinde duruyor: kısa da
+     olsa bir ölçek hareketi tam olarak kaldırılması istenen şey. */
+  .hero-media {
+    animation: none;
+    transform: none;
+  }
+
+  /* Asistanın "yazıyor" çizgisi sabit kalıyor; yerini yine koruyor. */
+  .thinking {
+    animation: none;
+    opacity: 0.7;
+  }
+
   @keyframes reveal-reduced {
     to {
       opacity: 1;

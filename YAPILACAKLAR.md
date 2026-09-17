@@ -7,7 +7,7 @@ Bir madde bitince altına kısa bir not düşülüyor.
 yazı) uygulamanın bütün ekranlarında. Koyu tema. Geniş, dolu, sade; grafikler,
 fotoğraflar, ödül alacak kalitede UI/UX.
 
-**Şu an:** `pnpm build`, ROADMAP, son tur; sonra kalan ince işler (klavye kısayolları, boş hesap karoları).
+**Şu an:** ince işler — antrenman klavye kısayolları, boş hesap karoları, ekran ekran son gözden geçirme.
 
 ---
 
@@ -35,9 +35,9 @@ fotoğraflar, ödül alacak kalitede UI/UX.
   - Sonra: hepsi ≤0,024. Düzeltmeler: banttaki yer tutucular gelecek içerikle aynı
     yükseklikte, ağrı ekranının açılış cümlesi iki satır, harita karosunun alt sınırı.
   - Ölçüm aracı: `e2e/_cls.spec.ts` (geçici, commit edilmiyor).
-- [~] Mobil (390px) turu yapıldı; tablet (768px) turu kaldı
-- [ ] Hareket azaltma tercihinde bantların animasyonu
-- [ ] Eksik fotoğraflar: akşam yemeği, ara öğün, tebeşir (yeniden üret)
+- [x] Mobil (390px) ve tablet (768px) turu yapıldı
+- [x] Hareket azaltma tercihinde bandın fotoğrafı hiç hareket etmiyor (+ e2e testi)
+- [x] Öğün ve salon fotoğrafları tamam (akşam, ara öğün, tebeşir dahil); README güncellendi
 
 ## 1. Pano (`/`)
 
@@ -117,9 +117,10 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 
 - [x] e2e testleri yeni tasarıma göre güncellendi (pano, antrenman, beslenme, hoş geldin)
 - [x] Tasarım kuralları testi: yeni ekran `/body` eklendi (124/124 geçti)
-- [~] Tam test paketi + `pnpm build` (e2e 385/387 → iki kırık kas haritası testi yeni ekranla düzeldi; build sırada)
+- [x] Tam test paketi (393 e2e) + `pnpm build` başarılı
+  - Gezinme testi paralel yük altında derleme gecikmesiyle düşüyordu; bekleme 20 sn.
 - [x] Commit: "Koyu tema ve sinematik ekranlar" (2026-09-17)
-- [ ] ROADMAP güncelle
+- [x] ROADMAP güncellendi (Bölüm 5 ve yeni Bölüm 8: koyu tema ve sinematik dil)
 
 ---
 

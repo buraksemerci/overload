@@ -376,3 +376,22 @@ test("dar ekranda hiçbir ekran yana kaymıyor", async ({ page }) => {
 
   expect(overflowing, overflowing.join(" · ")).toEqual([]);
 });
+
+/**
+ * "?" düğmesinin DOKUNMA ALANI görünen dairesinden büyük.
+ *
+ * Daire 18 piksel: başlığın yanında bir düğme gibi durmasın diye küçük.
+ * Parmakla 18 piksellik bir hedefe vurmak ise kumar — görünmez bir halka
+ * (`::after`) alanı 38 piksele çıkarıyor. Ölçülebilir olan tıklamanın
+ * kendisi: dairenin dışına basıldığında da açılıyor mu?
+ */
+test("ipucu düğmesinin çevresine basmak da açıyor", async ({ page }) => {
+  await signIn(page);
+  await mockApi(page);
+  await page.goto("/weight");
+
+  const tip = page.getByRole("button", { name: /nasıl hesaplanıyor/ }).first();
+  const box = (await tip.boundingBox())!;
+  await page.mouse.click(box.x + box.width / 2 + 9, box.y + box.height / 2 + 9);
+  await expect(tip).toHaveAttribute("aria-expanded", "true");
+});

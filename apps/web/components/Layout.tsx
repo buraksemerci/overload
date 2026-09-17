@@ -377,7 +377,11 @@ export function InfoTip({
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-label={label}
-        className={`grid size-[18px] shrink-0 place-items-center rounded-full border text-[10px] font-semibold transition-colors ${
+        /* Görünen daire 18px ama DOKUNMA ALANI 38px: `after` ile görünmez bir
+           halka. Parmakla 18 piksellik bir hedefe vurmak kumar; daireyi
+           büyütmek ise başlığın yanında bir düğme gibi durup metnin önüne
+           geçiyordu. */
+        className={`after:absolute after:-inset-2.5 after:content-[''] relative grid size-[18px] shrink-0 place-items-center rounded-full border text-[10px] font-semibold transition-colors ${
           onDark
             ? "border-[oklch(99%_0_0_/_0.4)] text-[var(--color-on-night-muted)] hover:border-[oklch(99%_0_0_/_0.8)] hover:text-[var(--color-on-night)]"
             : "border-[var(--color-border-strong)] text-[var(--color-ink-faint)] hover:border-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)]"

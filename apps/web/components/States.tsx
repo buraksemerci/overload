@@ -11,11 +11,28 @@
 
 import { Photo } from "@/components/Photo";
 
-export function Loading({ label = "Yükleniyor…" }: { label?: string }) {
+/**
+ * Yükleniyor — yazı değil, gelecek içeriğin iskeleti.
+ *
+ * "Yükleniyor…" satırı ekranın ortasında tek başına duruyordu ve veri gelince
+ * yerine giren blok her şeyi aşağı itiyordu. İskelet aynı yüksekliği
+ * kaplıyor; satır sayısı çağıran tarafından, gelecek içeriğe göre veriliyor.
+ *
+ * Etiket ekran okuyucu için duruyor (`aria-label`): görsel iskelet ekran
+ * okuyucuya hiçbir şey anlatmıyor.
+ */
+export function Loading({ label = "Yükleniyor…", rows = 3 }: { label?: string; rows?: number }) {
   return (
-    <p className="py-8 text-center text-sm text-[var(--color-ink-faint)]" role="status">
-      {label}
-    </p>
+    <div role="status" aria-busy="true" aria-label={label} className="flex flex-col gap-3 py-2">
+      {Array.from({ length: rows }, (_, index) => (
+        <span
+          key={index}
+          aria-hidden
+          className="skeleton block h-4"
+          style={{ width: index === rows - 1 ? "58%" : "100%" }}
+        />
+      ))}
+    </div>
   );
 }
 

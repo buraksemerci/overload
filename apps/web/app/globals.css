@@ -620,6 +620,19 @@
     border-color: var(--color-border-strong);
   }
 
+  /* Gelecek içeriğin yeri. Parıltı soldan sağa geçiyor; renk farkı küçük
+     çünkü iskelet bir içerik değil, bir boşluk. */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--color-surface-raised) 0%,
+      var(--color-border) 45%,
+      var(--color-surface-raised) 90%
+    );
+    background-size: 220% 100%;
+    animation: skeleton 1.5s var(--ease-out) infinite;
+  }
+
   /* Asistan yazarken: üç nokta yerine tek, nefes alan bir çizgi. Yer
      kaplamıyor ve metin gelince yerine hiçbir şey kaymıyor. */
   .thinking {
@@ -806,6 +819,15 @@
   animation: tick var(--dur-short) var(--ease-out);
 }
 
+@keyframes skeleton {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -40% 0;
+  }
+}
+
 @keyframes thinking {
   from {
     transform: scaleX(0.25);
@@ -845,6 +867,11 @@
   .thinking {
     animation: none;
     opacity: 0.7;
+  }
+
+  /* İskelet parıltısı da durur; yer tutma işini yine görüyor. */
+  .skeleton {
+    animation: none;
   }
 
   @keyframes reveal-reduced {

@@ -7,7 +7,7 @@ Bir madde bitince altına kısa bir not düşülüyor.
 yazı) uygulamanın bütün ekranlarında. Koyu tema. Geniş, dolu, sade; grafikler,
 fotoğraflar, ödül alacak kalitede UI/UX.
 
-**Şu an:** `/soreness` yeniden tasarımı → ardından `/history`, `/programs`, `/exercises`.
+**Şu an:** `/history` yeniden tasarımı → ardından `/programs`, `/exercises`, `/supplements`, `/coach`.
 
 ---
 
@@ -67,7 +67,12 @@ fotoğraflar, ödül alacak kalitede UI/UX.
   - "Hedefe göre hız": beslenme hedefinden (yağ kaybı/koruma/kas) vücut ağırlığına oranlı
     sağlıklı bant ve bugünkü hızın yeri. Haftalık ortalamalar tablosu.
   - `weeklyRate`, `rateBand`, `rateVerdict`, `weeklyAverages` + 5 birim testi; 2 yeni e2e.
-- [ ] `/soreness` yeniden: vücut üzerinde ağrı işaretleme (şimdilik bant var)
+- [x] `/soreness` yeniden: vücut üzerinde ağrı işaretleme
+  - Haritada bölgeye dokun → seviye paneli. Ağrı için AYRI renk ailesi (kehribar),
+    hacim voltuyla karışmıyor; 4. seviye ışıyor.
+  - Bant: bölge sayısı, en yüksek seviye, aktif sakatlık. Sağ sütun: bugün listesi
+    (şiddet kutucukları), "bugün için" tavsiye kartı, son 7 gün şeridi.
+  - `MuscleMap` artık `scale="soreness"` destekliyor; yeni e2e: haritadan işaretleme.
 
 ## 3. Antrenman
 

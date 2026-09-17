@@ -78,4 +78,29 @@ test.describe("ağrı", () => {
     await expect.poll(() => posted).toHaveLength(1);
     expect(posted[0]).toMatchObject({ muscle_group_slug: "lats", level: 0 });
   });
+
+  test("vücutta kasa dokunmak seviye panelini açıyor", async ({ page }) => {
+    const posted: Array<Record<string, unknown>> = [];
+    await page.route(`${API}/soreness`, (route) => {
+      if (route.request().method() !== "POST") return route.fallback();
+      posted.push(route.request().postDataJSON() as Record<string, unknown>);
+      return route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+    });
+
+    await page.goto("/soreness");
+    await page.waitForLoadState("networkidle");
+
+    // Adı bilinmeyen kası listede aramak yerine yerine dokunmak.
+    await page
+      .getByRole("img", { name: "Ön vücut ağrı haritası" })
+      .locator("g", { has: page.locator("title", { hasText: "Göğüs" }) })
+      .locator("path")
+      .first()
+      .click();
+    await expect(page.getByRole("dialog", { name: "Göğüs" })).toBeVisible();
+    await page.getByRole("button", { name: "Belirgin" }).click();
+
+    await expect.poll(() => posted).toHaveLength(1);
+    expect(posted[0]).toMatchObject({ muscle_group_slug: "chest", level: 3 });
+  });
 });

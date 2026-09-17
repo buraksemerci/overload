@@ -71,6 +71,25 @@ export function heatColor(step: number, night: boolean): string {
   return (night ? NIGHT_HEAT : LIGHT_HEAT)[step]!;
 }
 
+/**
+ * Ağrı ölçeği — hacimden AYRI bir renk ailesi. Hacim "iyi iş" (volt), ağrı
+ * bir uyarı: sıcak kehribar tonlarında koyulaşıyor. Aynı haritada iki kavram
+ * aynı renkle çizilseydi "yanan kas" hem hedefte hem ağrıyor okunurdu.
+ */
+export const SORENESS_LABELS = ["Yok", "Hafif", "Orta", "Belirgin", "Kısıtlayıcı"] as const;
+
+const SORENESS_NIGHT = [
+  "var(--color-heat-night-0)",
+  "oklch(40% 0.06 62)",
+  "oklch(54% 0.1 62)",
+  "oklch(67% 0.13 62)",
+  "var(--color-warning)",
+] as const;
+
+export function sorenessColor(level: number): string {
+  return SORENESS_NIGHT[Math.max(0, Math.min(4, Math.round(level)))]!;
+}
+
 interface Props {
   volumes: MuscleVolume[];
   /** Üzerine gelince açıklama, tıklayınca seçim. Küçük gömülü haritada false. */
@@ -83,6 +102,11 @@ interface Props {
   pair?: boolean;
   /** Bir kas grubuna tıklandı. Seçimi kaldırmak çağıranın kararı. */
   onSelect?: (svgId: string) => void;
+  /**
+   * `soreness`: `sets` alanı 0-4 ağrı seviyesi, `target` kullanılmıyor.
+   * Renk ailesi ve açıklama metni ona göre.
+   */
+  scale?: "volume" | "soreness";
   className?: string;
 }
 
@@ -100,8 +124,13 @@ export function MuscleMap({
   night = false,
   pair = false,
   onSelect,
+  scale = "volume",
   className,
 }: Props) {
+  const describe = (volume: MuscleVolume) =>
+    scale === "soreness"
+      ? SORENESS_LABELS[Math.max(0, Math.min(4, Math.round(volume.sets)))]!
+      : `${setText(volume.sets)} / ${volume.target} set`;
   const [region, setRegion] = useState<Region>("front");
   const [hovered, setHovered] = useState<MuscleVolume | null>(null);
 
@@ -163,6 +192,8 @@ export function MuscleMap({
               night={night}
               onHover={setHovered}
               onSelect={onSelect}
+              scale={scale}
+              describe={describe}
             />
             {pair && (
               <figcaption
@@ -182,12 +213,14 @@ export function MuscleMap({
             <p className="text-sm" style={{ color: night ? "var(--color-on-night)" : undefined }}>
               <span>{hovered.nameTr}</span>{" "}
               <span className="tnum" style={{ color: muted }}>
-                {setText(hovered.sets)} / {hovered.target} set
+                {describe(hovered)}
               </span>
             </p>
           ) : (
             <p className="text-xs" style={{ color: muted }}>
-              Bir kas grubuna gel ya da dokun — haftalık set hacmini gösterir.
+              {scale === "soreness"
+                ? "Ağrıyan bölgeye dokun — seviyesini seç."
+                : "Bir kas grubuna gel ya da dokun — haftalık set hacmini gösterir."}
             </p>
           )}
         </div>
@@ -229,6 +262,8 @@ function BodySvg({
   night,
   onHover,
   onSelect,
+  scale,
+  describe,
 }: {
   view: BodyView;
   region: Region;
@@ -238,6 +273,8 @@ function BodySvg({
   night: boolean;
   onHover: (volume: MuscleVolume | null) => void;
   onSelect?: (svgId: string) => void;
+  scale: "volume" | "soreness";
+  describe: (volume: MuscleVolume) => string;
 }) {
   // `useId`: aynı sayfada iki harita bulunabiliyor ve kimlikler çakışırsa
   // biri diğerinin kırpmasını ya da ışımasını kullanıyor.
@@ -245,18 +282,24 @@ function BodySvg({
 
   const stepOf = (svgId: string) => {
     const volume = bySvgId.get(svgId);
-    return volume ? heatStep(volume.sets, volume.target) : 0;
+    if (!volume) return 0;
+    return scale === "soreness"
+      ? Math.max(0, Math.min(4, Math.round(volume.sets)))
+      : heatStep(volume.sets, volume.target);
   };
 
   const paint = (svgId: string | null) => {
     if (svgId === null) return night ? "var(--color-silhouette)" : "var(--color-surface-raised)";
     // Veri gelmeyen bölge ile "0 set" aynı görünmeli.
-    return heatColor(stepOf(svgId), night);
+    return scale === "soreness" ? sorenessColor(stepOf(svgId)) : heatColor(stepOf(svgId), night);
   };
 
   // Hedefteki kas gece sahnesinde hafifçe ışıyor.
-  const glow = (svgId: string | null) =>
-    night && svgId !== null && stepOf(svgId) === 3 ? `url(#${uid}-glow)` : undefined;
+  const glow = (svgId: string | null) => {
+    if (!night || svgId === null) return undefined;
+    if (scale === "soreness") return stepOf(svgId) === 4 ? `url(#${uid}-glow-warm)` : undefined;
+    return stepOf(svgId) === 3 ? `url(#${uid}-glow)` : undefined;
+  };
 
   const hoverProps = (svgId: string | null) => {
     if (!interactive || svgId === null) return {};
@@ -275,7 +318,7 @@ function BodySvg({
     if (svgId === null) return null;
     const volume = bySvgId.get(svgId);
     if (!volume) return null;
-    return <title>{`${volume.nameTr}: ${setText(volume.sets)} / ${volume.target} set`}</title>;
+    return <title>{`${volume.nameTr}: ${describe(volume)}`}</title>;
   };
 
   // İşaretleme dolguyla DEĞİL konturla: dolguyu değiştirmek ısı rengini
@@ -293,7 +336,7 @@ function BodySvg({
       viewBox={view.viewBox}
       className="mx-auto block w-full max-w-[340px]"
       role="img"
-      aria-label={`${region === "front" ? "Ön" : "Arka"} vücut kas hacmi haritası`}
+      aria-label={`${region === "front" ? "Ön" : "Arka"} vücut ${scale === "soreness" ? "ağrı" : "kas hacmi"} haritası`}
     >
       <defs>
         {night && (
@@ -303,6 +346,21 @@ function BodySvg({
               in="blur"
               type="matrix"
               values="0 0 0 0 0.82  0 0 0 0 0.95  0 0 0 0 0.25  0 0 0 0.75 0"
+              result="tint"
+            />
+            <feMerge>
+              <feMergeNode in="tint" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        )}
+        {night && scale === "soreness" && (
+          <filter id={`${uid}-glow-warm`} x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="9" result="blur" />
+            <feColorMatrix
+              in="blur"
+              type="matrix"
+              values="0 0 0 0 0.95  0 0 0 0 0.68  0 0 0 0 0.25  0 0 0 0.7 0"
               result="tint"
             />
             <feMerge>

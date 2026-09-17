@@ -37,6 +37,17 @@ export const metadata: Metadata = {
   applicationName: "overload",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "overload", statusBarStyle: "default" },
+  /* Bağlantı paylaşıldığında görünen kart. Görsel uygulamanın kendi
+     salonundan: ön izleme ile ekranın açılışı aynı sahneyi gösteriyor. */
+  openGraph: {
+    type: "website",
+    locale: "tr_TR",
+    siteName: "overload",
+    title: "overload",
+    description: "Progresif overload merkezli antrenman, beslenme ve sağlık takibi.",
+    images: [{ url: "/photos/app-gym-wide.jpg", width: 2400, height: 1350 }],
+  },
+  twitter: { card: "summary_large_image" },
 };
 
 export const viewport: Viewport = {

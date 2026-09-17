@@ -1,4 +1,5 @@
-import type { Page, Route } from "@playwright/test";
+import { expect, type Page, type Route } from "@playwright/test";
+import type { Me } from "../lib/auth";
 
 /**
  * Backend taklidi.
@@ -24,7 +25,14 @@ export const ME = {
   sex: "male",
   height_cm: 180,
   activity_level: "moderate",
-};
+  training_experience: "one_to_three",
+  training_goal: "hypertrophy",
+  training_days_per_week: 5,
+  nutrition_goal: null,
+  // Dolu: yoksa her test tanışma akışına yönlendirilir. Akışın kendi testleri
+  // (`e2e/onboarding.spec.ts`) bunu boşaltıyor.
+  onboarding_completed_at: "2026-09-01T10:00:00Z",
+} satisfies Me;
 
 export const TODAY_WORKOUT = {
   program_name: "5 Günlük Split",
@@ -80,6 +88,21 @@ const json = (route: Route, body: unknown, status = 200) =>
     contentType: "application/json",
     body: JSON.stringify(body),
   });
+
+/**
+ * Giriş ekranını açıp forma iner.
+ *
+ * Form anlatının FİNALİNDE, videonun son karesinin üstünde duruyor ve oraya
+ * inilene kadar `inert`: görünmüyor, odaklanamıyor, tıklanamıyor. Testler
+ * kullanıcının yolunu izliyor — üstteki çubuktaki "Giriş yap".
+ */
+export async function openAuthForm(page: Page): Promise<void> {
+  await page.goto("/login");
+  await expect(page.locator("[data-story]")).toBeVisible();
+  await page.locator("header").getByRole("button", { name: "Giriş yap" }).click();
+  await expect(page.getByLabel("E-posta")).toBeInViewport();
+  await expect(page.locator("[inert] #giris")).toHaveCount(0);
+}
 
 /** Oturumu açık bir kullanıcı simüle eder. */
 export async function signIn(page: Page): Promise<void> {

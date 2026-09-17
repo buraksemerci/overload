@@ -13,8 +13,8 @@ from decimal import Decimal
 import pytest
 
 from overload_api.db.models.exercise import Equipment
-from overload_api.db.models.user import Sex
-from overload_api.services.starting_weight import estimate, infer_level
+from overload_api.db.models.user import Sex, TrainingExperience
+from overload_api.services.starting_weight import EXPERIENCE_LEVEL, estimate, infer_level
 from overload_api.services.strength_standards import StrengthLevel
 
 D = Decimal
@@ -178,6 +178,45 @@ class TestInferLevel:
             infer_level(best_ratios={"leg press": D("3.0")}, sex=Sex.male)
             is StrengthLevel.untrained
         )
+
+
+class TestDeclaredExperience:
+    """Geçmiş yokken kullanıcının beyan ettiği antrenman süresi.
+
+    Önce hiç sorulmuyordu: üç yıllık biri de ilk haftasında hiç antrenman
+    yapmamış biriyle aynı ağırlıkları görüyordu.
+    """
+
+    def test_experience_seeds_the_level_without_history(self) -> None:
+        level = infer_level(best_ratios={}, sex=Sex.male, experience=TrainingExperience.over_three)
+        assert level is StrengthLevel.intermediate
+
+    def test_every_step_is_one_below_the_natural_mapping(self) -> None:
+        """Beyan ölçüm değil: 1-3 yıl çoğu tabloda orta, burada acemi."""
+        assert EXPERIENCE_LEVEL[TrainingExperience.one_to_three] is StrengthLevel.novice
+        assert EXPERIENCE_LEVEL[TrainingExperience.under_1y] is StrengthLevel.untrained
+
+    def test_declaration_never_reaches_advanced(self) -> None:
+        """İleri ve elit seviyeye yalnızca gerçek setlerle çıkılıyor."""
+        ceiling = {StrengthLevel.advanced, StrengthLevel.elite}
+        assert not ceiling & set(EXPERIENCE_LEVEL.values())
+
+    def test_real_history_overrides_the_declaration(self) -> None:
+        """Ölçüm beyandan her zaman üstün — aşağı yönde de."""
+        level = infer_level(
+            best_ratios={"barbell bench press": D("0.50")},  # acemi eşiğinin altı
+            sex=Sex.male,
+            experience=TrainingExperience.over_three,
+        )
+        assert level is StrengthLevel.untrained
+
+    def test_declared_experience_makes_the_guess_heavier_but_below_advanced(self) -> None:
+        """Etkiyi sayıyla gör: aynı kişi, aynı hareket."""
+        new = guess(level=EXPERIENCE_LEVEL[TrainingExperience.new])
+        veteran = guess(level=EXPERIENCE_LEVEL[TrainingExperience.over_three])
+        advanced = guess(level=StrengthLevel.advanced)
+        assert new is not None and veteran is not None and advanced is not None
+        assert new < veteran < advanced
 
 
 @pytest.mark.parametrize(

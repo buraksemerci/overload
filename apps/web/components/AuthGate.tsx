@@ -28,7 +28,7 @@ const NEVER = () => () => {};
 /* Oturum İSTEMEYEN yollar. Parola kurtarma ve e-posta doğrulama buraya ait:
    ikisi de tanım gereği oturumu olmayan kişinin geldiği yer. Doğrulama
    bağlantısı e-postadan geliyor ve başka bir cihazda açılabiliyor. */
-const PUBLIC_PATHS = new Set([
+export const PUBLIC_PATHS: ReadonlySet<string> = new Set([
   "/login",
   "/forgot-password",
   "/reset-password",

@@ -323,7 +323,9 @@ async def todays_workout(db: DbSession, user: CurrentUser) -> TodayOut:
             )
         )
 
-    streak = await service.compute_streak(db, user.id, today_in(user.timezone))
+    streak = await service.compute_streak(
+        db, user.id, today_in(user.timezone), user.training_days_per_week
+    )
     return TodayOut(
         program_name=program.name,
         program_day_id=day.id,
@@ -664,9 +666,7 @@ async def workout_history(
             continue
         by_session.setdefault(record.workout_session_id, []).append(record)
 
-    return [
-        _history_session(s, day_labels, by_session.get(s.id, [])) for s in sessions
-    ]
+    return [_history_session(s, day_labels, by_session.get(s.id, [])) for s in sessions]
 
 
 @router.get("/progression/{exercise_id}", response_model=ProgressionOut)
@@ -694,7 +694,9 @@ async def muscle_volume(
 
 @router.get("/streak", response_model=StreakOut)
 async def streak(db: DbSession, user: CurrentUser) -> StreakOut:
-    info = await service.compute_streak(db, user.id, today_in(user.timezone))
+    info = await service.compute_streak(
+        db, user.id, today_in(user.timezone), user.training_days_per_week
+    )
     return StreakOut(
         intact_weeks=info.intact_weeks,
         this_week_sessions=info.this_week_sessions,
@@ -808,4 +810,3 @@ async def best_records(db: DbSession, user: CurrentUser) -> list[ExerciseRecords
     ]
     result.sort(key=lambda row: row.last_achieved_at, reverse=True)
     return result
-

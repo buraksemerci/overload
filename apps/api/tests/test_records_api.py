@@ -75,7 +75,9 @@ async def _record(
 
 
 class TestBestPerType:
-    async def test_only_the_best_row_survives(self, client: AsyncClient, user_id: uuid.UUID) -> None:
+    async def test_only_the_best_row_survives(
+        self, client: AsyncClient, user_id: uuid.UUID
+    ) -> None:
         """Aynı türde üç rekor satırı var; listede bir tanesi görünmeli."""
         exercise, _ = await _two_exercises()
         await _record(user_id, exercise, "max_weight", "70", reps=8, day=0)
@@ -88,8 +90,10 @@ class TestBestPerType:
         assert len(weights) == 1
         assert weights[0]["value"] == "80.00"
 
-    async def test_more_reps_wins_at_equal_weight(self, client: AsyncClient, user_id: uuid.UUID) -> None:
-        """"100kg x 1" ile "100kg x 8" aynı rekor değil."""
+    async def test_more_reps_wins_at_equal_weight(
+        self, client: AsyncClient, user_id: uuid.UUID
+    ) -> None:
+        """ "100kg x 1" ile "100kg x 8" aynı rekor değil."""
         exercise, _ = await _two_exercises()
         await _record(user_id, exercise, "max_weight", "100", reps=1, day=0)
         await _record(user_id, exercise, "max_weight", "100", reps=8, day=7)
@@ -111,7 +115,9 @@ class TestBestPerType:
             "estimated_1rm",
         }
 
-    async def test_types_come_in_a_stable_order(self, client: AsyncClient, user_id: uuid.UUID) -> None:
+    async def test_types_come_in_a_stable_order(
+        self, client: AsyncClient, user_id: uuid.UUID
+    ) -> None:
         """Sözlük sırası veriye bağlı; sabitlenmezse aynı ekranda hareketten
         harekete yer değiştiriyorlar."""
         exercise, _ = await _two_exercises()
@@ -147,7 +153,9 @@ class TestBestPerType:
 
 
 class TestGroupingAndOrder:
-    async def test_grouped_by_exercise_with_its_name(self, client: AsyncClient, user_id: uuid.UUID) -> None:
+    async def test_grouped_by_exercise_with_its_name(
+        self, client: AsyncClient, user_id: uuid.UUID
+    ) -> None:
         first, second = await _two_exercises()
         await _record(user_id, first, "max_weight", "80", reps=8)
         await _record(user_id, second, "max_weight", "40", reps=12)
@@ -157,7 +165,9 @@ class TestGroupingAndOrder:
         # Hareket ADI dönüyor: ham `exercise_id` ekranda işe yaramıyor.
         assert all(row["name"] for row in rows)
 
-    async def test_freshest_achievement_comes_first(self, client: AsyncClient, user_id: uuid.UUID) -> None:
+    async def test_freshest_achievement_comes_first(
+        self, client: AsyncClient, user_id: uuid.UUID
+    ) -> None:
         """Kullanıcı en son neyi kırdığını listenin başında görmeli."""
         first, second = await _two_exercises()
         await _record(user_id, first, "max_weight", "80", reps=8, day=0)

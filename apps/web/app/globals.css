@@ -375,6 +375,35 @@
     box-shadow: 0 1px 2px oklch(21% 0.014 115 / 0.06);
   }
 
+  /* Seçenek satırı — "hangisi sana uyuyor" soruları (tanışma akışı).
+
+     Seçili hâl volt DEĞİL: volt ekranın tek birincil aksiyonuna ayrılmış ve
+     beş seçenekli bir soruda seçimi volt yapmak, "Devam" düğmesiyle yarışan
+     ikinci bir aksiyon gibi duruyordu. Koyu, çift kalınlıkta kenar yeterince
+     belirgin ve renge bağlı değil — renk körü biri de seçimi görüyor. */
+  .choice {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    text-align: left;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    padding: 0.875rem 1rem;
+    transition:
+      border-color var(--dur-micro) var(--ease-out),
+      box-shadow var(--dur-micro) var(--ease-out);
+  }
+  .choice:hover {
+    border-color: var(--color-ink-faint);
+  }
+  .choice[aria-pressed="true"] {
+    border-color: var(--color-ink);
+    box-shadow: inset 0 0 0 1px var(--color-ink);
+  }
+
   /* Girdi alanı */
   .field {
     background: var(--color-surface);

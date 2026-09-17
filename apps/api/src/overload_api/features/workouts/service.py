@@ -92,13 +92,27 @@ def _week_start(day: date) -> date:
     return day - timedelta(days=day.weekday())
 
 
-async def compute_streak(session: AsyncSession, user_id: uuid.UUID, today: date) -> StreakInfo:
-    """Haftalık hedefi tutturarak geçirilen kesintisiz hafta sayısı."""
+async def compute_streak(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    today: date,
+    declared_days: int | None = None,
+) -> StreakInfo:
+    """Haftalık hedefi tutturarak geçirilen kesintisiz hafta sayısı.
+
+    Hedef sırası: aktif programın gün sayısı -> kullanıcının onboarding'de
+    söylediği haftalık gün -> 3. Programı olmayan biri için sabit 3, haftada
+    beş gün çalışan birinin serisini "hedef tuttu" diye yanlış ölçüyordu.
+    """
     target = (
-        await session.execute(
-            select(Program.days_per_week).where(Program.owner_id == user_id, Program.is_active)
-        )
-    ).scalar_one_or_none() or DEFAULT_WEEKLY_TARGET
+        (
+            await session.execute(
+                select(Program.days_per_week).where(Program.owner_id == user_id, Program.is_active)
+            )
+        ).scalar_one_or_none()
+        or declared_days
+        or DEFAULT_WEEKLY_TARGET
+    )
 
     since = _week_start(today) - timedelta(weeks=STREAK_LOOKBACK_WEEKS)
     rows = await session.execute(
@@ -319,7 +333,9 @@ async def load_strength_context(session: AsyncSession, user: User) -> StrengthCo
     return StrengthContext(
         bodyweight_kg=bodyweight,
         sex=user.sex,
-        level=infer_level(best_ratios=ratios, sex=user.sex),
+        # Geçmiş yoksa kullanıcının beyan ettiği antrenman süresi seviyeyi
+        # belirliyor (bir basamak muhafazakâr); geçmiş varsa beyan yok sayılıyor.
+        level=infer_level(best_ratios=ratios, sex=user.sex, experience=user.training_experience),
     )
 
 

@@ -3,16 +3,25 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from enum import StrEnum
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
 from fastapi_users_db_sqlalchemy.access_token import SQLAlchemyBaseAccessTokenTableUUID
-from sqlalchemy import CheckConstraint, ForeignKey, Index, Numeric, SmallInteger, String
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Numeric,
+    SmallInteger,
+    String,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from overload_api.db.base import Base, TimestampMixin, enum_column, pk_column
+from overload_api.db.models.program import ProgramGoal
 
 
 class Sex(StrEnum):
@@ -32,6 +41,29 @@ class ActivityLevel(StrEnum):
     moderate = "moderate"
     active = "active"
     very_active = "very_active"
+
+
+class TrainingExperience(StrEnum):
+    """Düzenli ağırlık antrenmanı süresi — kullanıcının KENDİ beyanı.
+
+    "Seviyen ne?" diye SORULMUYOR, "ne kadar süredir?" diye soruluyor. Süre
+    ölçülebilir bir şey; seviye bir öz değerlendirme ve insanlar kendini
+    sistematik olarak olduğundan iyi değerlendiriyor. Başlangıç ağırlığı
+    bu beyandan türetiliyor ve ağır bir tahminin bedeli sakatlık.
+    """
+
+    new = "new"  # hiç ya da birkaç haftadır
+    under_1y = "under_1y"
+    one_to_three = "one_to_three"
+    over_three = "over_three"
+
+
+class NutritionGoal(StrEnum):
+    """Beslenme hedefi. `services/nutrition/tdee.py` aynı değerleri kullanıyor."""
+
+    cut = "cut"
+    maintain = "maintain"
+    bulk = "bulk"
 
 
 class GoalType(StrEnum):
@@ -61,6 +93,24 @@ class User(SQLAlchemyBaseUserTableUUID, TimestampMixin, Base):
     )
     timezone: Mapped[str] = mapped_column(String(64), default="Europe/Istanbul", nullable=False)
 
+    # --- Onboarding'de toplanan ------------------------------------------------
+    # Her alanın BİR tüketicisi var; tüketicisi olmayan hiçbir şey sorulmuyor.
+    #
+    #   training_experience     başlangıç ağırlığı (geçmiş yokken seviye)
+    #   training_goal           program önerisi, asistan bağlamı
+    #   training_days_per_week  program önerisi, program yokken haftalık hedef
+    #   nutrition_goal          kalori hedefinin varsayılanı, asistan bağlamı
+    #
+    # Hepsi boş olabilir: kullanıcı bir adımı geçebilir ve o durumda ilgili
+    # özellik bugünkü (muhafazakâr) davranışında kalıyor.
+    training_experience: Mapped[TrainingExperience | None] = enum_column(TrainingExperience)
+    training_goal: Mapped[ProgramGoal | None] = enum_column(ProgramGoal)
+    training_days_per_week: Mapped[int | None] = mapped_column(SmallInteger)
+    nutrition_goal: Mapped[NutritionGoal | None] = enum_column(NutritionGoal)
+    #: Tanışma akışı bitti mi. Alanların dolu olmasından ÇIKARILMIYOR: kullanıcı
+    #: bir soruyu bilerek boş bırakabilir ve ona her girişte yeniden sorulmamalı.
+    onboarding_completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     # NOT: "aktif program" burada DEĞİL, `program.is_active` üzerinde tutulur.
     # Buraya bir `active_program_id` koymak user <-> program arasında karşılıklı
     # yabancı anahtar döngüsü yaratıyordu; migration hangi tabloyu önce
@@ -70,6 +120,10 @@ class User(SQLAlchemyBaseUserTableUUID, TimestampMixin, Base):
 
     __table_args__ = (
         CheckConstraint("height_cm IS NULL OR height_cm BETWEEN 80 AND 260", name="height_sane"),
+        CheckConstraint(
+            "training_days_per_week IS NULL OR training_days_per_week BETWEEN 1 AND 7",
+            name="training_days_sane",
+        ),
     )
 
 

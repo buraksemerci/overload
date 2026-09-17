@@ -78,10 +78,65 @@ ile öner. Gerekçeni `rationale` alanına yaz — kullanıcı onay kartında bu
 """
 
 
+def profile_line(
+    *,
+    age: int | None,
+    sex: str | None,
+    height_cm: int | None,
+    experience: str | None,
+    training_goal: str | None,
+    days_per_week: int | None,
+    nutrition_goal: str | None,
+) -> str | None:
+    """Profilin modele giden özeti — tek satır, yalnızca bilinenler.
+
+    Önce hiç yoktu: asistan "haftada kaç gün çalışmalıyım" sorusunu
+    kullanıcının deneyimini, hedefini ve kaç gün ayırabildiğini bilmeden
+    cevaplıyordu. Genel bir tavsiye verip kullanıcıya tekrar sormak zorunda
+    kalıyordu — bilgi zaten onboarding'de verilmişti.
+
+    Ad, e-posta ya da doğum tarihi GÖNDERİLMİYOR: model yaşı biliyor, doğum
+    gününe ihtiyacı yok. Yalnızca öneriyi değiştiren alanlar.
+    """
+    parts: list[str] = []
+    if age is not None:
+        parts.append(f"{age} yaş")
+    if sex in _SEX_TR:
+        parts.append(_SEX_TR[sex])
+    if height_cm is not None:
+        parts.append(f"{height_cm} cm")
+    if experience in _EXPERIENCE_TR:
+        parts.append(f"antrenman geçmişi: {_EXPERIENCE_TR[experience]}")
+    if training_goal in _TRAINING_GOAL_TR:
+        parts.append(f"antrenman hedefi: {_TRAINING_GOAL_TR[training_goal]}")
+    if days_per_week is not None:
+        parts.append(f"haftada {days_per_week} gün ayırabiliyor")
+    if nutrition_goal in _NUTRITION_GOAL_TR:
+        parts.append(f"beslenme hedefi: {_NUTRITION_GOAL_TR[nutrition_goal]}")
+    return f"Profil: {', '.join(parts)}" if parts else None
+
+
+_SEX_TR = {"male": "erkek", "female": "kadın"}
+_EXPERIENCE_TR = {
+    "new": "yeni başlıyor",
+    "under_1y": "1 yıldan az",
+    "one_to_three": "1-3 yıl",
+    "over_three": "3 yıldan fazla",
+}
+_TRAINING_GOAL_TR = {
+    "strength": "güç",
+    "hypertrophy": "kas kütlesi",
+    "powerbuilding": "güç ve kas",
+    "general_fitness": "genel form",
+}
+_NUTRITION_GOAL_TR = {"cut": "yağ kaybı", "maintain": "koruma", "bulk": "kas kazanımı"}
+
+
 def build_context_block(
     *,
     today: date,
     display_name: str | None,
+    profile: str | None = None,
     bodyweight_trend: list[tuple[date, Decimal]],
     recent_sessions: list[dict[str, Any]],
     todays_nutrition: dict[str, Any] | None,
@@ -99,6 +154,8 @@ def build_context_block(
 
     if display_name:
         lines.append(f"Kullanıcı: {display_name}")
+    if profile:
+        lines.append(profile)
     if active_program_name:
         lines.append(f"Aktif program: {active_program_name}")
     # Seri programa göre ölçülür (haftalık hedefi tutturmak), takvim gününe göre

@@ -187,11 +187,45 @@ const NEVER = () => () => {};
 const getServerRendition = (): Rendition | null => null;
 
 /** Anlatının kapladığı kaydırma yüksekliği. Ekran boyu cinsinden. */
-const SCROLL_SCREENS = 5;
+const SCROLL_SCREENS = 6;
 
-export function Scrollytelling() {
+/**
+ * Kaydırmanın hangi noktasında video bitiyor.
+ *
+ * Sonrası FİNAL: video son karesinde (telefon ekranı) duruyor ve çağıranın
+ * verdiği içerik o karenin üstüne çıkıyor. Faz aralıkları (`PHASES`) video
+ * zamanına göre yazılı; kaydırma ilerlemesi bu değerle ölçekleniyor.
+ */
+const VIDEO_END = 0.8;
+
+/** Finalin belirdiği nokta: son fazın metni çekildikten biraz sonra. */
+const FINALE_FROM = 0.86;
+
+interface Props {
+  /**
+   * Anlatının vardığı yer — videonun son karesinin üstünde duruyor.
+   *
+   * Giriş ekranında giriş formu. Anlatıdan sonra ayrı, düz bir bölüm olarak
+   * durduğunda videodan sonra sönük bir kapanış gibi kalıyordu; son karenin
+   * üstünde anlatının kendi sonucu oluyor.
+   */
+  finale?: React.ReactNode;
+  /** Final göründü ya da çekildi. Olay, render değil — GSAP'ten geliyor. */
+  onFinaleChange?: (active: boolean) => void;
+}
+
+export function Scrollytelling({ finale, onFinaleChange }: Props) {
   const root = useRef<HTMLDivElement>(null);
   const video = useRef<HTMLVideoElement>(null);
+  const hasFinale = finale !== undefined;
+
+  /* Geri çağırmanın güncel hâli bir ref'te: GSAP kurulumu yalnızca hareket
+     tercihi değişince yeniden yapılıyor ve çağıranın her render'da yeni bir
+     fonksiyon vermesi kaydırma bağlamasını baştan kurdurmamalı. */
+  const finaleCallback = useRef(onFinaleChange);
+  useEffect(() => {
+    finaleCallback.current = onFinaleChange;
+  }, [onFinaleChange]);
 
   /**
    * Hareket azaltma tercihi SUNUCUDA bilinemiyor.
@@ -210,6 +244,8 @@ export function Scrollytelling() {
   const [hasVideo, setHasVideo] = useState(false);
   /** Hangi fazın metni görünüyor. */
   const [active, setActive] = useState(0);
+  /** Final görünüyor mu. */
+  const [finaleActive, setFinaleActive] = useState(false);
 
   useEffect(() => {
     if (reduced !== false || root.current === null) return;
@@ -242,6 +278,7 @@ export function Scrollytelling() {
          * ve metin yanlış sahnenin üstünde görünürdü.
          */
         const state = { progress: 0 };
+        let lastFinale = false;
 
         gsap.to(state, {
           progress: 1,
@@ -255,21 +292,33 @@ export function Scrollytelling() {
             scrub: 0.6,
           },
           onUpdate: () => {
+            // Final varsa video kaydırmanın `VIDEO_END`inde bitiyor; kalan
+            // kısım son karede duruyor. Final yoksa bütün kaydırma video.
+            const end = hasFinale ? VIDEO_END : 1;
+            const videoProgress = Math.min(state.progress / end, 1);
+
             const element = video.current;
             if (element !== null && Number.isFinite(element.duration)) {
               // `duration - 0.05`: tam sona yazmak bazı tarayıcılarda
               // `ended` tetikleyip son kareyi boşaltıyor.
               seeker.seek(
-                Math.min(state.progress * element.duration, element.duration - 0.05),
+                Math.min(videoProgress * element.duration, element.duration - 0.05),
               );
             }
 
             const index = PHASES.findIndex(
-              (phase) => state.progress >= phase.from && state.progress <= phase.to,
+              (phase) => videoProgress >= phase.from && videoProgress <= phase.to,
             );
             // Aralıkların arasına düşen kaydırma konumunda son faz kalıyor:
             // metin bir an kaybolup geri gelmiyor.
             if (index !== -1) setActive(index);
+
+            const inFinale = hasFinale && state.progress >= FINALE_FROM;
+            if (inFinale !== lastFinale) {
+              lastFinale = inFinale;
+              setFinaleActive(inFinale);
+              finaleCallback.current?.(inFinale);
+            }
           },
         });
       }, root);
@@ -284,7 +333,7 @@ export function Scrollytelling() {
       cancelled = true;
       cleanup();
     };
-  }, [reduced]);
+  }, [reduced, hasFinale]);
 
   if (reduced !== false) {
     return (
@@ -295,6 +344,17 @@ export function Scrollytelling() {
         {PHASES.map((phase) => (
           <FlatCard key={phase.photo} phase={phase} />
         ))}
+        {/* Hareket azaltmada da final son karenin üstünde — ama kaydırmaya
+            bağlı değil, akışta. Fotoğraf arka planda; içerik kendi
+            yüksekliğini alıyor, kırpılmıyor. */}
+        {hasFinale && (
+          <section className="relative overflow-hidden">
+            <div aria-hidden className="absolute inset-0">
+              <Photo slug="story-phone" fill scrim className="size-full" />
+            </div>
+            <div className="relative flex px-5 py-16 sm:px-8 lg:px-12">{finale}</div>
+          </section>
+        )}
       </div>
     );
   }
@@ -353,23 +413,51 @@ export function Scrollytelling() {
               itiyor. Bir kez öyle oldu, `e2e/welcome.spec.ts` artık
               görünür metnin ekranda kaldığını ölçüyor. */}
           <div className="mx-auto grid w-full max-w-[84rem] px-5 pb-16 sm:px-8 lg:pb-24">
-            {PHASES.map((phase, index) => (
-              <div
-                key={phase.photo}
-                className="col-start-1 row-start-1 self-end"
-                style={{
-                  opacity: index === active ? 1 : 0,
-                  pointerEvents: index === active ? "auto" : "none",
-                  transition: "opacity var(--dur-long) var(--ease-out)",
-                }}
-              >
-                <Caption phase={phase} />
-              </div>
-            ))}
+            {PHASES.map((phase, index) => {
+              // Finalde bütün faz metinleri çekiliyor: formun yanında bir
+              // anlatı cümlesi durması iki şeyi aynı anda okutuyor.
+              const visible = index === active && !finaleActive;
+              return (
+                <div
+                  key={phase.photo}
+                  className="col-start-1 row-start-1 self-end"
+                  style={{
+                    opacity: visible ? 1 : 0,
+                    pointerEvents: visible ? "auto" : "none",
+                    transition: "opacity var(--dur-long) var(--ease-out)",
+                  }}
+                >
+                  <Caption phase={phase} />
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        <ProgressDots count={PHASES.length} active={active} />
+        {/* Final katmanı. `inert`: görünmezken içindeki alanlar sekmeyle
+            odaklanamıyor ve ekran okuyucu onları okumuyor — opaklık tek
+            başına yalnızca gözden saklıyor. Kendi içinde kayabiliyor:
+            telefonda klavye açılınca sahne kısalıyor ve form taşmamalı. */}
+        {hasFinale && (
+          <div
+            className="absolute inset-0 overflow-y-auto"
+            inert={!finaleActive}
+            style={{
+              opacity: finaleActive ? 1 : 0,
+              pointerEvents: finaleActive ? "auto" : "none",
+              transition: "opacity var(--dur-long) var(--ease-out)",
+            }}
+          >
+            <div className="mx-auto flex min-h-full w-full max-w-[84rem] items-center justify-center px-5 py-24 sm:px-8 lg:justify-start">
+              {finale}
+            </div>
+          </div>
+        )}
+
+        <ProgressDots
+          count={PHASES.length + (hasFinale ? 1 : 0)}
+          active={finaleActive ? PHASES.length : active}
+        />
       </div>
     </div>
   );

@@ -25,7 +25,8 @@ from overload_api.db.models.program import Program
 from overload_api.db.models.user import User
 from overload_api.db.models.workout import SetLog, WorkoutSession
 from overload_api.features.workouts.service import compute_streak
-from overload_api.services.ai.prompts import build_context_block
+from overload_api.services.ai.prompts import build_context_block, profile_line
+from overload_api.services.nutrition.tdee import age_from
 
 #: Modele kaç geçmiş mesaj gönderilir. Daha fazlası önbelleğe girse de
 #: token maliyeti doğrusal artıyor; 30 mesaj pratikte yeterli bağlam veriyor.
@@ -130,13 +131,22 @@ async def build_history(
     context_text = build_context_block(
         today=today,
         display_name=user.display_name,
+        profile=profile_line(
+            age=age_from(user.birth_date, today) if user.birth_date else None,
+            sex=user.sex.value,
+            height_cm=user.height_cm,
+            experience=user.training_experience.value if user.training_experience else None,
+            training_goal=user.training_goal.value if user.training_goal else None,
+            days_per_week=user.training_days_per_week,
+            nutrition_goal=user.nutrition_goal.value if user.nutrition_goal else None,
+        ),
         # `.all()` Row nesneleri döndürüyor; tuple'a çevirip ters çeviriyoruz
         # (sorgu yeniden eskiye sıralı, grafik eskiden yeniye bekliyor).
         bodyweight_trend=[(row[0], row[1]) for row in reversed(list(weights.all()))],
         recent_sessions=await _recent_sessions(db, user),
         todays_nutrition=await _todays_nutrition(db, user, today),
         active_program_name=active_program,
-        streak_label=(await compute_streak(db, user.id, today)).label,
+        streak_label=(await compute_streak(db, user.id, today, user.training_days_per_week)).label,
         open_injuries=[f"{name}: {desc}" for name, desc in injuries],
     )
 

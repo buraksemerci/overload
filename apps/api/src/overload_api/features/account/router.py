@@ -84,9 +84,7 @@ async def delete_own_account(
     )
     if not verified:
         # 403, 401 DEĞİL: oturum geçerli, reddedilen şey bu işlem.
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Parola doğrulanamadı."
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Parola doğrulanamadı.")
 
     try:
         removed = await r2.delete_user_objects(user.id)

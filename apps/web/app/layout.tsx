@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Big_Shoulders, Geist } from "next/font/google";
 import { AppShell } from "@/components/AppShell";
 import { AuthGate } from "@/components/AuthGate";
+import { OnboardingGate } from "@/components/OnboardingGate";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -53,7 +54,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-dvh">
         <Providers>
           <AuthGate>
-            <AppShell>{children}</AppShell>
+            <OnboardingGate>
+              <AppShell>{children}</AppShell>
+            </OnboardingGate>
           </AuthGate>
         </Providers>
       </body>

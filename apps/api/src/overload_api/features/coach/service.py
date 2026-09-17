@@ -273,7 +273,7 @@ async def gather_metrics(session: AsyncSession, user: User, week_start: date) ->
         avg_calories = int(sum((r.calories for r in nutrition_rows), Decimal(0)) / days_logged)
         avg_protein = int(sum((r.protein_g for r in nutrition_rows), Decimal(0)) / days_logged)
 
-    streak = await compute_streak(session, user.id, week_end)
+    streak = await compute_streak(session, user.id, week_end, user.training_days_per_week)
 
     return WeeklyMetrics(
         week_start=week_start,

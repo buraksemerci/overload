@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mockApi, signIn } from "./fixtures";
+import { mockApi, openAuthForm, signIn } from "./fixtures";
 
 /**
  * Uçtan uca duman testleri.
@@ -22,14 +22,15 @@ test.describe("oturum kontrolü", () => {
   });
 
   test("kayıt ve giriş arasında geçiş yapılabilir", async ({ page }) => {
-    await page.goto("/login");
+    await openAuthForm(page);
+    const form = page.locator("#giris");
     // Kip seçici ile gönder düğmesi AYRI etiketler taşıyor: ekranda aynı
     // yazının iki kez görünmesi hangisinin seçim hangisinin eylem olduğunu
     // belirsizleştiriyordu.
-    await expect(page.getByRole("button", { name: "Giriş yap" })).toBeVisible();
+    await expect(form.getByRole("button", { name: "Giriş yap" })).toBeVisible();
 
-    await page.getByRole("button", { name: "Kayıt", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Hesap oluştur" })).toBeVisible();
+    await form.getByRole("button", { name: "Kayıt", exact: true }).click();
+    await expect(form.getByRole("button", { name: "Hesap oluştur" })).toBeVisible();
     // Kayıt kipinde ad alanı açılıyor ve isteğe bağlı olduğu yazıyor.
     await expect(page.getByLabel("Adın")).toBeVisible();
     await expect(page.getByText("İsteğe bağlı.")).toBeVisible();
@@ -44,10 +45,10 @@ test.describe("oturum kontrolü", () => {
       }),
     );
 
-    await page.goto("/login");
+    await openAuthForm(page);
     await page.getByLabel("E-posta").fill("yanlis@example.com");
     await page.getByLabel("Şifre").fill("hatalisifre");
-    await page.getByRole("button", { name: "Giriş yap" }).click();
+    await page.locator("#giris").getByRole("button", { name: "Giriş yap" }).click();
 
     // Ham hata kodu ("LOGIN_BAD_CREDENTIALS") değil, çevrilmiş mesaj görünmeli.
     // NOT: `getByRole("alert")` kullanılmıyor — Next.js kendi rota duyurucusunu

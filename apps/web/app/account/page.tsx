@@ -47,12 +47,46 @@ interface ProfileForm {
   height_cm: string;
   timezone: string;
   activity_level: string;
+  training_experience: string;
+  training_goal: string;
+  training_days_per_week: string;
+  nutrition_goal: string;
 }
 
 const SEX_OPTIONS = [
   { value: "unspecified", label: "Belirtmek istemiyorum" },
   { value: "male", label: "Erkek" },
   { value: "female", label: "Kadın" },
+];
+
+/* Boş seçenek "belirtilmedi": tanışma akışında atlanan bir soru burada da
+   boş görünmeli, uydurulmuş bir varsayılanla değil. */
+const EXPERIENCE_OPTIONS = [
+  { value: "", label: "Belirtilmedi" },
+  { value: "new", label: "Yeni başlıyorum" },
+  { value: "under_1y", label: "Bir yıldan az" },
+  { value: "one_to_three", label: "Bir ile üç yıl arası" },
+  { value: "over_three", label: "Üç yıldan fazla" },
+];
+
+const TRAINING_GOAL_OPTIONS = [
+  { value: "", label: "Belirtilmedi" },
+  { value: "strength", label: "Güç" },
+  { value: "hypertrophy", label: "Kas" },
+  { value: "powerbuilding", label: "Güç ve kas" },
+  { value: "general_fitness", label: "Genel form" },
+];
+
+const DAYS_OPTIONS = [
+  { value: "", label: "Belirtilmedi" },
+  ...[1, 2, 3, 4, 5, 6, 7].map((days) => ({ value: String(days), label: `${days} gün` })),
+];
+
+const NUTRITION_GOAL_OPTIONS = [
+  { value: "", label: "Belirtilmedi (koruma)" },
+  { value: "cut", label: "Yağ kaybı" },
+  { value: "maintain", label: "Koruma" },
+  { value: "bulk", label: "Kas kazanımı" },
 ];
 
 const ACTIVITY_OPTIONS = [
@@ -77,12 +111,15 @@ export default function AccountPage() {
     if (me.data && form === null) {
       const loaded: ProfileForm = {
         display_name: me.data.display_name ?? "",
-        birth_date: (me.data as Me & { birth_date?: string | null }).birth_date ?? "",
-        sex: (me.data as Me & { sex?: string }).sex ?? "unspecified",
-        height_cm: String((me.data as Me & { height_cm?: number | null }).height_cm ?? ""),
+        birth_date: me.data.birth_date ?? "",
+        sex: me.data.sex,
+        height_cm: String(me.data.height_cm ?? ""),
         timezone: me.data.timezone,
-        activity_level:
-          (me.data as Me & { activity_level?: string }).activity_level ?? "moderate",
+        activity_level: me.data.activity_level,
+        training_experience: me.data.training_experience ?? "",
+        training_goal: me.data.training_goal ?? "",
+        training_days_per_week: String(me.data.training_days_per_week ?? ""),
+        nutrition_goal: me.data.nutrition_goal ?? "",
       };
       /* eslint-disable-next-line react-hooks/set-state-in-effect --
          Form durumu sunucudan gelen veriyle BİR KEZ tohumlanıyor ve sonra
@@ -106,6 +143,8 @@ export default function AccountPage() {
       // Profil değişince TDEE hedefi ve güç standartları yeniden hesaplanmalı.
       void client.invalidateQueries({ queryKey: keys.nutrition });
       void client.invalidateQueries({ queryKey: keys.standards });
+      // Haftalık gün, program olmayan haftalarda seri hedefi.
+      void client.invalidateQueries({ queryKey: keys.streak });
       setInitial(variables.snapshot);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
@@ -197,6 +236,12 @@ export default function AccountPage() {
               height_cm: form.height_cm ? Number.parseInt(form.height_cm, 10) : null,
               timezone: form.timezone,
               activity_level: form.activity_level,
+              training_experience: form.training_experience || null,
+              training_goal: form.training_goal || null,
+              training_days_per_week: form.training_days_per_week
+                ? Number.parseInt(form.training_days_per_week, 10)
+                : null,
+              nutrition_goal: form.nutrition_goal || null,
             },
             snapshot: form,
           });
@@ -299,6 +344,38 @@ export default function AccountPage() {
             />
           </Section>
         </div>
+
+        <Section
+          title="Hedefler"
+          info="Tanışmada sorulan bilgiler. Antrenman süresi, geçmişin yokken ilk ağırlıkların ne kadar temkinli başlayacağını belirliyor — setlerini girdikçe geçmişin bu beyanın yerini alıyor. Haftalık gün, aktif program yokken seri hedefin; beslenme hedefi, Beslenme ekranının varsayılanı."
+        >
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Select
+              label="Antrenman süresi"
+              value={form.training_experience}
+              options={EXPERIENCE_OPTIONS}
+              onChange={(v) => set({ training_experience: v })}
+            />
+            <Select
+              label="Antrenman hedefi"
+              value={form.training_goal}
+              options={TRAINING_GOAL_OPTIONS}
+              onChange={(v) => set({ training_goal: v })}
+            />
+            <Select
+              label="Haftada"
+              value={form.training_days_per_week}
+              options={DAYS_OPTIONS}
+              onChange={(v) => set({ training_days_per_week: v })}
+            />
+            <Select
+              label="Beslenme hedefi"
+              value={form.nutrition_goal}
+              options={NUTRITION_GOAL_OPTIONS}
+              onChange={(v) => set({ nutrition_goal: v })}
+            />
+          </div>
+        </Section>
 
         {/* Yalnızca değişiklik varken. Kaydedildikten sonra kısa bir süre
             daha duruyor ki onay görünsün. */}

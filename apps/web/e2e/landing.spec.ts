@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openAuthForm } from "./fixtures";
 
 /**
  * Giriş ekranı (`/login`) — aynı zamanda tanıtım sayfası.
@@ -7,8 +8,9 @@ import { expect, test, type Page } from "@playwright/test";
  * birden yapıyor ve ikisi birbirini engellememeli:
  *
  * * **Anlatmak** — kaydırdıkça bir günün dört ânı geçiyor.
- * * **Girdirmek** — geri gelen kullanıcı tanıtım izlemek istemiyor;
- *   üstteki çubuk her an forma inen bir yol bırakıyor.
+ * * **Girdirmek** — form anlatının vardığı yer, videonun son karesinin
+ *   üstünde. Geri gelen kullanıcı tanıtım izlemek istemiyor; üstteki çubuk
+ *   her an oraya inen bir yol bırakıyor.
  *
  * Anlatı burada oturum İSTEMİYOR: testler `signIn` çağırmıyor.
  */
@@ -88,7 +90,7 @@ test.describe("tanıtım", () => {
   test("üstteki çubuk kaydırırken kayboluyor değil", async ({ page }) => {
     await openLanding(page);
 
-    const cta = page.getByRole("link", { name: "Giriş yap" });
+    const cta = page.locator("header").getByRole("button", { name: "Giriş yap" });
     await expect(cta).toBeVisible();
 
     // Anlatının ortasına in: çıkış yolu hâlâ görünür olmalı. Tanıtımı
@@ -98,27 +100,47 @@ test.describe("tanıtım", () => {
     await expect(cta).toBeInViewport();
   });
 
-  test("çubuktaki bağlantı forma iniyor", async ({ page }) => {
-    await openLanding(page);
+  test("çubuktaki düğme forma iniyor ve form yazılabilir", async ({ page }) => {
+    await openAuthForm(page);
 
-    await page.getByRole("link", { name: "Giriş yap" }).click();
-    await page.waitForTimeout(600);
-
-    await expect(page.getByLabel("E-posta")).toBeInViewport();
+    await page.getByLabel("E-posta").fill("deniz@example.com");
+    await expect(page.getByLabel("E-posta")).toHaveValue("deniz@example.com");
   });
 
-  test("form anlatının SONUNDA", async ({ page }) => {
+  test("form anlatının FİNALİNDE, videonun üstünde", async ({ page }) => {
     await openLanding(page);
 
-    const scene = await page
-      .locator("[data-story]")
-      .evaluate((element) => element.getBoundingClientRect().bottom);
-    const form = await page
-      .getByLabel("E-posta")
-      .evaluate((element) => element.getBoundingClientRect().top);
+    // Başta form sahnede ama kapalı: görünmüyor ve klavyeyle odaklanamıyor.
+    // Opaklık tek başına yetmezdi — görünmeyen alanlara sekmeyle girilirdi.
+    await expect(page.locator("[data-story] #giris")).toHaveCount(1);
+    await expect(page.locator("[inert] #giris")).toHaveCount(1);
 
-    // Önce anlat, sonra iste.
-    expect(form).toBeGreaterThan(scene);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(page.locator("[inert] #giris")).toHaveCount(0);
+    await expect(page.getByLabel("E-posta")).toBeInViewport();
+    // Video arkada duruyor: form ayrı bir bölüm değil, anlatının sonu.
+    await expect(page.locator("[data-story] video")).toBeInViewport();
+    // Form ekrandayken çubuk çekiliyor — iki "Giriş yap" yan yana durmasın.
+    await expect(page.locator("header")).toHaveCSS("opacity", "0");
+  });
+
+  test("finalde anlatı metni formla yarışmıyor", async ({ page }) => {
+    await openLanding(page);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(page.getByLabel("E-posta")).toBeInViewport();
+    await page.waitForTimeout(700);
+
+    const visibleCaptions = await page.evaluate(
+      () =>
+        Array.from(document.querySelectorAll("[data-story] h2")).filter((element) => {
+          const cell = element.closest("[style*='opacity']");
+          return (
+            cell !== null && !cell.contains(document.querySelector("#giris")) &&
+            getComputedStyle(cell).opacity !== "0"
+          );
+        }).length,
+    );
+    expect(visibleCaptions).toBe(0);
   });
 
   test("hareket azaltmada anlatı düz kartlara düşüyor", async ({ browser }) => {

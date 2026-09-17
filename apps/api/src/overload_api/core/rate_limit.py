@@ -126,9 +126,7 @@ def _client_key(request: Request, path: str) -> str:
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """`RULES` içindeki uçlara sınır uyguluyor, diğerlerine dokunmuyor."""
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         rule = RULES.get((request.method, request.url.path))
         if rule is None:
             return await call_next(request)

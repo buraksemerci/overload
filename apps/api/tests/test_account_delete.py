@@ -61,9 +61,7 @@ async def _add_bodyweight(user_id: uuid.UUID) -> None:
     from overload_api.db.session import session_scope
 
     async with session_scope(assume_app_role=False) as session:
-        session.add(
-            BodyWeightLog(user_id=user_id, date=date(2026, 9, 1), weight_kg=80)
-        )
+        session.add(BodyWeightLog(user_id=user_id, date=date(2026, 9, 1), weight_kg=80))
 
 
 async def _count_bodyweight(user_id: uuid.UUID) -> int:
@@ -103,9 +101,7 @@ async def test_dogru_parolayla_hesap_ve_verisi_siliniyor(_password_hash: str) ->
     client, app = await _client_for(user_id)
     try:
         async with client:
-            response = await client.request(
-                "DELETE", "/users/me", json={"password": PASSWORD}
-            )
+            response = await client.request("DELETE", "/users/me", json={"password": PASSWORD})
         assert response.status_code == 204
     finally:
         from overload_api.core.security import current_active_user
@@ -149,9 +145,7 @@ async def test_yanlis_parola_reddediliyor(_password_hash: str) -> None:
             sa.text('SELECT count(*) FROM "user" WHERE id = :i'), {"i": str(user_id)}
         )
         assert alive.scalar_one() == 1
-        await session.execute(
-            sa.text('DELETE FROM "user" WHERE id = :i'), {"i": str(user_id)}
-        )
+        await session.execute(sa.text('DELETE FROM "user" WHERE id = :i'), {"i": str(user_id)})
 
 
 @pytest.mark.asyncio
@@ -172,6 +166,4 @@ async def test_parolasiz_istek_reddediliyor(_password_hash: str) -> None:
     from overload_api.db.session import session_scope
 
     async with session_scope(assume_app_role=False) as session:
-        await session.execute(
-            sa.text('DELETE FROM "user" WHERE id = :i'), {"i": str(user_id)}
-        )
+        await session.execute(sa.text('DELETE FROM "user" WHERE id = :i'), {"i": str(user_id)})

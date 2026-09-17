@@ -59,9 +59,7 @@ async def test_onbellek_tokeni_butceye_girmiyor(user_id: uuid.UUID) -> None:
 
 
 @pytest.mark.asyncio
-async def test_sinir_dolunca_sohbet_baslamiyor(
-    client: AsyncClient, user_id: uuid.UUID
-) -> None:
+async def test_sinir_dolunca_sohbet_baslamiyor(client: AsyncClient, user_id: uuid.UUID) -> None:
     from overload_api.config import get_settings
 
     limit = get_settings().ai_daily_request_limit
@@ -87,9 +85,7 @@ async def test_sinirin_altinda_engel_yok(client: AsyncClient, user_id: uuid.UUID
 
 
 @pytest.mark.asyncio
-async def test_kullanim_ucu_bugunu_donduruyor(
-    client: AsyncClient, user_id: uuid.UUID
-) -> None:
+async def test_kullanim_ucu_bugunu_donduruyor(client: AsyncClient, user_id: uuid.UUID) -> None:
     await _record(user_id, input_tokens=120, output_tokens=30)
 
     body = (await client.get("/users/me/ai-usage")).json()

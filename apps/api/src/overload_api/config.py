@@ -157,7 +157,7 @@ class Settings(BaseSettings):
             errors.append(
                 "JWT_SECRET varsayılan değerde. Bu değer depoda yazılı: "
                 "herkes kendine geçerli bir oturum jetonu üretebilir. "
-                "`python -c \"import secrets; print(secrets.token_urlsafe(48))\"` "
+                '`python -c "import secrets; print(secrets.token_urlsafe(48))"` '
                 "ile yeni bir tane üret."
             )
 

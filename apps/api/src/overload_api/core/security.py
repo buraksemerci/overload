@@ -99,9 +99,7 @@ async def get_access_token_db(
 
 
 def get_database_strategy(
-    access_tokens: Annotated[
-        AccessTokenDatabase[AccessToken], Depends(get_access_token_db)
-    ],
+    access_tokens: Annotated[AccessTokenDatabase[AccessToken], Depends(get_access_token_db)],
 ) -> DatabaseStrategy[User, uuid.UUID, AccessToken]:
     """Oturumlar veritabanında — JWT DEĞİL.
 
@@ -120,9 +118,7 @@ def get_database_strategy(
     doğrulama token'larını imzalıyor; `JWT_LIFETIME_SECONDS` oturum ömrü
     olarak kullanılmaya devam ediyor).
     """
-    return DatabaseStrategy(
-        access_tokens, lifetime_seconds=get_settings().jwt_lifetime_seconds
-    )
+    return DatabaseStrategy(access_tokens, lifetime_seconds=get_settings().jwt_lifetime_seconds)
 
 
 # Bearer token: PWA'da Authorization başlığı cookie'den daha öngörülebilir

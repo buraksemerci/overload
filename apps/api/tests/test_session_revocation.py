@@ -59,9 +59,7 @@ async def _drop_user(user_id: uuid.UUID) -> None:
     from overload_api.db.session import session_scope
 
     async with session_scope(assume_app_role=False) as session:
-        await session.execute(
-            sa.text('DELETE FROM "user" WHERE id = :i'), {"i": str(user_id)}
-        )
+        await session.execute(sa.text('DELETE FROM "user" WHERE id = :i'), {"i": str(user_id)})
 
 
 def _client() -> AsyncClient:

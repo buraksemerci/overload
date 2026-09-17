@@ -9,7 +9,7 @@ import logging
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from datetime import date
+from datetime import date, datetime
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,8 +19,10 @@ from pydantic import BaseModel, Field
 from overload_api.config import get_settings
 from overload_api.core.rate_limit import RateLimitMiddleware
 from overload_api.core.security import auth_backend, fastapi_users
-from overload_api.db.models.user import ActivityLevel, Sex
+from overload_api.db.models.program import ProgramGoal
+from overload_api.db.models.user import ActivityLevel, NutritionGoal, Sex, TrainingExperience
 from overload_api.db.session import dispose_engine
+from overload_api.features.account.onboarding import router as onboarding_router
 from overload_api.features.account.router import router as account_router
 from overload_api.features.body.router import router as body_router
 from overload_api.features.chat.router import router as chat_router
@@ -47,6 +49,12 @@ class UserRead(schemas.BaseUser[uuid.UUID]):
     sex: Sex = Sex.unspecified
     height_cm: int | None = None
     activity_level: ActivityLevel = ActivityLevel.moderate
+    training_experience: TrainingExperience | None = None
+    training_goal: ProgramGoal | None = None
+    training_days_per_week: int | None = None
+    nutrition_goal: NutritionGoal | None = None
+    #: Boşsa istemci tanışma akışına yönlendiriyor (`OnboardingGate`).
+    onboarding_completed_at: datetime | None = None
 
 
 class UserCreate(schemas.BaseUserCreate):
@@ -66,6 +74,10 @@ class UserUpdate(schemas.BaseUserUpdate):
     sex: Sex | None = None
     height_cm: int | None = Field(default=None, ge=80, le=260)
     activity_level: ActivityLevel | None = None
+    training_experience: TrainingExperience | None = None
+    training_goal: ProgramGoal | None = None
+    training_days_per_week: int | None = Field(default=None, ge=1, le=7)
+    nutrition_goal: NutritionGoal | None = None
 
 
 class Health(BaseModel):
@@ -137,9 +149,7 @@ app.include_router(fastapi_users.get_reset_password_router(), prefix="/auth", ta
 # Doğrulama router'ı: `/auth/request-verify-token` ve `/auth/verify`.
 # Kayıt kancası doğrulama e-postasını kendiliğinden gönderiyor ama bağlantının
 # gideceği ucun var olması gerekiyor — yoksa e-postadaki adres 404.
-app.include_router(
-    fastapi_users.get_verify_router(UserRead), prefix="/auth", tags=["auth"]
-)
+app.include_router(fastapi_users.get_verify_router(UserRead), prefix="/auth", tags=["auth"])
 # Hesap ayarları (bölüm 4.3'ün sabit sınırı): SADECE buradan değişir.
 # AI'nın bu endpoint'lere karşılık gelen bir tool'u yok.
 # Hesap silme, kullanıcı router'ından ÖNCE.
@@ -150,6 +160,7 @@ app.include_router(
 # çarpıyor ve 401 dönüyordu. Kendi hesabını silmek bir yönetim işlemi değil,
 # bir hak: önce bu router.
 app.include_router(account_router)
+app.include_router(onboarding_router)
 app.include_router(
     fastapi_users.get_users_router(UserRead, UserUpdate), prefix="/users", tags=["account"]
 )

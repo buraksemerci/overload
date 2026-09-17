@@ -7,10 +7,9 @@ from decimal import Decimal
 
 import pytest
 
-from overload_api.db.models.user import ActivityLevel, Sex
+from overload_api.db.models.user import ActivityLevel, NutritionGoal, Sex
 from overload_api.services.nutrition.tdee import (
     MIN_SAFE_CALORIES,
-    NutritionGoal,
     age_from,
     bmr_mifflin_st_jeor,
     macro_target,

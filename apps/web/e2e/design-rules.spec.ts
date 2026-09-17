@@ -24,6 +24,9 @@ const SCREENS = [
   "/coach",
   "/chat",
   "/account",
+  // Oturumlu ama gezinmesiz. Taklit kullanıcı akışı bitirmiş sayılıyor; ekran
+  // yine de açılıyor (tanıtım adımı) ve aynı kurallara tabi.
+  "/onboarding",
 ] as const;
 
 /** Oturum istemeyen ekranlar. Aynı üç kural, ama `signIn` olmadan. */

@@ -41,6 +41,30 @@ sorusunu cevaplıyor ve o soru yalnızca oturumu olmayan kişide canlı; panelde
 her gün açan kullanıcıyı beş ekran boyu videoyu geçmeye zorluyordu. Giriş
 ekranı artık tanıtım + form: önce anlat, sonra iste.
 
+**Form anlatının FİNALİNDE.** Önce videodan sonra ayrı, düz bir bölümdü ve
+sönük bir kapanış gibi kalıyordu. Şimdi video telefon ekranında duruyor ve
+form o karenin üstünde bir kartta; oraya inilene kadar `inert`.
+
+### 1b. Tanışma akışı (`/onboarding`) — BİTTİ
+- [x] Kayıttan hemen sonra; akıştan önce açılmış hesaplara da bir kez
+      (`OnboardingGate`, sunucudaki `onboarding_completed_at`e bakıyor)
+- [x] Beş adım, her biri atlanabilir, her sorunun altında bilginin NEYE
+      gittiği yazıyor. Tek istekte, sonda kaydediliyor.
+- [x] Deneyim SÜRE olarak soruluyor; başlangıç ağırlığı bir basamak temkinli
+      seviyeye bağlanıyor, gerçek set geçmişi beyanı geçersiz kılıyor
+- [x] Aktivite katsayısı sorulmuyor: antrenman günü + gün içi hareketten
+      türetiliyor, gün içi hareket cevabı saklanmıyor
+- [x] Beslenme hedefi kalıcı (Beslenme ekranının varsayılanı), haftalık gün
+      program yokken seri hedefi, profil asistan bağlamında
+- [x] Sonuç ekranı: sunucunun hesapladığı kalori hedefi + beyana uyan şablon
+      ve tek dokunuşla başlatma
+- [x] Hesap ekranında "Hedefler" kartı — hepsi sonradan değiştirilebilir
+
+**Yol üstünde bulunan açık:** servis worker'ın varsayılan kuralları API
+yanıtlarını (başka köken) bir saat önbelleğe yazıyordu — yorumda "API
+önbelleğe alınmaz" yazmasına rağmen. Başka kökene giden istekler artık worker'a
+hiç girmiyor ve eski önbellek güncellemede siliniyor.
+
 ### 2. Profil (`/account`) — BİTTİ
 - [x] Kimlik kapak kartı (fotoğraf + ad + e-posta + baş harf)
 - [x] Bento: Kimlik / Vücut / Aktivite / Saat dilimi ayrı kartlarda —

@@ -8,6 +8,13 @@
  * tek bir yerde doğru şekilde sarmalanıyor.
  */
 
+import type {
+  ActivityLevel,
+  Experience,
+  NutritionGoal,
+  Sex,
+  TrainingGoal,
+} from "./onboarding";
 import { ApiError, api, setToken } from "./api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -20,6 +27,16 @@ export interface Me {
   is_active: boolean;
   is_superuser: boolean;
   is_verified: boolean;
+  birth_date: string | null;
+  sex: Sex;
+  height_cm: number | null;
+  activity_level: ActivityLevel;
+  training_experience: Experience | null;
+  training_goal: TrainingGoal | null;
+  training_days_per_week: number | null;
+  nutrition_goal: NutritionGoal | null;
+  /** Boşsa tanışma akışı bitmemiş (`components/OnboardingGate.tsx`). */
+  onboarding_completed_at: string | null;
 }
 
 interface TokenResponse {

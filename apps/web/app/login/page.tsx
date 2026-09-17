@@ -10,27 +10,26 @@
  * sayfa uygulamanın **dış kapısı**. "Bu ne işe yarıyor" sorusu yalnızca
  * burada canlı: içeride oturan kişi o soruyu aylar önce bir kez sordu.
  *
- * Anlatı bu yüzden panelden buraya taşındı. Panelde her gün açan kişiyi beş
- * ekran boyu videoyu geçmeye zorluyordu; burada tam olarak aradığı şey.
+ * --------------------------------------------------------------------------
+ * FORM ANLATININ SONUCU
+ * --------------------------------------------------------------------------
+ * Kaydırdıkça bir günün dört ânı geçiyor; video telefon ekranında bitiyor ve
+ * form o karenin üstüne çıkıyor. Önce anlatıdan sonra ayrı, açık zeminli bir
+ * bölümdü: videodan sonra sönük bir kapanış gibi kalıyordu. Şimdi anlatının
+ * vardığı yer — "bu uygulama bu; başla".
+ *
+ * Form bir KART içinde, doğrudan videonun üstünde değil. Yazılması gereken
+ * bir yüzeyin arkasında hareketli görüntü olunca alanlar okunmuyor; kart
+ * kendi zeminini taşıyor, video çevresinde görünmeye devam ediyor. Masaüstünde
+ * kart solda duruyor: sağdaki telefon ekranı açık kalıyor.
  *
  * --------------------------------------------------------------------------
- * SIRA: ÖNCE ANLAT, SONRA İSTE
+ * GERİ GELEN KULLANICI
  * --------------------------------------------------------------------------
- * 1. **Anlatı** — kaydırdıkça bir günün dört ânı geçiyor.
- * 2. **Form** — en altta, anlatının vardığı yer.
- *
- * Ama geri gelen kullanıcı tanıtım izlemek istemiyor: üstteki çubukta duran
- * "Giriş yap" doğrudan forma indiriyor. Çubuk YAPIŞKAN, yani kaydırmanın
- * neresinde olursan ol çıkış yolu görünür kalıyor. Anlatıyı zorunlu tutmak
- * onu tanıtım olmaktan çıkarıp engele çevirirdi.
- *
- * --------------------------------------------------------------------------
- * FORMUN ARKASINDA FOTOĞRAF YOK
- * --------------------------------------------------------------------------
- * Ekranın geri kalanında fotoğraf baskın ama form bölümü sade. Aynı ayrım
- * antrenman ekranında da var: okunması ve YAZILMASI gereken bir yüzeyin
- * arkasına görsel koymak yalnızca kontrastı düşürüyor. Görselin işi yukarıda
- * bitti.
+ * Tanıtım izlemek istemiyor: üstteki çubuktaki "Giriş yap" doğrudan finale
+ * kaydırıyor. Çubuk kaydırmanın neresinde olursan ol görünür; final
+ * geldiğinde çekiliyor. Anlatıyı zorunlu tutmak onu tanıtım olmaktan
+ * çıkarıp engele çevirirdi.
  *
  * --------------------------------------------------------------------------
  * GİRİŞ Mİ KAYIT MI
@@ -43,14 +42,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Scrollytelling } from "@/components/Scrollytelling";
 import { login, register } from "@/lib/auth";
 
 type Mode = "login" | "register";
-
-/** Formun çapası. Üstteki "Giriş yap" ve anlatının sonu buraya iniyor. */
-const FORM_ID = "giris";
 
 /**
  * Kip etiketleri KISA, gönder düğmesindekiler uzun.
@@ -65,33 +61,23 @@ const MODES = [
 ] as const;
 
 export default function LoginPage() {
+  const [atFinale, setAtFinale] = useState(false);
+
   return (
     <div className="flex flex-col">
-      <TopBar />
+      <TopBar hidden={atFinale} />
 
       {/* Anlatı TAM GENİŞLİK: sahne ekranın tamamını kaplamak zorunda, yoksa
           iki yanında şeritle bir video oynatıcı gibi duruyor. `50% - 50vw`
           kabın ortasından ekranın kenarına kadar geri çekiyor; taşmayı
-          `html`deki `overflow-x: clip` kesiyor. */}
+          `html`deki `overflow-x: clip` kesiyor.
+
+          Sayfa anlatıyla BİTİYOR. Altına bir şey eklenirse en alta
+          kaydırıldığında sahne o kadar yukarı çıkar ve form ekranın dışında
+          kalır. */}
       <div style={{ width: "100vw", marginInline: "calc(50% - 50vw)" }}>
-        <Scrollytelling />
+        <Scrollytelling finale={<AuthCard />} onFinaleChange={setAtFinale} />
       </div>
-
-      {/* Sahneden forma geçişi yumuşatan bant. Video koyu, form bölümü açık
-          zeminde: aralarında keskin bir çizgi kalıyor ve sayfa iki ayrı
-          parçaya bölünmüş gibi duruyordu. */}
-      <div
-        aria-hidden
-        className="h-24"
-        style={{
-          width: "100vw",
-          marginInline: "calc(50% - 50vw)",
-          background:
-            "linear-gradient(to bottom, oklch(12% 0.01 115), transparent)",
-        }}
-      />
-
-      <AuthSection />
     </div>
   );
 }
@@ -99,39 +85,11 @@ export default function LoginPage() {
 /**
  * Anlatının üstünde yüzen çubuk.
  *
- * --------------------------------------------------------------------------
- * `fixed`, AKIŞTA DEĞİL
- * --------------------------------------------------------------------------
- * Akışta duran yapışkan bir çubuk sahneyi kendi yüksekliği kadar aşağı
- * itiyordu: ekranın tepesinde bir şerit zemin kalıyor ve sahne o kadar
- * aşağıdan başladığı için alt kenarı katlanma çizgisinin altına taşıyor,
- * anlatı metninin son satırı kesiliyordu. `fixed` yer kaplamıyor; video
- * ekranın tamamını dolduruyor ve çubuk onun üstünde yüzüyor.
- *
- * --------------------------------------------------------------------------
- * FORMA VARINCA KAYBOLUYOR
- * --------------------------------------------------------------------------
- * Çubuğun tek işi forma inen bir yol bırakmak. Form ekrandayken o yol
- * gereksiz — ve koyu cam bir şerit, açık zeminli form bölümünün üstünde
- * yabancı duruyor. Görünürlük forma bakılarak veriliyor: gözlemci, kaydırma
- * dinleyicisinden daha ucuz ve sıçramasız.
+ * `fixed`, akışta değil: akışta duran bir çubuk sahneyi kendi yüksekliği
+ * kadar aşağı itiyor, sahnenin alt kenarı katlanma çizgisinin altına taşıyor
+ * ve anlatı metninin son satırı kesiliyordu.
  */
-function TopBar() {
-  const [atForm, setAtForm] = useState(false);
-
-  useEffect(() => {
-    const form = document.getElementById(FORM_ID);
-    if (form === null) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setAtForm(entry?.isIntersecting ?? false),
-      // Form ekranın üçte birine girdiğinde çubuk çekiliyor: tam değdiği
-      // anda kaybolsa geçiş ani oluyor.
-      { rootMargin: "-33% 0px 0px 0px" },
-    );
-    observer.observe(form);
-    return () => observer.disconnect();
-  }, []);
-
+function TopBar({ hidden }: { hidden: boolean }) {
   return (
     <header
       className="fixed inset-x-0 top-0 flex items-center justify-between py-4"
@@ -142,27 +100,39 @@ function TopBar() {
         backdropFilter: "blur(10px)",
         WebkitBackdropFilter: "blur(10px)",
         paddingInline: "max(1.5rem, calc(50vw - 34rem))",
-        opacity: atForm ? 0 : 1,
-        pointerEvents: atForm ? "none" : "auto",
+        // Finalde çekiliyor: form ekrandayken forma inen bir yol gereksiz.
+        opacity: hidden ? 0 : 1,
+        pointerEvents: hidden ? "none" : "auto",
         transition: "opacity var(--dur-long) var(--ease-out)",
       }}
     >
-      {/* Sayfanın `h1`i BURASI. Marka adı, sayfanın kimliği; altındaki
-          anlatı fazları ve form bölümü `h2`. Formun başlığını `h1` yapmak,
-          sayfanın konusunu "başlamaya hazır mısın" sanmak olurdu. */}
+      {/* Sayfanın `h1`i BURASI. Marka adı, sayfanın kimliği; anlatı fazları
+          ve formun başlığı `h2`. */}
       <h1 className="display text-xl" style={{ color: "oklch(99% 0 0)" }}>
         overload
       </h1>
-      <a href={`#${FORM_ID}`} className="btn btn-on-photo">
+      <button
+        type="button"
+        className="btn btn-on-photo"
+        onClick={() =>
+          // Sayfanın sonu = anlatının finali. Yumuşak kaydırma kasıtlı:
+          // video hızla sona sarıyor ve form bir sıçramayla değil, anlatının
+          // sonucu olarak geliyor.
+          window.scrollTo({
+            top: document.documentElement.scrollHeight,
+            behavior: "smooth",
+          })
+        }
+      >
         Giriş yap
-      </a>
+      </button>
     </header>
   );
 }
 
 /* --- Giriş / Kayıt -------------------------------------------------------- */
 
-function AuthSection() {
+function AuthCard() {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
@@ -177,9 +147,16 @@ function AuthSection() {
     setBusy(true);
     setError(null);
     try {
-      if (mode === "login") await login(email, password);
-      else await register(email, password, displayName);
-      router.replace("/");
+      if (mode === "login") {
+        await login(email, password);
+        // Onboarding'i bitirmemiş biri panelden oraya yönlendiriliyor
+        // (`components/OnboardingGate.tsx`); burada ayrıca bakmak gerekmiyor.
+        router.replace("/");
+      } else {
+        await register(email, password, displayName);
+        // Yeni hesap: panele uğramadan doğrudan tanışmaya.
+        router.replace("/onboarding");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Bir şeyler ters gitti.");
     } finally {
@@ -189,12 +166,19 @@ function AuthSection() {
 
   return (
     <section
-      id={FORM_ID}
-      /* `scroll-mt`: çapaya inerken yapışkan çubuk başlığın üstünü
-         örtmesin. */
-      className="mx-auto flex w-full max-w-sm scroll-mt-24 flex-col justify-center pt-8 pb-24"
+      id="giris"
+      className="w-full max-w-sm p-7 lg:p-9"
+      style={{
+        // Kart kendi zeminini taşıyor: arkasında hareketli bir görüntü var
+        // ve alanların okunması ona bağlı olmamalı.
+        background: "oklch(98.5% 0.004 115 / 0.94)",
+        backdropFilter: "blur(14px)",
+        WebkitBackdropFilter: "blur(14px)",
+        boxShadow: "0 30px 80px oklch(0% 0 0 / 0.45)",
+      }}
     >
-      <h2 className="display text-3xl">Başlamaya hazır mısın?</h2>
+      <p className="label">overload</p>
+      <h2 className="display mt-2 text-2xl lg:text-3xl">Başlamaya hazır mısın?</h2>
       <p className="mt-2 text-sm text-[var(--color-ink-muted)]">
         {mode === "login"
           ? "Devam etmek için giriş yap."
@@ -255,18 +239,14 @@ function AuthSection() {
           </p>
         )}
 
-        <button
-          type="submit"
-          className="btn btn-primary mt-1 w-full py-3"
-          disabled={busy}
-        >
+        <button type="submit" className="btn btn-primary mt-1 w-full py-3" disabled={busy}>
           {busy ? "…" : mode === "login" ? "Giriş yap" : "Hesap oluştur"}
         </button>
       </form>
 
       {/* Yalnızca giriş kipinde: kayıt olurken parolasını unutmuş olamaz. */}
       {mode === "login" && (
-        <Link href="/forgot-password" className="link mt-4 self-start text-xs">
+        <Link href="/forgot-password" className="link mt-4 inline-block text-xs">
           Parolamı unuttum
         </Link>
       )}

@@ -25,10 +25,14 @@ async def _two_exercises() -> tuple[uuid.UUID, uuid.UUID]:
 
     async with session_scope(assume_app_role=False) as session:
         rows = (
-            await session.execute(
-                sa.select(Exercise.id).where(Exercise.owner_id.is_(None)).limit(2)
+            (
+                await session.execute(
+                    sa.select(Exercise.id).where(Exercise.owner_id.is_(None)).limit(2)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
     if len(rows) < 2:
         pytest.skip("Test veritabanında yeterli hareket yok (seed yüklenmemiş).")
@@ -76,9 +80,7 @@ class TestGrouping:
         # Hareket ADI dönüyor: ekranın tek başına anlamlı olması için şart.
         assert all(e["name"] for e in exercises)
 
-    async def test_exercises_keep_the_order_they_were_performed(
-        self, client: AsyncClient
-    ) -> None:
+    async def test_exercises_keep_the_order_they_were_performed(self, client: AsyncClient) -> None:
         """Sıra `completed_at`'ten gelmeli, ilişkinin `set_number` sırasından
         değil.
 
@@ -139,10 +141,8 @@ class TestSummaries:
         # Set yine de LİSTEDE: kullanıcı ne yaptığını görebilmeli.
         assert len(session_row["exercises"][0]["sets"]) == 2
 
-    async def test_top_set_prefers_more_reps_at_equal_weight(
-        self, client: AsyncClient
-    ) -> None:
-        """"80x8" ile "80x5" aynı zirve değil."""
+    async def test_top_set_prefers_more_reps_at_equal_weight(self, client: AsyncClient) -> None:
+        """ "80x8" ile "80x5" aynı zirve değil."""
         exercise, _ = await _two_exercises()
         session_id = (await client.post("/workouts/sessions", json={})).json()["id"]
         await _log(client, session_id, exercise, 1, "80", 5)
@@ -165,9 +165,7 @@ class TestSummaries:
         assert group["top_weight_kg"] == "100.00"
         assert group["top_reps"] == 3
 
-    async def test_warmup_only_session_reports_zero_not_null(
-        self, client: AsyncClient
-    ) -> None:
+    async def test_warmup_only_session_reports_zero_not_null(self, client: AsyncClient) -> None:
         exercise, _ = await _two_exercises()
         session_id = (await client.post("/workouts/sessions", json={})).json()["id"]
         await _log(client, session_id, exercise, 1, "40", 10, is_warmup=True)

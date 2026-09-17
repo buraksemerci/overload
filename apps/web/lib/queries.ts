@@ -23,6 +23,13 @@ import {
 } from "@tanstack/react-query";
 import { api } from "./api";
 import { fetchMe, type Me } from "./auth";
+import type {
+  ActivityLevel,
+  Experience,
+  NutritionGoal,
+  Sex,
+  TrainingGoal,
+} from "./onboarding";
 
 // --- Sorgu anahtarları -------------------------------------------------------
 
@@ -935,6 +942,64 @@ export function useResolvePendingAction(): UseMutationResult<
       void client.invalidateQueries({ queryKey: keys.programs });
       void client.invalidateQueries({ queryKey: keys.workouts });
     },
+  });
+}
+
+export interface OnboardingInput {
+  display_name: string | null;
+  sex: Sex;
+  birth_date: string | null;
+  height_cm: number | null;
+  weight_kg: number | null;
+  activity_level: ActivityLevel;
+  training_experience: Experience | null;
+  training_goal: TrainingGoal | null;
+  training_days_per_week: number | null;
+  nutrition_goal: NutritionGoal | null;
+}
+
+/**
+ * Tanışma akışını tek istekle kaydediyor.
+ *
+ * Başarıda `me` önbelleği BEKLENEREK tazeleniyor: yönlendirme kapısı
+ * (`OnboardingGate`) `onboarding_completed_at`e bakıyor ve eski önbellekle
+ * kullanıcıyı panele geçtiği anda akışa geri atardı.
+ */
+export function useCompleteOnboarding(): UseMutationResult<unknown, Error, OnboardingInput> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body) => api.post("/users/me/onboarding", body),
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: keys.me });
+      void client.invalidateQueries({ queryKey: keys.nutrition });
+      void client.invalidateQueries({ queryKey: keys.standards });
+      void client.invalidateQueries({ queryKey: keys.weightTrend });
+      void client.invalidateQueries({ queryKey: keys.workouts });
+    },
+  });
+}
+
+export interface NutritionTarget {
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  bmr: number;
+  tdee: number;
+  floor_applied: boolean;
+}
+
+/**
+ * Kayıtlı beslenme hedefine göre günlük hedef.
+ *
+ * Profil eksikse sunucu 422 dönüyor; bu bir hata değil, "henüz
+ * hesaplanamıyor" durumu — çağıran `isError`ü öyle okumalı.
+ */
+export function useNutritionTarget(enabled = true): UseQueryResult<NutritionTarget> {
+  return useQuery({
+    queryKey: [...keys.nutrition, "target"],
+    queryFn: () => api.get<NutritionTarget>("/nutrition/target"),
+    enabled,
   });
 }
 

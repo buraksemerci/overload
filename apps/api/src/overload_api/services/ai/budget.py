@@ -123,9 +123,7 @@ def ensure_verified(is_verified: bool) -> None:
     )
 
 
-async def ensure_available(
-    session: AsyncSession, user_id: uuid.UUID, timezone: str
-) -> None:
+async def ensure_available(session: AsyncSession, user_id: uuid.UUID, timezone: str) -> None:
     """Bütçe dolmuşsa 429 fırlatıyor.
 
     Mesaj kullanıcıya gösterilebilir hâlde ve NE ZAMAN açılacağını söylüyor:
@@ -152,9 +150,7 @@ async def ensure_available(
     )
 
 
-async def record(
-    session: AsyncSession, user_id: uuid.UUID, timezone: str, usage: Usage
-) -> None:
+async def record(session: AsyncSession, user_id: uuid.UUID, timezone: str, usage: Usage) -> None:
     """Kullanımı bugünün satırına ekliyor.
 
     `ON CONFLICT DO UPDATE`: iki eşzamanlı çağrı aynı anda ilk satırı yazmaya

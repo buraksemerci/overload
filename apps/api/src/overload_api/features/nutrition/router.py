@@ -28,9 +28,10 @@ from overload_api.db.models.nutrition import (
     MealType,
     NutritionLog,
 )
+from overload_api.db.models.user import NutritionGoal, User
 from overload_api.services.nutrition import meal_suggestion as ms
 from overload_api.services.nutrition import sources
-from overload_api.services.nutrition.tdee import MacroTarget, NutritionGoal, age_from, macro_target
+from overload_api.services.nutrition.tdee import MacroTarget, age_from, macro_target
 
 router = APIRouter(tags=["nutrition"])
 
@@ -157,6 +158,20 @@ def _log_out(log: NutritionLog) -> NutritionLogOut:
     )
 
 
+def _resolve_goal(user: User, requested: NutritionGoal | None) -> NutritionGoal:
+    """İstekte hedef yoksa kullanıcının KAYITLI hedefi.
+
+    Önce varsayılan her istekte "koruma"ydı ve hedef yalnızca ekrandaki bir
+    düğmede yaşıyordu: yağ kaybındaki biri beslenme ekranını her açtığında
+    kalori hedefini koruma kalorisi olarak görüyor, düğmeye yeniden
+    basmadıkça yanlış sayıyla gün geçiriyordu. Asistan da hedefi bilmiyordu.
+
+    İstekteki değer hâlâ öncelikli: ekrandaki seçici "yağ kaybında olsam
+    ne olurdu" diye bakmak için kullanılabiliyor.
+    """
+    return requested or user.nutrition_goal or NutritionGoal.maintain
+
+
 async def _current_target(
     db: DbSession, user: CurrentUser, goal: NutritionGoal
 ) -> MacroTarget | None:
@@ -238,7 +253,7 @@ async def nutrition_day(
     db: DbSession,
     user: CurrentUser,
     on: date_t | None = None,
-    goal: NutritionGoal = NutritionGoal.maintain,
+    goal: NutritionGoal | None = None,
 ) -> DayOut:
     target_date = on or today_in(user.timezone)
 
@@ -263,7 +278,7 @@ async def nutrition_day(
         fat_g=sum((r.fat_g for r in rows), Decimal(0)),
     )
 
-    target = await _current_target(db, user, goal)
+    target = await _current_target(db, user, _resolve_goal(user, goal))
     remaining = (
         DayTotals(
             calories=Decimal(target.calories) - totals.calories,
@@ -399,9 +414,9 @@ async def recent_foods(db: DbSession, user: CurrentUser) -> list[FrequentFoodOut
 
 @router.get("/nutrition/target", response_model=MacroTargetOut)
 async def nutrition_target(
-    db: DbSession, user: CurrentUser, goal: NutritionGoal = NutritionGoal.maintain
+    db: DbSession, user: CurrentUser, goal: NutritionGoal | None = None
 ) -> MacroTarget:
-    target = await _current_target(db, user, goal)
+    target = await _current_target(db, user, _resolve_goal(user, goal))
     if target is None:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -440,7 +455,7 @@ class MealSuggestionsOut(BaseModel):
 async def meal_suggestions(
     db: DbSession,
     user: CurrentUser,
-    goal: NutritionGoal = NutritionGoal.maintain,
+    goal: NutritionGoal | None = None,
 ) -> MealSuggestionsOut:
     """Kalan makrolara göre öğün önerisi (Bölüm 4.2).
 
@@ -448,7 +463,7 @@ async def meal_suggestions(
     modeline sormak hem maliyetli hem de daha kötü sonuç verirdi; porsiyon
     aritmetiğini tam yapabiliyoruz.
     """
-    target = await _current_target(db, user, goal)
+    target = await _current_target(db, user, _resolve_goal(user, goal))
     if target is None:
         return MealSuggestionsOut(
             suggestions=[],

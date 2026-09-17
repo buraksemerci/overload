@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openAuthForm } from "./fixtures";
 
 /**
  * Parola kurtarma ve e-posta doğrulama.
@@ -20,7 +21,7 @@ const API = "http://localhost:8000";
 
 test.describe("parola kurtarma", () => {
   test("giriş ekranından ulaşılıyor", async ({ page }) => {
-    await page.goto("/login");
+    await openAuthForm(page);
     await page.getByRole("link", { name: "Parolamı unuttum" }).click();
     await expect(page).toHaveURL(/\/forgot-password$/);
   });

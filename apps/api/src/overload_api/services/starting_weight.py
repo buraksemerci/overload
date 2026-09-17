@@ -45,7 +45,7 @@ from __future__ import annotations
 from decimal import ROUND_FLOOR, Decimal
 
 from overload_api.db.models.exercise import Equipment
-from overload_api.db.models.user import Sex
+from overload_api.db.models.user import Sex, TrainingExperience
 from overload_api.services.strength_standards import (
     _LEVELS,
     _RATIOS,
@@ -116,15 +116,43 @@ _PLATE_STEP: dict[Equipment, Decimal] = {
 }
 
 
+#: Beyan edilen antrenman süresi -> geçmiş YOKKEN kullanılacak seviye.
+#:
+#: Her basamak "doğal" eşleşmenin BİR ALTINDA: 1-3 yıl antrenman yapmış
+#: biri çoğu tabloda orta seviye sayılır, burada acemi. İki sebep:
+#:
+#: 1. Beyan, ölçüm değil. İnsanlar antrenman sürelerini ve düzenliliklerini
+#:    sistematik olarak fazla söylüyor ("3 yıldır" çoğu zaman "3 yıl önce
+#:    başladım, arada bıraktım").
+#: 2. Modülün kuralı: hafif tahminin bedeli bir kolay set, ağır tahminin
+#:    bedeli sakatlık.
+#:
+#: İleri ve elit seviye BEYANLA HİÇ verilmiyor. Oraya yalnızca gerçek setlerle
+#: çıkılıyor.
+EXPERIENCE_LEVEL: dict[TrainingExperience, StrengthLevel] = {
+    TrainingExperience.new: StrengthLevel.untrained,
+    TrainingExperience.under_1y: StrengthLevel.untrained,
+    TrainingExperience.one_to_three: StrengthLevel.novice,
+    TrainingExperience.over_three: StrengthLevel.intermediate,
+}
+
+
 def infer_level(
     *,
     best_ratios: dict[str, Decimal],
     sex: Sex,
+    experience: TrainingExperience | None = None,
 ) -> StrengthLevel:
     """Kullanıcının seviyesini bilinen çapa hareketlerindeki oranlardan çıkarır.
 
     `best_ratios`: çapa hareket anahtarı -> tahmini 1RM / vücut ağırlığı.
-    Hiç veri yoksa `untrained` döner — en muhafazakâr varsayım.
+
+    Hiç veri yoksa BEYAN kullanılıyor (`EXPERIENCE_LEVEL`, bir basamak
+    muhafazakâr); beyan da yoksa `untrained`. Önce beyan hiç sorulmuyordu ve
+    üç yıllık biri de ilk haftasında hiç antrenman yapmamış biriyle aynı
+    ağırlıkları görüyordu.
+
+    Gerçek set varsa BEYAN YOK SAYILIYOR: ölçüm beyandan her zaman üstün.
 
     En YÜKSEK değil ALT MEDYAN seviye alınıyor: tek bir güçlü hareket
     kullanıcıyı her harekette ileri seviye saymaya yetmemeli.
@@ -135,9 +163,11 @@ def infer_level(
     90 kg'lık bir chest press başlangıcı öneriliyordu. Modülün tamamı düşük
     tahmin etmek üzerine kurulu; medyan da o yöne yuvarlanmalı.
     """
+    fallback = EXPERIENCE_LEVEL[experience] if experience is not None else StrengthLevel.untrained
+
     table = _RATIOS.get(sex)
     if not table or not best_ratios:
-        return StrengthLevel.untrained
+        return fallback
 
     levels: list[int] = []
     for lift, ratio in best_ratios.items():
@@ -151,7 +181,7 @@ def infer_level(
         levels.append(index)
 
     if not levels:
-        return StrengthLevel.untrained
+        return fallback
 
     levels.sort()
     return _LEVELS[levels[(len(levels) - 1) // 2]]

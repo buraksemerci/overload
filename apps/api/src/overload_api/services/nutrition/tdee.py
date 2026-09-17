@@ -12,9 +12,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
-from enum import StrEnum
 
-from overload_api.db.models.user import ActivityLevel, Sex
+# `NutritionGoal` modelde tanımlı: hedef artık kullanıcıda saklanıyor.
+from overload_api.db.models.user import ActivityLevel, NutritionGoal, Sex
 
 #: Aktivite çarpanları. Antrenman bunlara DAHİL — ayrıca `activity_log`
 #: kayıtlarını da eklersek aynı eforu iki kez saymış oluruz.
@@ -25,12 +25,6 @@ ACTIVITY_MULTIPLIER: dict[ActivityLevel, Decimal] = {
     ActivityLevel.active: Decimal("1.725"),  # haftada 6-7 gün
     ActivityLevel.very_active: Decimal("1.90"),  # günde iki seans / fiziksel iş
 }
-
-
-class NutritionGoal(StrEnum):
-    cut = "cut"  # yağ kaybı
-    maintain = "maintain"  # koruma
-    bulk = "bulk"  # kas kazanımı
 
 
 #: Hedefe göre TDEE'ye uygulanan oran.

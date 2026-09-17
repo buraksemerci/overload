@@ -213,6 +213,4 @@ class AiUsage(Base):
     output_tokens: Mapped[int] = mapped_column(nullable=False, default=0)
     cache_read_tokens: Mapped[int] = mapped_column(nullable=False, default=0)
 
-    __table_args__ = (
-        CheckConstraint("requests >= 0", name="ck_ai_usage_requests_positive"),
-    )
+    __table_args__ = (CheckConstraint("requests >= 0", name="ck_ai_usage_requests_positive"),)

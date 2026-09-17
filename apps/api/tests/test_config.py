@@ -90,9 +90,7 @@ class TestProductionChecks:
         assert any("JWT_SECRET" in problem for problem in errors)
 
     def test_yerel_frontend_adresi_hata(self) -> None:
-        errors, _ = self._settings(
-            frontend_url="http://localhost:3000"
-        ).production_problems()
+        errors, _ = self._settings(frontend_url="http://localhost:3000").production_problems()
         # CORS yalnızca bu adresi kabul ediyor; tarayıcı her isteği engeller.
         assert any("FRONTEND_URL" in problem for problem in errors)
 

@@ -43,6 +43,7 @@ import {
   shiftDay,
 } from "@/lib/meals";
 import {
+  useMe,
   useMealSuggestions,
   useNutritionDay,
   type FoodLogRow,
@@ -59,7 +60,12 @@ const num = (value: string | number | null | undefined): number =>
   typeof value === "number" ? value : Number.parseFloat(value ?? "0") || 0;
 
 export default function NutritionPage() {
-  const [goal, setGoal] = useState<string>("maintain");
+  const me = useMe();
+  /* Seçilmediyse profildeki hedef (tanışma akışında soruluyor). Buradaki
+     seçim KAYDEDİLMİYOR: "kas kazanımında olsam ne kadar yerdim" diye bakmak
+     hedefi değiştirmek değil. Kalıcı değişiklik Hesap ekranından. */
+  const [chosenGoal, setGoal] = useState<string | null>(null);
+  const goal = chosenGoal ?? me.data?.nutrition_goal ?? "maintain";
   const [date, setDate] = useState<string | null>(null);
   const day = useNutritionDay(date, goal);
 

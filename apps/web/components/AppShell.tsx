@@ -190,6 +190,9 @@ const CHROMELESS = new Set([
   "/forgot-password",
   "/reset-password",
   "/verify",
+  // Oturum VAR ama gezinme yok: tanışma akışı bitmeden menüdeki ekranların
+  // çoğu boş ya da eksik hesap gösterir. Akışın tek çıkışı kendi sonu.
+  "/onboarding",
 ]);
 
 /** Üst çubuğun yüksekliği. Fotoğraf örtüsü bu kadar yukarıdan başlıyor. */
@@ -376,7 +379,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
        verilen 2.5rem'lik üst dolgu, çubuğu ekranın tepesinden aşağı
        itiyordu. Diğer oturumsuz ekranlar (parola kurtarma) sıradan metin;
        onlar dolguyu koruyor. */
-    const bare = pathname === "/login";
+    const bare = pathname === "/login" || pathname === "/onboarding";
     return <main className={bare ? "px-6" : "px-6 py-10"}>{children}</main>;
   }
 

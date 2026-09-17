@@ -421,26 +421,53 @@ function StepBody({
     case "intro":
       return (
         <>
-          <Photo slug="story-phone" ratio="16 / 10" scrim className="card">
-            <div className="flex size-full flex-col justify-end p-6 lg:p-8">
+          {/* Tanışmanın ilk ekranı uygulamanın ilk izlenimi: kart değil,
+              sahne. Giriş anlatısının salonundan bir kare, ekranın kenarına
+              kadar. Sorular başlayınca dar sütuna dönülüyor — orada okunacak
+              şey metin, bakılacak şey değil. */}
+          <div
+            className="relative isolate -mt-6 flex min-h-[46svh] items-end overflow-hidden lg:min-h-[54svh]"
+            style={{ width: "100vw", marginInline: "calc(50% - 50vw)" }}
+          >
+            <div aria-hidden className="absolute inset-0">
+              <Photo slug="story-entry" fill position="center 45%" className="size-full" />
+              <div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    "linear-gradient(to top, oklch(12% 0.01 115 / 0.92) 0%, oklch(12% 0.01 115 / 0.45) 55%, oklch(12% 0.01 115 / 0.2) 100%)",
+                }}
+              />
+            </div>
+            <div className="relative mx-auto w-full max-w-xl px-6 pb-8 lg:pb-10">
+              <p className="label" style={{ color: "var(--color-on-night-muted)" }}>
+                Tanışma
+              </p>
               <h1
                 ref={headingRef}
                 tabIndex={-1}
-                className="display text-2xl outline-none lg:text-3xl"
-                style={{ color: "oklch(99% 0 0)" }}
+                className="display mt-2 text-3xl outline-none sm:text-4xl lg:text-5xl"
+                style={{ color: "var(--color-on-night)" }}
               >
                 Seni tanıyalım
               </h1>
             </div>
-          </Photo>
-          <p className="mt-6 max-w-[52ch] text-base">
+          </div>
+
+          <p className="mt-8 max-w-[52ch] text-lg leading-relaxed">
             Beş kısa soru. Cevapların iki sayıyı belirliyor: rafın başında kaç kilo kaldıracağın
             ve günde kaç kalori alacağın.
           </p>
-          <ul className="mt-5 flex flex-col gap-2 text-sm text-[var(--color-ink-muted)]">
-            <li>Her soruyu atlayabilirsin.</li>
-            <li>Her sorunun altında o bilginin neye gittiği yazıyor.</li>
-            <li>Hepsini sonra Hesap ekranından değiştirebilirsin.</li>
+          <ul className="mt-8 flex flex-col divide-y divide-[var(--color-border)] border-y border-[var(--color-border)] text-base text-[var(--color-ink-muted)]">
+            {[
+              "Her soruyu atlayabilirsin.",
+              "Her sorunun altında o bilginin neye gittiği yazıyor.",
+              "Hepsini sonra Hesap ekranından değiştirebilirsin.",
+            ].map((line) => (
+              <li key={line} className="py-3.5">
+                {line}
+              </li>
+            ))}
           </ul>
         </>
       );

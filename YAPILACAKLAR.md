@@ -7,7 +7,7 @@ Bir madde bitince altına kısa bir not düşülüyor.
 yazı) uygulamanın bütün ekranlarında. Koyu tema. Geniş, dolu, sade; grafikler,
 fotoğraflar, ödül alacak kalitede UI/UX.
 
-**Şu an:** boş durumlar, CLS ölçümü, hareket azaltma, giriş/tanışma koyu tema kontrolü, `pnpm build`.
+**Şu an:** `pnpm build`, ROADMAP, son tur; sonra kalan ince işler (klavye kısayolları, boş hesap karoları).
 
 ---
 
@@ -30,8 +30,12 @@ fotoğraflar, ödül alacak kalitede UI/UX.
       üstüne binmiyor.
   - Program düzenleme ve onay ekranında hata durumunda sonsuz "yükleniyor"
     hatası da düzeldi (hata kontrolü önce).
-- [ ] Kayma (CLS) denetimi: her ekranda ölçüm, yükleme iskeletleri sabit yükseklikte
-- [ ] Mobil (390px) ve tablet (768px) turu
+- [x] Kayma (CLS) denetimi: 15 ekran ölçüldü (masaüstü ve 390px).
+  - Önce: mobilde antrenman 0,100 / programlar 0,091 / beslenme 0,043 / ağrı 0,041.
+  - Sonra: hepsi ≤0,024. Düzeltmeler: banttaki yer tutucular gelecek içerikle aynı
+    yükseklikte, ağrı ekranının açılış cümlesi iki satır, harita karosunun alt sınırı.
+  - Ölçüm aracı: `e2e/_cls.spec.ts` (geçici, commit edilmiyor).
+- [~] Mobil (390px) turu yapıldı; tablet (768px) turu kaldı
 - [ ] Hareket azaltma tercihinde bantların animasyonu
 - [ ] Eksik fotoğraflar: akşam yemeği, ara öğün, tebeşir (yeniden üret)
 
@@ -104,9 +108,10 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 ## 6. Hesap ve diğerleri
 
 - [x] `/account` bant + kimlik bloğu
-- [ ] `/onboarding` koyu temada kontrol
+- [x] `/onboarding`: açılış adımı tam genişlik sahne (salona giren kişi), büyük başlık
 - [ ] Giriş ekranı koyu temada kontrol (telefon ekranı açık kalmalı)
-- [ ] Parola kurtarma / doğrulama ekranları koyu tema
+- [x] Parola kurtarma / doğrulama ekranları: fotoğraflı ikili kabuk (`components/AuthScreen.tsx`)
+  - Geniş ekranda solda salon sağda form; dar ekranda fotoğraf tam sayfa, perde ağır.
 
 ## 7. Kalite
 

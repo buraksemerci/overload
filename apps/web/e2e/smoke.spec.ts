@@ -453,6 +453,74 @@ test.describe("antrenman modu", () => {
     await expect(page.getByText("Set 2 / 2")).toBeVisible();
   });
 
+  test("klavye: Enter seti kaydediyor, dinlenmede Enter atlıyor", async ({ page }) => {
+    /* Masaüstünde antrenman girmek de bir senaryo (evde, dizüstüyle).
+       Kısayolların ekranda görünen karşılıkları var; burada ölçülen şey
+       ikisinin AYNI işi yapması. Alanlara yazarken kısayol çalışmamalı —
+       o yüzden Enter gövdeye basılıyor. */
+    const sessionId = "44444444-4444-4444-4444-444444444444";
+    const loggedSets: unknown[] = [];
+    const savedSet = {
+      id: "55555555-5555-5555-5555-555555555555",
+      exercise_id: "33333333-3333-3333-3333-333333333333",
+      set_number: 1,
+      weight_kg: "42.50",
+      reps: 5,
+      rir: null,
+      is_warmup: false,
+      technique: "rir1",
+    };
+
+    await page.route("http://localhost:8000/workouts/sessions", (route) =>
+      route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: sessionId,
+          program_day_id: null,
+          started_at: new Date().toISOString(),
+          completed_at: null,
+          notes: null,
+          is_deload: false,
+          sets: [],
+        }),
+      }),
+    );
+    await page.route(`http://localhost:8000/workouts/sessions/${sessionId}/sets`, (route) => {
+      loggedSets.push(savedSet);
+      return route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify(savedSet) });
+    });
+    await page.route(`http://localhost:8000/workouts/sessions/${sessionId}`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: sessionId,
+          program_day_id: null,
+          started_at: new Date().toISOString(),
+          completed_at: null,
+          notes: null,
+          is_deload: false,
+          sets: loggedSets,
+        }),
+      }),
+    );
+
+    await page.goto("/workout");
+    await page.getByRole("button", { name: "Antrenmanı başlat" }).click();
+    await expect(page.getByText("Set 1 / 2")).toBeVisible();
+
+    // Odak alanda DEĞİLKEN Enter: set kaydediliyor ve dinlenme başlıyor.
+    await page.locator("body").click({ position: { x: 5, y: 5 } });
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("timer")).toBeVisible();
+
+    // Dinlenmede Enter: sayaç kapanıyor, sıradaki set sahnesi geliyor.
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("timer")).toHaveCount(0);
+    await expect(page.getByText("Set 2 / 2")).toBeVisible();
+  });
+
   test("tekrar alanı boşsa set kaydedilemez", async ({ page }) => {
     // Alanlar önceden dolu geldiği için düğme açık başlıyor; korumanın
     // çalıştığını görmek için alanı boşaltmak gerekiyor.

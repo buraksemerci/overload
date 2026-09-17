@@ -7,7 +7,7 @@
  * izin vermiyorsa akış bozulmamalı.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * Ekran açık kalsın.
@@ -79,4 +79,36 @@ export function formatElapsed(ms: number): string {
   const seconds = total % 60;
   const pad = (n: number) => String(n).padStart(2, "0");
   return hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${minutes}:${pad(seconds)}`;
+}
+
+/**
+ * Ekran genelinde klavye kısayolları.
+ *
+ * Bir alana yazarken ÇALIŞMIYOR: antrenman ekranında "+" tuşu ağırlığı
+ * artırıyor ama kilo alanına "+" yazmak isteyen biri de var. Aynı sebeple
+ * Ctrl/Cmd/Alt basılıyken devre dışı — onlar tarayıcının kısayolları.
+ *
+ * Kısayollar fareye ya da dokunmaya ALTERNATİF, tek yol değil: her birinin
+ * ekranda görünen bir düğmesi var.
+ */
+export function useHotkeys(handlers: Record<string, () => void>, active = true): void {
+  const latest = useRef(handlers);
+  useEffect(() => {
+    latest.current = handlers;
+  });
+
+  useEffect(() => {
+    if (!active) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
+      const handler = latest.current[event.key];
+      if (!handler) return;
+      event.preventDefault();
+      handler();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [active]);
 }

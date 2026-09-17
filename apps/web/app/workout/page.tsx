@@ -46,7 +46,7 @@ import {
 } from "@/components/RestTimer";
 import { Photo } from "@/components/Photo";
 import { ErrorBox, fmt } from "@/components/States";
-import { formatElapsed, useNow, useWakeLock } from "@/lib/device";
+import { formatElapsed, useHotkeys, useNow, useWakeLock } from "@/lib/device";
 import { prLabel, prUnit } from "@/lib/labels";
 import { barFor, plateLoad, weightStep } from "@/lib/plates";
 import {
@@ -174,6 +174,22 @@ export default function WorkoutPage() {
 
   const draftKey = (exerciseId: string, setNumber: number) => `${exerciseId}:${setNumber}`;
 
+  const resting = rest !== null;
+
+  const skipRest = useCallback(() => setRest(null), []);
+  const adjustRest = useCallback(
+    (seconds: number) =>
+      setRest((current) =>
+        current === null
+          ? current
+          : {
+              endsAt: Math.max(Date.now() + 1000, current.endsAt + seconds * 1000),
+              total: Math.max(1, current.total + seconds),
+            },
+      ),
+    [],
+  );
+
   /**
    * Alanların gösterilecek değeri. Kaydedilmiş set varsa SUNUCUDAN, kullanıcı
    * bir şey yazdıysa taslaktan, aksi halde MOTORUN ÖNERİSİNDEN.
@@ -242,6 +258,28 @@ export default function WorkoutPage() {
     }
     setNewRecords(result.new_records);
   };
+
+  /**
+   * Klavye kısayolları.
+   *
+   * Salonda telefon kullanılıyor ama masaüstünde antrenman girmek de bir
+   * senaryo (evde, dizüstüyle). Her kısayolun ekranda görünen bir düğmesi
+   * var — kısayol alternatif, tek yol değil. Bir alana yazarken çalışmıyor
+   * (`useHotkeys` odağa bakıyor), yoksa kilo alanına "+" yazılamazdı.
+   */
+  useHotkeys(
+    resting
+      ? {
+          Enter: skipRest,
+          " ": skipRest,
+          ArrowRight: () => adjustRest(15),
+          ArrowLeft: () => adjustRest(-15),
+          "+": () => adjustRest(15),
+          "-": () => adjustRest(-15),
+        }
+      : { Enter: () => void submit() },
+    sessionId !== null && newRecords === null,
+  );
 
   if (newRecords !== null) {
     return <Celebration records={newRecords} doneCount={doneCount} volume={volume} />;
@@ -338,17 +376,8 @@ export default function WorkoutPage() {
                 remaining={remaining}
                 progress={progress}
                 next={step}
-                onSkip={() => setRest(null)}
-                onAdjust={(seconds) =>
-                  setRest((current) =>
-                    current === null
-                      ? null
-                      : {
-                          endsAt: Math.max(Date.now() + 1000, current.endsAt + seconds * 1000),
-                          total: Math.max(1, current.total + seconds),
-                        },
-                  )
-                }
+                onSkip={skipRest}
+                onAdjust={adjustRest}
               />
             ) : allDone ? (
               <AllDoneStage pending={complete.isPending} onFinish={() => void finish()} />
@@ -918,6 +947,17 @@ function DayMap({
           );
         })}
       </ol>
+
+      {/* Kısayollar yalnızca klavyesi olan ekranda yazıyor: telefonda satır
+          yer kaplamaktan başka bir şey yapmazdı. */}
+      {onJump && (
+        <p className="mt-5 hidden border-t border-[var(--color-border)] pt-4 text-2xs text-[var(--color-ink-faint)] lg:block">
+          Klavye: <strong className="font-medium">Enter</strong> seti kaydet ·{" "}
+          <strong className="font-medium">↑ ↓</strong> ağırlık ve tekrar ·{" "}
+          dinlenmede <strong className="font-medium">Enter</strong> atla,{" "}
+          <strong className="font-medium">← →</strong> ±15 sn
+        </p>
+      )}
     </aside>
   );
 }

@@ -85,7 +85,9 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 - [x] Kod geliştirmeleri: ekran uyanık kalıyor (Wake Lock), titreşim, plaka
       hesaplayıcı (`lib/plates.ts` + test), ±15 sn dinlenme, ağırlık adımı ekipmana göre,
       yarım kalan set taslakları yerelde saklanıyor, önceki seti tekrarla
-- [ ] Klavye kısayolları (Enter = seti kaydet, +/- ağırlık)
+- [x] Klavye kısayolları: Enter seti kaydeder, dinlenmede Enter atlar, ← → ±15 sn;
+      ok tuşları alanlarda adım adım değiştirir. Alana yazarken kısayol kapalı
+      (`useHotkeys`), kısayol listesi günün hareketleri sütununun altında yazıyor.
 - [x] `/programs`: aktif program BANDIN kendisi (hedef fotoğrafı, ad, gün/hareket sayısı,
       "bugünkü antrenman"), altında program günleri kartları; diğerleri ve şablonlar açılır
 - [x] `/exercises`: bantta cam arama kutusu + sayılar; ekipman karoları büyüdü

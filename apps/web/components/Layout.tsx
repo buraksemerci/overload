@@ -100,7 +100,8 @@ export function Hero({
       }}
     >
       <div aria-hidden className="hero-media absolute inset-0">
-        <Photo slug={photo} fill position={position} className="size-full" />
+        {/* Bandın fotoğrafı sayfanın en büyük öğesi: tembel değil, öncelikli. */}
+        <Photo slug={photo} fill position={position} className="size-full" eager />
       </div>
       <div aria-hidden className="absolute inset-0" style={{ background: HERO_SCRIM }} />
       {/* Dar ekranda yazı fotoğrafın tam genişliğinde; soldan gelen perde

@@ -86,6 +86,14 @@ export function Photo({
    * letterbox boşluğunun ortasında keskin bir fotoğraf kenarı kalırdı.
    */
   feather = false,
+  /**
+   * Sayfa açılır açılmaz gereken görsel: giriş bandının fotoğrafı.
+   *
+   * Varsayılan `lazy` ekranın ALTINDAKİ kartlar için doğru, ama bandın
+   * fotoğrafı sayfanın en büyük öğesi (LCP) ve tembel yüklenince tarayıcı
+   * onu diğer isteklerin arkasına atıyor.
+   */
+  eager = false,
 }: {
   slug: string;
   /** Dekoratif fotoğrafta BOŞ kalır — ekran okuyucu gereksiz yere okumasın. */
@@ -98,6 +106,7 @@ export function Photo({
   position?: string;
   fill?: boolean;
   feather?: boolean;
+  eager?: boolean;
 }) {
   /**
    * Görsel YÜKLENENE kadar görünmez.
@@ -149,7 +158,8 @@ export function Photo({
       <img
         src={`/photos/${slug}.jpg`}
         alt={alt}
-        loading="lazy"
+        loading={eager ? "eager" : "lazy"}
+        fetchPriority={eager ? "high" : undefined}
         decoding="async"
         onLoad={(event) => {
           const image = event.currentTarget;

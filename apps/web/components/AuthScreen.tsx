@@ -34,7 +34,7 @@ export function AuthScreen({
       style={{ width: "100vw", marginInline: "calc(50% - 50vw)" }}
     >
       <div aria-hidden className="absolute inset-0 lg:relative lg:h-full">
-        <Photo slug={photo} fill position={position} className="size-full" />
+        <Photo slug={photo} fill position={position} className="size-full" eager />
         {/* Perde YALNIZCA dar ekranda ağır: orada yazı fotoğrafın üstünde
             duruyor. Geniş ekranda yazı kendi sütununda ve fotoğrafı
             karartmanın tek sonucu sahneyi kaybetmek olurdu. */}

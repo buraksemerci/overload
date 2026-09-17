@@ -395,3 +395,35 @@ test("ipucu düğmesinin çevresine basmak da açıyor", async ({ page }) => {
   await page.mouse.click(box.x + box.width / 2 + 9, box.y + box.height / 2 + 9);
   await expect(tip).toHaveAttribute("aria-expanded", "true");
 });
+
+/**
+ * Başlık hiyerarşisi: ekran başına TEK `h1` ve atlanan düzey yok.
+ *
+ * Ekran okuyucu kullanıcıların çoğu sayfayı başlıklara bakarak geziyor.
+ * İki `h1` "iki sayfa" demek; `h2`den `h4`e atlamak da aradaki düzeyin
+ * kaybolduğu anlamına geliyor. Gözle fark edilmiyor, o yüzden ölçülüyor.
+ */
+test("her ekranda tek h1 ve atlanmış başlık düzeyi yok", async ({ page }) => {
+  test.slow();
+  await signIn(page);
+  await mockApi(page);
+
+  const problems: string[] = [];
+  for (const path of SCREENS) {
+    await openScreen(page, path);
+    const result = await page.evaluate(() => {
+      const levels = [...document.querySelectorAll("main h1, main h2, main h3, main h4")].map(
+        (heading) => Number(heading.tagName[1]),
+      );
+      const skips: string[] = [];
+      for (let index = 1; index < levels.length; index += 1) {
+        if (levels[index]! - levels[index - 1]! > 1) skips.push(`${levels[index - 1]}→${levels[index]}`);
+      }
+      return { h1: levels.filter((level) => level === 1).length, skips };
+    });
+    if (result.h1 !== 1) problems.push(`${path}: ${result.h1} adet h1`);
+    if (result.skips.length > 0) problems.push(`${path}: atlanan düzey ${result.skips.join(", ")}`);
+  }
+
+  expect(problems, problems.join(" · ")).toEqual([]);
+});

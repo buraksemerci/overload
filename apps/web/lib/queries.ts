@@ -643,6 +643,27 @@ export function useLogSet(): UseMutationResult<WorkoutSet, Error, LogSetInput> {
   });
 }
 
+/**
+ * Tek bir set kaydını siler.
+ *
+ * Yanlış girilen bir seti düzeltmenin yolu üzerine yazmak (aynı slota tekrar
+ * kaydetmek); SİLMEK ise "bu seti hiç yapmadım" demek — fazladan açılmış bir
+ * slot ya da sehven kaydedilmiş bir set için. Seans önbelleği tazeleniyor.
+ */
+export function useDeleteSet(): UseMutationResult<
+  unknown,
+  Error,
+  { setId: string; sessionId: string }
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ setId }) => api.delete(`/workouts/sets/${setId}`),
+    onSuccess: (_data, variables) => {
+      void client.invalidateQueries({ queryKey: keys.session(variables.sessionId) });
+    },
+  });
+}
+
 export function useCompleteSession(): UseMutationResult<
   { session: WorkoutSession; new_records: PersonalRecordRow[] },
   Error,

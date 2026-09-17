@@ -51,6 +51,7 @@ import { prLabel, prUnit } from "@/lib/labels";
 import { barFor, plateLoad, weightStep } from "@/lib/plates";
 import {
   useCompleteSession,
+  useDeleteSet,
   useLogSet,
   useSession,
   useStartSession,
@@ -117,6 +118,7 @@ export default function WorkoutPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const session = useSession(sessionId);
   const logSet = useLogSet();
+  const deleteSet = useDeleteSet();
   const complete = useCompleteSession();
 
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
@@ -286,6 +288,29 @@ export default function WorkoutPage() {
     }
   };
 
+  /**
+   * Bu seti kaldır.
+   *
+   * İki durum tek düğmede: kaydedilmiş set siliniyor, plana fazladan açılmış
+   * boş slot ise geri alınıyor. Kullanıcı açısından ikisi de "bu set olmasın".
+   */
+  const removeCurrent = async () => {
+    if (!step) return;
+    const logged = findLogged(step.exercise.exercise_id, step.setNumber);
+    if (logged && sessionId) {
+      await deleteSet.mutateAsync({ setId: logged.id, sessionId });
+    }
+    // Fazladan açılan slot da kapanıyor — yoksa boş bir slot ekranda kalıyor.
+    if (step.setNumber > step.exercise.target_sets) {
+      setExtra((current) => {
+        const count = current[step.exercise.exercise_id] ?? 0;
+        if (count <= 0) return current;
+        return { ...current, [step.exercise.exercise_id]: count - 1 };
+      });
+    }
+    setJump(null);
+  };
+
   const finish = async () => {
     if (!sessionId) return;
     const result = await complete.mutateAsync(sessionId);
@@ -431,6 +456,12 @@ export default function WorkoutPage() {
                     : undefined
                 }
                 pending={logSet.isPending}
+                removable={
+                  findLogged(step.exercise.exercise_id, step.setNumber) !== undefined ||
+                  step.setNumber > step.exercise.target_sets
+                }
+                removing={deleteSet.isPending}
+                onRemove={() => void removeCurrent()}
                 onChange={(patch) =>
                   updateDraft(
                     draftKey(step.exercise.exercise_id, step.setNumber),
@@ -464,6 +495,19 @@ export default function WorkoutPage() {
                       ...current,
                       [exerciseId]: (current[exerciseId] ?? 0) + 1,
                     }))
+            }
+            /* Geri alma yalnızca BOŞ ve fazladan açılmış slot için: dolu bir
+               seti buradan silmek, listeye bir kez dokunup veri kaybetmek
+               demek olurdu. Kayıtlı set sahnedeki "Bu seti sil" ile gidiyor. */
+            canRemoveSet={(exerciseId, planned) =>
+              (extra[exerciseId] ?? 0) > 0 && findLogged(exerciseId, planned) === undefined
+            }
+            onRemoveSet={(exerciseId) =>
+              setExtra((current) => {
+                const count = current[exerciseId] ?? 0;
+                if (count <= 0) return current;
+                return { ...current, [exerciseId]: count - 1 };
+              })
             }
           />
         </div>
@@ -644,6 +688,9 @@ function SetStage({
   logged,
   previous,
   pending,
+  removable,
+  removing,
+  onRemove,
   onChange,
   onSubmit,
 }: {
@@ -655,6 +702,10 @@ function SetStage({
   logged: boolean;
   previous: WorkoutSet | undefined;
   pending: boolean;
+  /** Kaydedilmiş ya da plana sonradan eklenmiş set: kaldırılabilir. */
+  removable: boolean;
+  removing: boolean;
+  onRemove: () => void;
   onChange: (patch: Partial<Draft>) => void;
   onSubmit: () => void;
 }) {
@@ -791,6 +842,17 @@ function SetStage({
             </button>
           )}
         </div>
+
+        {removable && (
+          <button
+            type="button"
+            className="btn btn-quiet text-sm"
+            disabled={removing}
+            onClick={onRemove}
+          >
+            {removing ? "Kaldırılıyor…" : logged ? "Bu seti sil" : "Bu seti kaldır"}
+          </button>
+        )}
       </form>
     </Stage>
   );
@@ -952,6 +1014,8 @@ function DayMap({
   findLogged,
   onJump,
   onAddSet,
+  canRemoveSet,
+  onRemoveSet,
 }: {
   className: string;
   steps: Step[];
@@ -959,6 +1023,8 @@ function DayMap({
   findLogged: (exerciseId: string, setNumber: number) => WorkoutSet | undefined;
   onJump?: (index: number) => void;
   onAddSet?: (exerciseId: string) => void;
+  canRemoveSet?: (exerciseId: string, planned: number) => boolean;
+  onRemoveSet?: (exerciseId: string) => void;
 }) {
   /* Hareket başına grupla: harita set değil hareket düzeyinde okunuyor.
      Set sayısı PLANDAN değil adım listesinden geliyor — plana eklenen
@@ -1031,7 +1097,19 @@ function DayMap({
                 <div className="flex min-w-0 flex-1 items-center gap-3 py-3.5">{content}</div>
               )}
 
-              {/* Plana bir set daha: program bir öneri, yasak değil. */}
+              {/* Plana bir set daha: program bir öneri, yasak değil. Yanlışlıkla
+                  açılan boş slot aynı yerden geri alınıyor. */}
+              {onRemoveSet && canRemoveSet?.(exercise.exercise_id, planned) && (
+                <button
+                  type="button"
+                  onClick={() => onRemoveSet(exercise.exercise_id)}
+                  aria-label={`${exercise.name} için eklenen seti geri al`}
+                  className="grid size-9 shrink-0 place-items-center text-lg text-[var(--color-ink-faint)] transition-colors hover:text-[var(--color-ink)]"
+                  style={{ transitionDuration: "var(--dur-micro)" }}
+                >
+                  −
+                </button>
+              )}
               {onAddSet && (
                 <button
                   type="button"

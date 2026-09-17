@@ -648,6 +648,36 @@ test.describe("antrenman modu", () => {
     await expect(page.getByRole("button", { name: "Seti güncelle" })).toBeVisible();
   });
 
+  test("fazladan açılan set geri alınabiliyor", async ({ page }) => {
+    const sessionId = "44444444-4444-4444-4444-444444444444";
+    const empty = {
+      id: sessionId,
+      program_day_id: null,
+      started_at: new Date().toISOString(),
+      completed_at: null,
+      notes: null,
+      is_deload: false,
+      sets: [],
+    };
+    await page.route("http://localhost:8000/workouts/sessions", (route) =>
+      route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify(empty) }),
+    );
+    await page.route(`http://localhost:8000/workouts/sessions/${sessionId}`, (route) =>
+      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(empty) }),
+    );
+
+    await page.goto("/workout");
+    await page.getByRole("button", { name: "Antrenmanı başlat" }).click();
+
+    const map = page.getByRole("complementary", { name: "Günün hareketleri" });
+    await map.getByRole("button", { name: /bir set daha ekle/ }).click();
+    await expect(map.getByText("0 / 3 set")).toBeVisible();
+
+    // Aynı yerden geri al: plan yine iki set.
+    await map.getByRole("button", { name: /eklenen seti geri al/ }).click();
+    await expect(map.getByText("0 / 2 set")).toBeVisible();
+  });
+
   test("ısınma seti işaretlenip kaydediliyor", async ({ page }) => {
     /* Isınma setleri hacme, rekora ve ilerleme motoruna girmiyor (sunucu
        `is_warmup` alanına bakıyor) ama kaydedilebilmeleri gerekiyor. */

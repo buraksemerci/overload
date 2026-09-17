@@ -89,6 +89,8 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 - [x] Kod geliştirmeleri: ekran uyanık kalıyor (Wake Lock), titreşim, plaka
       hesaplayıcı (`lib/plates.ts` + test), ±15 sn dinlenme, ağırlık adımı ekipmana göre,
       yarım kalan set taslakları yerelde saklanıyor, önceki seti tekrarla
+- [x] Set silme: kayıtlı seti sahneden sil (`DELETE /workouts/sets/{id}` vardı, arayüzde
+      karşılığı yoktu); yanlışlıkla açılan boş slotu haritadan "−" ile geri al
 - [x] Isınma seti işaretlenebiliyor: kayıt tutuluyor ama hacme, rekora ve ilerleme
       motoruna girmiyor (sunucu `is_warmup` alanına bakıyordu, arayüzde karşılığı yoktu)
 - [x] Plana bir set daha eklenebiliyor (haritadaki "+"): sunucu plan dışı sırayı

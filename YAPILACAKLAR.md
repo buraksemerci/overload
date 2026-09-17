@@ -134,7 +134,7 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 
 - [x] e2e testleri yeni tasarıma göre güncellendi (pano, antrenman, beslenme, hoş geldin)
 - [x] Tasarım kuralları testi: yeni ekran `/body` eklendi (124/124 geçti)
-- [x] Tam test paketi (393 e2e) + `pnpm build` başarılı
+- [x] Tam test paketi (424 e2e koşumu / 212 senaryo, 98 birim) + `pnpm build` başarılı
   - Gezinme testi paralel yük altında derleme gecikmesiyle düşüyordu; bekleme 20 sn.
 - [x] Commit: "Koyu tema ve sinematik ekranlar" (2026-09-17)
 - [x] ROADMAP güncellendi (Bölüm 5 ve yeni Bölüm 8: koyu tema ve sinematik dil)

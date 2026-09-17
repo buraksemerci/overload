@@ -245,6 +245,20 @@ test.describe("oturum açıkken", () => {
     }
   });
 
+  test("bağlantı gidince ekran bunu söylüyor", async ({ page, context }) => {
+    /* Salonun bodrumunda bağlantı düşüyor ve uygulama sessizce çalışmamaya
+       başlıyordu: "Seti kaydet" bir hata kutusu döndürüyor ama sebebi
+       görünmüyordu. Çubuk yalnızca çevrimdışıyken var. */
+    await page.goto("/");
+    await expect(page.getByText(/Bağlantı yok/)).toHaveCount(0);
+
+    await context.setOffline(true);
+    await expect(page.getByText(/Bağlantı yok/)).toBeVisible();
+
+    await context.setOffline(false);
+    await expect(page.getByText(/Bağlantı yok/)).toHaveCount(0);
+  });
+
   test("sekme başlığı hangi ekranda olduğunu söylüyor", async ({ page }) => {
     /* Uygulama tek sayfa gibi davranıyor ve bütün sekmeler "overload"
        yazıyordu; beş sekme açık olan biri hangisinin kilo, hangisinin

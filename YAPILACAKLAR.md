@@ -7,7 +7,7 @@ Bir madde bitince altına kısa bir not düşülüyor.
 yazı) uygulamanın bütün ekranlarında. Koyu tema. Geniş, dolu, sade; grafikler,
 fotoğraflar, ödül alacak kalitede UI/UX.
 
-**Şu an:** son tur — tam test paketi, üretim derlemesi, ekran ekran gözden geçirme sürüyor.
+**Şu an:** ince ayar turu — erişilebilirlik, performans ve dayanıklılık detayları.
 
 ---
 
@@ -115,7 +115,8 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 
 - [x] `/account` bant + kimlik bloğu
 - [x] `/onboarding`: açılış adımı tam genişlik sahne (salona giren kişi), büyük başlık
-- [ ] Giriş ekranı koyu temada kontrol (telefon ekranı açık kalmalı)
+- [x] Giriş ekranı koyu temada kontrol edildi: anlatı sahneleri ve finalde
+      telefon ekranındaki açık temalı form yerinde
 - [x] Parola kurtarma / doğrulama ekranları: fotoğraflı ikili kabuk (`components/AuthScreen.tsx`)
   - Geniş ekranda solda salon sağda form; dar ekranda fotoğraf tam sayfa, perde ağır.
 
@@ -130,6 +131,13 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 - [x] Sekme başlıkları: her bölümün kendi `layout.tsx` metadata'sı ("Kilo · overload")
 - [x] Dar ekranda yatay kayma denetimi testi (`design-rules`)
 - [x] Menüdeki eski Unsplash kareleri kaldırıldı; menü ve bant aynı salonu gösteriyor
+- [x] **Panel hatası düzeldi:** `main` üzerindeki filtre `position: fixed` için konum
+      kabı oluyordu; sayfa kaydırılmışken paneller ekranın dışına taşıyordu. Panel
+      artık `<body>`ye portal ediliyor (+ regresyon testi).
+- [x] "?" düğmelerinin dokunma alanı 18 → 38 piksel (görünen daire aynı) + test
+- [x] Bant fotoğrafı öncelikli yükleniyor (LCP), diğerleri tembel
+- [x] Yükleniyor durumu iskelet oldu (`.skeleton`, hareket azaltmada durağan)
+- [x] Çevrimdışı uyarısı: bağlantı yokken tek satırlık çubuk (+ test)
 
 ---
 

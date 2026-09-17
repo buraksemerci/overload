@@ -20,6 +20,7 @@ import {
 } from "@/components/Icons";
 import { CONTENT_WIDTH } from "@/components/Layout";
 import { Photo } from "@/components/Photo";
+import { OfflineNote } from "@/components/OfflineNote";
 import { logout } from "@/lib/auth";
 import { useMe } from "@/lib/queries";
 
@@ -540,6 +541,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           Tasarım masaüstü öncelikli ama telefonda GEZİNİLEMEZ olmak tasarım
           tercihi değil, işlev kaybı. */}
       {drawer && <Drawer isActive={isActive} onClose={() => setDrawer(false)} />}
+
+      {/* Çubuk `main`in DIŞINDA: `main` üzerinde her zaman bir filtre var ve
+          filtreli bir öğe `fixed` torunları için konum kabı oluyor. */}
+      <OfflineNote />
 
       <main
         className={`w-full flex-1 px-5 pb-20 sm:px-8 ${

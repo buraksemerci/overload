@@ -167,8 +167,8 @@ export default function ProgressPage() {
             <ErrorBox error={records.error} />
           ) : (
             <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {shelf.map((row, index) => (
-                <li key={row.exercise_id} className="reveal" style={{ ["--i" as string]: index }}>
+              {shelf.map((row) => (
+                <li key={row.exercise_id} className="rise">
                   <RecordCard row={row} />
                 </li>
               ))}

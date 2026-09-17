@@ -205,8 +205,8 @@ export default function HistoryPage() {
         <section key={month.label}>
           <h2 className="display mb-4 text-xl lg:text-2xl">{month.label}</h2>
           <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {month.sessions.map((session, index) => (
-              <li key={session.id} className="reveal" style={{ ["--i" as string]: index }}>
+            {month.sessions.map((session) => (
+              <li key={session.id} className="rise">
                 <SessionCard session={session} onOpen={() => setOpen(session)} />
               </li>
             ))}

@@ -677,6 +677,36 @@
   }
 }
 
+/* --- Uzun sayfalarda kaydırmaya bağlı açılış ---
+   `.reveal` sayfa açılışında bir kez çalışıyor ve ekranın DIŞINDAKİ satırlar
+   için boşa gidiyor: kullanıcı oraya geldiğinde animasyon çoktan bitmiş
+   oluyor. `.rise` kaydırma zaman çizgisine bağlı — satır görünür alana
+   girerken açılıyor, JS yok.
+
+   Destek yoksa (Safari, Firefox) hiçbir şey olmuyor: temel hâl zaten görünür,
+   yani hiçbir tarayıcıda içerik kaybolmuyor. Hareket azaltma tercihinde de
+   kapalı. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .rise {
+      animation: rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 18%;
+    }
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* Giriş bandının fotoğrafı açılışta çok yavaş yerine oturuyor — giriş
    ekranındaki kameranın ekranın içinde de sürdüğü hissi. Ölçek yalnızca
    %6'dan geliyor ve süre uzun: fark edilmeyecek kadar, ama sahne "canlı". */

@@ -188,8 +188,8 @@ export default function ExercisesPage() {
             />
           ) : (
             <ul className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
-              {rows.map((exercise, index) => (
-                <li key={exercise.id} className="reveal" style={{ ["--i" as string]: index }}>
+              {rows.map((exercise) => (
+                <li key={exercise.id} className="rise">
                   <button
                     type="button"
                     onClick={() => setOpen(exercise)}

@@ -220,7 +220,18 @@ test.describe("oturum açıkken", () => {
            edilmemeli. İptal edildiğinde imleç sekmenin üstünde durduğu için
            yeni bir `mouseenter` de gelmiyordu — panel bir daha hiç
            açılmıyordu. */
-        await page.locator("header").getByRole("link", { name: group, exact: true }).hover();
+        const groupLink = page.locator("header").getByRole("link", { name: group, exact: true });
+        await groupLink.hover();
+
+        /* Panel açılışı bir önceki gezinmeyle çakışırsa imleç zaten sekmenin
+           üstünde duruyor ve yeni bir `mouseenter` gelmiyor. İmleci kenara
+           alıp tekrar üstüne gelmek açılışı garantiliyor — testin kendisi
+           yüzünden kırılmasın. */
+        if (!(await target.isVisible())) {
+          await page.mouse.move(0, 400);
+          await groupLink.hover();
+        }
+        await target.waitFor({ state: "visible", timeout: 10_000 });
       }
 
       await target.click();

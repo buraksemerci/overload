@@ -337,3 +337,42 @@ test("hareket azaltma tercihinde bandın fotoğrafı hiç hareket etmiyor", asyn
   expect(animation).toBe("none");
   await context.close();
 });
+
+/**
+ * Dar ekranda YATAY KAYDIRMA YOK.
+ *
+ * Tam kadraj bantlar `100vw` genişliğinde ve negatif kenar boşluğuyla
+ * ortalanıyor; bir yerde `overflow-x` kesilmezse ya da bir ızgara sabit
+ * genişlikli bir çocuk taşırsa bütün sayfa yana kayıyor. Telefonda bu,
+ * dokunarak kaydırırken içeriğin sürekli sağa sola oynaması demek.
+ *
+ * Tek testte bütün ekranlar geziliyor: her ekran için ayrı test açmak aynı
+ * iddiayı otuz kez yeniden kurmak olurdu.
+ */
+test("dar ekranda hiçbir ekran yana kaymıyor", async ({ page }) => {
+  test.slow();
+  await page.setViewportSize({ width: 390, height: 800 });
+  await signIn(page);
+  await mockApi(page);
+
+  const overflowing: string[] = [];
+  for (const path of SCREENS) {
+    await page.goto(path);
+    await page.waitForLoadState("networkidle").catch(() => undefined);
+    const result = await page.evaluate(() => {
+      const width = document.documentElement.clientWidth;
+      const wide = [...document.querySelectorAll("main *")]
+        .filter((element) => {
+          const rect = element.getBoundingClientRect();
+          return rect.width > width + 1 && rect.height > 4;
+        })
+        .map((element) => `${element.tagName.toLowerCase()}.${(element.getAttribute("class") ?? "").slice(0, 50)}`);
+      return { scroll: document.documentElement.scrollWidth, width, wide: wide.slice(0, 2) };
+    });
+    if (result.scroll > result.width + 1) {
+      overflowing.push(`${path}: ${result.scroll}px > ${result.width}px — ${result.wide.join(", ")}`);
+    }
+  }
+
+  expect(overflowing, overflowing.join(" · ")).toEqual([]);
+});

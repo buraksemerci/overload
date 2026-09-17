@@ -5,7 +5,7 @@ Bu klasördeki dosyalar `<Photo slug="..." />` bileşeni tarafından
 altındaki nötr işlem katmanı görünüyor. Yani bir fotoğraf eklemek dosyayı bu
 klasöre doğru adla atmaktan ibaret; kod değişmiyor.
 
-Şu an 45 dosya, toplam ~6 MB.
+Şu an 41 dosya, toplam ~6 MB.
 
 ## Hazırlama
 
@@ -36,18 +36,10 @@ yok. **%60 ile %85 arasında** zemine soluyor (maske). Menü yazıları %50'den
 başlıyor, yani bir bölümü tam opak görselin üstünde — okunurluğu perde değil
 gölge taşıyor (`.on-photo-*`), çünkü perde fotoğrafı örterdi.
 
-Kutu geniş (≈2.3) olduğu için hepsi **yatay** kare; dikey bir kaynak bu
-kırpmada konuyu tamamen kaybediyor. `position` her kare için ayrı seçildi.
-
-Panelin zemin tonu fotoğrafa göre (`tone: "dark" | "light"`): görsel o renge
-soluyor ve üst çubuğun bütün renkleri onunla birlikte dönüyor.
-
-| Slug | Kare |
-|---|---|
-| `nav-antrenman` | omuz pressi |
-| `nav-beslenme` | kahvaltı tabağı |
-| `nav-vucut` | sırt — bölümün adını birebir karşılıyor |
-| `nav-asistan` | deadlift |
+Paneller artık **ekran bantlarıyla aynı kareleri** kullanıyor (`app-grip`,
+`app-meal-bar`, `app-body`, `app-review`): menüde gördüğün salon, girdiğin
+ekranda devam ediyor. Eski `nav-*` yuvaları (Unsplash) kaldırıldı — aynı
+uygulamada iki ayrı salon vardı ve geçiş her seferinde kopuyordu.
 
 ### Giriş ekranı
 

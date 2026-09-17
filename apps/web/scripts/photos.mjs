@@ -49,11 +49,7 @@ const JOBS = [
   // `position` her kare için ayrı seçildi: konunun kadrajda kalması bu
   // orandaki kırpmada tek tek karar gerektiriyor. Hepsi YATAY kaynak;
   // dikey bir kare bu kutuda konuyu tamamen kaybediyor.
-  { slug: "nav-antrenman", file: "woman shoulder press.jpg", fit: "cover", width: 1600, height: 700, position: "center" },
-  { slug: "nav-beslenme", file: "breakfast.jpg", fit: "cover", width: 1600, height: 700, position: "center" },
   // "Vücut" bölümü için sırt karesi: bölümün adını birebir karşılıyor.
-  { slug: "nav-vucut", file: "woman back.jpg", fit: "cover", width: 1600, height: 700, position: "top" },
-  { slug: "nav-asistan", file: "deadlift.jpg", fit: "cover", width: 1600, height: 700, position: "center" },
 
   // --- Giriş ekranı --------------------------------------------------------
   { slug: "hero-login", file: "squat.jpg", fit: "cover", width: 1000, height: 1333, position: "center" },

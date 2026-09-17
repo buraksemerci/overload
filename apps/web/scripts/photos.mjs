@@ -69,12 +69,6 @@ const JOBS = [
   // Kettlebell ve direnç bandı KASITLI olarak boş: elde o ekipmanın fotoğrafı
   // yok ve yanlış bir görsel koymak, hiç koymamaktan kötü. O kartlar nötr
   // dokuyla çalışıyor.
-  { slug: "equipment-barbell", file: "barbell rack.jpg", fit: "cover", width: 800, height: 533, position: "center" },
-  { slug: "equipment-dumbbell", file: "incline dumbell chestpress.jpg", fit: "cover", width: 800, height: 533, position: "center" },
-  { slug: "equipment-machine", file: "rack.jpg", fit: "cover", width: 800, height: 533, position: "center" },
-  { slug: "equipment-plate-loaded", file: "rack.jpg", fit: "cover", width: 800, height: 533, position: "top" },
-  { slug: "equipment-cable", file: "gym.jpg", fit: "cover", width: 800, height: 533, position: "center" },
-  { slug: "equipment-bodyweight", file: "home workout.jpg", fit: "cover", width: 800, height: 533, position: "center" },
 
   // --- Antrenman bitiş ekranı ----------------------------------------------
 

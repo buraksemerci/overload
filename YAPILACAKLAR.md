@@ -38,6 +38,9 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 - [x] Mobil (390px) ve tablet (768px) turu yapıldı
 - [x] Hareket azaltma tercihinde bandın fotoğrafı hiç hareket etmiyor (+ e2e testi)
 - [x] Öğün ve salon fotoğrafları tamam (akşam, ara öğün, tebeşir dahil); README güncellendi
+- [x] TEK görsel dili: boş durumlar, program hedefleri, ekipman karoları ve menü
+      panelleri de aynı salondan. Eski Unsplash setleri (empty-*, goal-*, nav-*,
+      equipment-*) silindi; makine ve kablo kareleri üretildi. 45 → 26 dosya.
 
 ## 1. Pano (`/`)
 
@@ -132,7 +135,8 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 
 ## Notlar
 
-- Higgsfield kredisi: ~11 kaldı (2026-09-17). Görsel başına 1,5 kredi (2k orta).
+- Higgsfield kredisi: 8 kaldı (2026-09-18). `gpt_image_2_5` 16:9 görsel = 1 kredi.
+  Son üretilenler: `app-machine`, `app-cable` (ekipman karoları).
 - Üretilen ham görseller: `~/Downloads/hf-app`. Anlatı segmentleri: `~/Downloads/hf2`.
 - Tur ekran görüntüleri için geçici test: `apps/web/e2e/_tour.spec.ts`
   (`MSYS_NO_PATHCONV=1 TOUR=/,/body TOUR_TAG=dk npx playwright test e2e/_tour.spec.ts --project=masaüstü`).

@@ -5,7 +5,7 @@ Bu klasördeki dosyalar `<Photo slug="..." />` bileşeni tarafından
 altındaki nötr işlem katmanı görünüyor. Yani bir fotoğraf eklemek dosyayı bu
 klasöre doğru adla atmaktan ibaret; kod değişmiyor.
 
-Şu an 30 dosya, toplam ~5 MB.
+Şu an 26 dosya, toplam ~4,5 MB.
 
 ## Hazırlama
 
@@ -65,16 +65,17 @@ içinde iki farklı salon görünüyordu; o dosyalar silindi.
 ### Ekipman kartları
 
 Hareket başına fotoğraf **yok** — 400+ hareket için tutarlı ve ücretsiz bir
-kaynak yok. Ekipmana göre altı fotoğraf bütün kütüphaneyi kaplıyor.
+kaynak yok. Ekipmana göre yedi yuva bütün kütüphaneyi kaplıyor ve hepsi aynı
+salondan:
 
-| Slug | Kare |
+| Ekipman | Kare |
 |---|---|
-| `equipment-barbell` | barbell rack |
-| `equipment-dumbbell` | incline dumbbell press |
-| `equipment-machine` | makine |
-| `equipment-plate-loaded` | makine |
-| `equipment-cable` | salon |
-| `equipment-bodyweight` | ev antrenmanı |
+| Barbell | squat rafı (`app-squat`) |
+| Dumbbell | dambıl rafı (`app-dumbbells`) |
+| Makine / Smith | makine sırası (`app-machine`) |
+| Plate loaded | plaka yığını (`app-plates`) |
+| Kablo | kablo istasyonu (`app-cable`) |
+| Vücut ağırlığı | bara kavrayan eller (`app-grip`) |
 
 **Kettlebell ve direnç bandı kasıtlı olarak boş.** Elde o ekipmanın karesi
 yok ve yanlış bir görsel koymak, hiç koymamaktan kötü — o kartlar nötr
@@ -126,6 +127,8 @@ seçilmiyor, logo yok.
 | `app-review` | defter ve telefon | Menü: Asistan; Koç raporu; program onayı |
 | `app-cafe` | salonun kafesi (hareket bulanık) | Asistan |
 | `app-entry` | salon girişi | Hesap |
+| `app-machine` | makine sırası | Hareketler: makine, Smith |
+| `app-cable` | kablo istasyonu | Hareketler: kablo |
 
 ### Öğünler
 

@@ -48,6 +48,9 @@ const GENERATED_JOBS = [
   { slug: "app-shoes", file: "shoes.png", width: 2400, height: 1350, position: "center" },
   { slug: "app-review", file: "review.png", width: 2400, height: 1350, position: "right" },
   { slug: "app-chalk", file: "chalk.png", width: 2400, height: 1350, position: "right" },
+  // Ekipman karoları: kütüphanede makine ve kablo bölümleri için.
+  { slug: "app-machine", file: "machine.png", width: 1344, height: 752, position: "center" },
+  { slug: "app-cable", file: "cable.png", width: 1344, height: 752, position: "center" },
   { slug: "meal-breakfast", file: "meal-breakfast.png", width: 1200, height: 800, position: "center" },
   { slug: "meal-lunch", file: "meal-lunch.png", width: 1200, height: 800, position: "center" },
   { slug: "meal-dinner", file: "meal-dinner.png", width: 1200, height: 800, position: "center" },

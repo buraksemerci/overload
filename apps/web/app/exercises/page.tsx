@@ -34,15 +34,21 @@ import { Sheet } from "@/components/Sheet";
 import { ErrorBox, Empty, Loading } from "@/components/States";
 import { useExercises, type ExerciseRow } from "@/lib/queries";
 
-/** Ekipman: kod değeri, Türkçe ad ve fotoğraf yuvası. */
+/**
+ * Ekipman: kod değeri, Türkçe ad ve fotoğraf yuvası.
+ *
+ * Kareler uygulamanın geri kalanıyla aynı salondan. Kettlebell ve direnç
+ * bandı BİLİNÇLİ olarak boş: o ekipmanın karesi yok ve yanlış bir görsel
+ * koymak hiç koymamaktan kötü — `Photo` yuvası nötr dokuya düşüyor.
+ */
 const EQUIPMENT = [
-  { value: "barbell", label: "Barbell", photo: "equipment-barbell" },
-  { value: "dumbbell", label: "Dumbbell", photo: "equipment-dumbbell" },
-  { value: "machine", label: "Makine", photo: "equipment-machine" },
-  { value: "plate_loaded", label: "Plate loaded", photo: "equipment-plate-loaded" },
-  { value: "smith_machine", label: "Smith", photo: "equipment-machine" },
-  { value: "cable", label: "Kablo", photo: "equipment-cable" },
-  { value: "bodyweight", label: "Vücut ağırlığı", photo: "equipment-bodyweight" },
+  { value: "barbell", label: "Barbell", photo: "app-squat" },
+  { value: "dumbbell", label: "Dumbbell", photo: "app-dumbbells" },
+  { value: "machine", label: "Makine", photo: "app-machine" },
+  { value: "plate_loaded", label: "Plate loaded", photo: "app-plates" },
+  { value: "smith_machine", label: "Smith", photo: "app-machine" },
+  { value: "cable", label: "Kablo", photo: "app-cable" },
+  { value: "bodyweight", label: "Vücut ağırlığı", photo: "app-grip" },
   { value: "kettlebell", label: "Kettlebell", photo: "equipment-kettlebell" },
   { value: "band", label: "Direnç bandı", photo: "equipment-band" },
 ] as const;

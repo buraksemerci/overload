@@ -63,21 +63,39 @@ Ayrıntılı kararlar ve gerekçeleri: **[docs/mimari.md](docs/mimari.md)**
 | Medya | `/media/*` | Ön-imzalı R2 yükleme |
 | Asistan | `/chat/*` | SSE akışı, onay kartları, denetim kaydı |
 
-### Frontend — 15 ekran (Bölüm 8'in tamamı)
+### Frontend — 16 ekran
 
 Onboarding · Ana Panel · Antrenman Modu · Program Yönetimi · Hareket Kütüphanesi ·
-Geçmiş · Kas Haritası · İlerleme · Beslenme · Kilo Takibi · Supplement ·
-Ağrı Check-in · AI Asistan · Koç Raporu · Hesap Ayarları
+Geçmiş · Vücut (özet) · Kas Haritası · İlerleme · Beslenme · Kilo Takibi ·
+Supplement · Ağrı Check-in · AI Asistan · Koç Raporu · Hesap Ayarları
 
 PWA olarak kurulabilir (Serwist servis worker + manifest + ikonlar).
+
+### Arayüz
+
+Koyu tema ve sinematik bir dil: her ekran tam kadraj bir **fotoğraf bandıyla**
+açılıyor (aynı salonun kareleri — giriş ekranındaki anlatının mekânı), bandın
+içinde ekranın büyük sayıları duruyor, altında grafikler ve kartlar geliyor.
+
+- Volt (lime) yalnızca **dolgu** olarak, ekran başına en fazla iki yerde;
+  kehribar uyarı, kırmızı gerçek hata için ayrılmış.
+- Keskin köşe, iki yazı ailesi (Big Shoulders Display + Geist), OKLCH palet.
+- Kurallar `apps/web/app/globals.css` başındaki blokta yazılı ve
+  `e2e/design-rules.spec.ts` bunları her ekranda **mekanik olarak** denetliyor:
+  volt bütçesi, volt-metin yasağı, tanımsız CSS değişkeni, dar ekranda yatay
+  kayma, hareket azaltma tercihi, "?" düğmesinin dokunma alanı.
+- Düzen kayması (CLS) 15 ekranda ölçülü: masaüstünde en yüksek 0,005, 390
+  pikselde 0,024.
 
 ### Testler
 
 ```
-Backend   374  (pytest)     progresif overload, TDEE, güç standartları, öğün önerisi,
-                             AI tool sınırları, seed tutarlılığı
-Frontend    6  (Vitest)     SSE çerçeve ayrıştırıcısı
-E2E         34 (Playwright) oturum, gezinme, set kaydı, program gözden geçirme
+Backend   374  (pytest)      progresif overload, TDEE, güç standartları, öğün önerisi,
+                              AI tool sınırları, seed tutarlılığı
+Frontend   98  (Vitest)      tasarım belirteçleri, plaka hesabı, pano istatistikleri,
+                              kilo hızı, SSE çerçeve ayrıştırıcısı
+E2E       204  (Playwright)  oturum, gezinme, set kaydı, beslenme akışı, kas haritası,
+                              tasarım kuralları — masaüstü ve mobil profilde iki kez
 ```
 
 ---

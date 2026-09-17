@@ -245,6 +245,23 @@ test.describe("oturum açıkken", () => {
     }
   });
 
+  test("sekme başlığı hangi ekranda olduğunu söylüyor", async ({ page }) => {
+    /* Uygulama tek sayfa gibi davranıyor ve bütün sekmeler "overload"
+       yazıyordu; beş sekme açık olan biri hangisinin kilo, hangisinin
+       antrenman olduğunu ancak tıklayarak buluyordu. Başlıklar bölüm
+       düzenlerinden (`app/<bölüm>/layout.tsx`) geliyor — sayfalar istemci
+       bileşeni olduğu için `metadata` dışa aktaramıyor. */
+    for (const [path, title] of [
+      ["/", "overload"],
+      ["/weight", "Kilo · overload"],
+      ["/muscle-map", "Kas haritası · overload"],
+      ["/chat", "Asistan · overload"],
+    ] as const) {
+      await page.goto(path);
+      await expect(page).toHaveTitle(title);
+    }
+  });
+
   test("ana başlıklar üstte, alt ekranlar panelde", async ({ page }) => {
     test.skip((page.viewportSize()?.width ?? 1280) < 768, "masaüstü gezinmesi");
     await page.goto("/");

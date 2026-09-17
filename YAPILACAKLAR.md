@@ -7,7 +7,7 @@ Bir madde bitince altına kısa bir not düşülüyor.
 yazı) uygulamanın bütün ekranlarında. Koyu tema. Geniş, dolu, sade; grafikler,
 fotoğraflar, ödül alacak kalitede UI/UX.
 
-**Şu an:** ince işler — antrenman klavye kısayolları, boş hesap karoları, ekran ekran son gözden geçirme.
+**Şu an:** son tur — tam test paketi, üretim derlemesi, ekran ekran gözden geçirme sürüyor.
 
 ---
 
@@ -46,7 +46,8 @@ fotoğraflar, ödül alacak kalitede UI/UX.
       kilo eğrisi, tutarlılık ızgarası, haftalık rapor karosu, son antrenmanlar,
       bölüm karoları
 - [x] Koyu temada kontrol
-- [ ] Boş hesap (hiç veri yok) görünümü: karolar anlamlı davet göstermeli
+- [x] Boş hesap görünümü kontrol edildi: her karo veri yerine davet cümlesi gösteriyor
+      (tonaj, kalori halkası, kas dengesi, tutarlılık, rekor rafı)
 
 ## 2. Vücut
 
@@ -123,6 +124,9 @@ fotoğraflar, ödül alacak kalitede UI/UX.
   - Gezinme testi paralel yük altında derleme gecikmesiyle düşüyordu; bekleme 20 sn.
 - [x] Commit: "Koyu tema ve sinematik ekranlar" (2026-09-17)
 - [x] ROADMAP güncellendi (Bölüm 5 ve yeni Bölüm 8: koyu tema ve sinematik dil)
+- [x] Sekme başlıkları: her bölümün kendi `layout.tsx` metadata'sı ("Kilo · overload")
+- [x] Dar ekranda yatay kayma denetimi testi (`design-rules`)
+- [x] Menüdeki eski Unsplash kareleri kaldırıldı; menü ve bant aynı salonu gösteriyor
 
 ---
 

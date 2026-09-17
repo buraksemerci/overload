@@ -30,7 +30,9 @@ const sans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "overload",
+  // Şablon: alt ekranların başlığı "Kilo · overload" olarak çıkıyor. Sekme
+  // kalabalığında hangi ekranda olduğun görünüyor; kök sayfa sade kalıyor.
+  title: { default: "overload", template: "%s · overload" },
   description: "Progresif overload merkezli antrenman, beslenme ve sağlık takibi.",
   applicationName: "overload",
   manifest: "/manifest.webmanifest",

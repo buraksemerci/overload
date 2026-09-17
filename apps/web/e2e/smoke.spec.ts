@@ -648,6 +648,53 @@ test.describe("antrenman modu", () => {
     await expect(page.getByRole("button", { name: "Seti güncelle" })).toBeVisible();
   });
 
+  test("plana bir set daha eklenebiliyor", async ({ page }) => {
+    /* "Bugün bir set daha" salonda sık verilen bir karar. Sunucu plan dışı
+       sıra numarasını zaten kabul ediyordu; eksik olan ekranda o slotun
+       açılmasıydı. */
+    const sessionId = "44444444-4444-4444-4444-444444444444";
+    await page.route("http://localhost:8000/workouts/sessions", (route) =>
+      route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: sessionId,
+          program_day_id: null,
+          started_at: new Date().toISOString(),
+          completed_at: null,
+          notes: null,
+          is_deload: false,
+          sets: [],
+        }),
+      }),
+    );
+    await page.route(`http://localhost:8000/workouts/sessions/${sessionId}`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: sessionId,
+          program_day_id: null,
+          started_at: new Date().toISOString(),
+          completed_at: null,
+          notes: null,
+          is_deload: false,
+          sets: [],
+        }),
+      }),
+    );
+
+    await page.goto("/workout");
+    await page.getByRole("button", { name: "Antrenmanı başlat" }).click();
+
+    const map = page.getByRole("complementary", { name: "Günün hareketleri" });
+    await expect(map.getByText("0 / 2 set")).toBeVisible();
+    await map.getByRole("button", { name: /bir set daha ekle/ }).click();
+    await expect(map.getByText("0 / 3 set")).toBeVisible();
+    // Sahnedeki sayaç da yeni planı gösteriyor.
+    await expect(page.getByText("Set 1 / 3")).toBeVisible();
+  });
+
   test("günün hareketleri sahnenin yanında hep görünüyor", async ({ page }) => {
     await page.route("http://localhost:8000/workouts/sessions", (route) =>
       route.fulfill({

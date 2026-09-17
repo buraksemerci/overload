@@ -112,6 +112,13 @@ export default function WorkoutPage() {
 
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [draftsFor, setDraftsFor] = useState<string | null>(null);
+  /**
+   * Plandan FAZLA set: "bugün bir set daha" salonda sık verilen bir karar ve
+   * program yüzünden engellenmemeli. Sunucu plan dışı sıra numarasını zaten
+   * kabul ediyor (aynı slot gönderilirse üzerine yazıyor); eksik olan tek şey
+   * ekranda o slotun açılmasıydı.
+   */
+  const [extra, setExtra] = useState<Record<string, number>>({});
   const [rest, setRest] = useState<RestState | null>(null);
   const [jump, setJump] = useState<number | null>(null);
   const [newRecords, setNewRecords] = useState<PersonalRecordRow[] | null>(null);
@@ -135,19 +142,39 @@ export default function WorkoutPage() {
 
   const workout = today.data;
 
+  const loggedSets = useMemo(() => session.data?.sets ?? [], [session.data]);
+
+  /**
+   * Hareket başına kaydedilmiş EN YÜKSEK set sırası.
+   *
+   * Plandan fazla set eklendiğinde (aşağıdaki `extra`) o slotlar yalnızca
+   * bellekte duruyor; sayfa yenilenince kaybolmasınlar diye sunucudaki
+   * kayıtlardan yeniden türetiliyor. Yoksa kaydedilmiş 4. set, üç setlik
+   * planın içinde görünmez oluyordu.
+   */
+  const maxLoggedSet = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const set of loggedSets) {
+      map.set(set.exercise_id, Math.max(map.get(set.exercise_id) ?? 0, set.set_number));
+    }
+    return map;
+  }, [loggedSets]);
+
   const steps: Step[] = useMemo(
     () =>
-      (workout?.exercises ?? []).flatMap((exercise, exerciseIndex) =>
-        Array.from({ length: exercise.target_sets }, (_, i) => ({
+      (workout?.exercises ?? []).flatMap((exercise, exerciseIndex) => {
+        const planned = Math.max(
+          exercise.target_sets + (extra[exercise.exercise_id] ?? 0),
+          maxLoggedSet.get(exercise.exercise_id) ?? 0,
+        );
+        return Array.from({ length: planned }, (_, i) => ({
           exercise,
           setNumber: i + 1,
           exerciseIndex,
-        })),
-      ),
-    [workout],
+        }));
+      }),
+    [workout, extra, maxLoggedSet],
   );
-
-  const loggedSets = useMemo(() => session.data?.sets ?? [], [session.data]);
   const findLogged = useCallback(
     (exerciseId: string, setNumber: number): WorkoutSet | undefined =>
       loggedSets.find((s) => s.exercise_id === exerciseId && s.set_number === setNumber),
@@ -384,6 +411,7 @@ export default function WorkoutPage() {
             ) : step ? (
               <SetStage
                 step={step}
+                planned={steps.filter((s) => s.exerciseIndex === step.exerciseIndex).length}
                 values={valuesFor(step)}
                 logged={findLogged(step.exercise.exercise_id, step.setNumber) !== undefined}
                 previous={
@@ -416,6 +444,15 @@ export default function WorkoutPage() {
                     setJump(index);
                     setRest(null);
                   }
+            }
+            onAddSet={
+              sessionId === null
+                ? undefined
+                : (exerciseId) =>
+                    setExtra((current) => ({
+                      ...current,
+                      [exerciseId]: (current[exerciseId] ?? 0) + 1,
+                    }))
             }
           />
         </div>
@@ -591,6 +628,7 @@ const KIND_LABEL: Record<string, string> = {
 
 function SetStage({
   step,
+  planned,
   values,
   logged,
   previous,
@@ -599,6 +637,8 @@ function SetStage({
   onSubmit,
 }: {
   step: Step;
+  /** Bu hareket için AÇIK slot sayısı — plana eklenen fazladan setler dâhil. */
+  planned: number;
   values: Draft;
   /** Bu set daha önce kaydedildi mi? Haritadan geri dönülünce düzenleniyor. */
   logged: boolean;
@@ -628,12 +668,12 @@ function SetStage({
     <Stage>
       <div>
         <p className="label">
-          Set {setNumber} / {exercise.target_sets}
+          Set {setNumber} / {planned}
           <span className="mx-2 text-[var(--color-border-strong)]">·</span>
           {exercise.target_rep_min}–{exercise.target_rep_max} tekrar
         </p>
         <h2 className="display mt-2 text-2xl lg:text-3xl">{exercise.name}</h2>
-        <SetDots total={exercise.target_sets} current={setNumber} />
+        <SetDots total={planned} current={setNumber} />
         {/* Haritadan geri dönüldüğünde alanlar KAYITLI değerlerle doluyor ve
             "Seti kaydet" yazısı yeni bir set ekliyormuş gibi duruyordu.
             Sunucu aynı sırayı üzerine yazıyor; ekran da bunu söylüyor. */}
@@ -886,19 +926,26 @@ function DayMap({
   cursor,
   findLogged,
   onJump,
+  onAddSet,
 }: {
   className: string;
   steps: Step[];
   cursor: number;
   findLogged: (exerciseId: string, setNumber: number) => WorkoutSet | undefined;
   onJump?: (index: number) => void;
+  onAddSet?: (exerciseId: string) => void;
 }) {
-  // Hareket başına grupla: harita set değil hareket düzeyinde okunuyor.
-  const byExercise = new Map<number, { exercise: PlannedExercise; firstStep: number }>();
+  /* Hareket başına grupla: harita set değil hareket düzeyinde okunuyor.
+     Set sayısı PLANDAN değil adım listesinden geliyor — plana eklenen
+     fazladan setler de haritada görünüyor. */
+  const byExercise = new Map<
+    number,
+    { exercise: PlannedExercise; firstStep: number; planned: number }
+  >();
   steps.forEach((s, index) => {
-    if (!byExercise.has(s.exerciseIndex)) {
-      byExercise.set(s.exerciseIndex, { exercise: s.exercise, firstStep: index });
-    }
+    const found = byExercise.get(s.exerciseIndex);
+    if (found) found.planned += 1;
+    else byExercise.set(s.exerciseIndex, { exercise: s.exercise, firstStep: index, planned: 1 });
   });
   const current = steps[cursor]?.exerciseIndex;
 
@@ -906,8 +953,8 @@ function DayMap({
     <aside className={`card p-6 lg:sticky lg:top-6 ${className}`} aria-label="Günün hareketleri">
       <p className="label">Günün hareketleri</p>
       <ol className="mt-4 flex flex-col">
-        {[...byExercise.entries()].map(([exerciseIndex, { exercise, firstStep }], order) => {
-          const done = Array.from({ length: exercise.target_sets }, (_, i) =>
+        {[...byExercise.entries()].map(([exerciseIndex, { exercise, firstStep, planned }], order) => {
+          const done = Array.from({ length: planned }, (_, i) =>
             findLogged(exercise.exercise_id, i + 1),
           ).filter(Boolean).length;
           const isCurrent = exerciseIndex === current;
@@ -922,7 +969,7 @@ function DayMap({
               <span className="min-w-0 flex-1">
                 <span className={`block truncate text-sm ${isCurrent ? "font-semibold" : ""}`}>{exercise.name}</span>
                 <span className="mt-1.5 flex gap-1" aria-hidden>
-                  {Array.from({ length: exercise.target_sets }, (_, i) => (
+                  {Array.from({ length: planned }, (_, i) => (
                     <span
                       key={i}
                       className="h-1 flex-1"
@@ -935,16 +982,19 @@ function DayMap({
                 </span>
               </span>
               <span className="tnum shrink-0 text-xs text-[var(--color-ink-muted)]">
-                {done} / {exercise.target_sets} set
+                {done} / {planned} set
               </span>
             </>
           );
           return (
-            <li key={exercise.program_exercise_id} className="border-t border-[var(--color-border)] first:border-t-0">
+            <li
+              key={exercise.program_exercise_id}
+              className="flex items-center border-t border-[var(--color-border)] first:border-t-0"
+            >
               {onJump ? (
                 <button
                   onClick={() => onJump(firstStep)}
-                  className="-mx-3 flex w-[calc(100%+1.5rem)] items-center gap-3 px-3 py-3.5 text-left transition-colors hover:bg-[var(--color-surface-raised)]"
+                  className="-ml-3 flex min-w-0 flex-1 items-center gap-3 py-3.5 pl-3 text-left transition-colors hover:bg-[var(--color-surface-raised)]"
                   style={{
                     transitionDuration: "var(--dur-micro)",
                     boxShadow: isCurrent ? "inset 3px 0 0 var(--color-accent-deep)" : undefined,
@@ -953,7 +1003,20 @@ function DayMap({
                   {content}
                 </button>
               ) : (
-                <div className="flex items-center gap-3 py-3.5">{content}</div>
+                <div className="flex min-w-0 flex-1 items-center gap-3 py-3.5">{content}</div>
+              )}
+
+              {/* Plana bir set daha: program bir öneri, yasak değil. */}
+              {onAddSet && (
+                <button
+                  type="button"
+                  onClick={() => onAddSet(exercise.exercise_id)}
+                  aria-label={`${exercise.name} için bir set daha ekle`}
+                  className="-mr-2 grid size-9 shrink-0 place-items-center text-lg text-[var(--color-ink-faint)] transition-colors hover:text-[var(--color-ink)]"
+                  style={{ transitionDuration: "var(--dur-micro)" }}
+                >
+                  +
+                </button>
               )}
             </li>
           );

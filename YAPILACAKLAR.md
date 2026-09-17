@@ -89,6 +89,9 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 - [x] Kod geliştirmeleri: ekran uyanık kalıyor (Wake Lock), titreşim, plaka
       hesaplayıcı (`lib/plates.ts` + test), ±15 sn dinlenme, ağırlık adımı ekipmana göre,
       yarım kalan set taslakları yerelde saklanıyor, önceki seti tekrarla
+- [x] Plana bir set daha eklenebiliyor (haritadaki "+"): sunucu plan dışı sırayı
+      zaten kabul ediyordu, ekranda slot açılmıyordu. Kaydedilmiş fazladan setler
+      sayfa yenilense de görünüyor (sunucudaki en yüksek sıradan türetiliyor).
 - [x] Kayıtlı bir sete haritadan dönünce ekran bunu söylüyor ("Bu set kayıtlı —
       değiştirirsen üzerine yazılır", düğme "Seti güncelle"). Sunucu zaten üzerine
       yazıyordu; arayüz sessizdi.

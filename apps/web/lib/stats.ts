@@ -241,3 +241,85 @@ export function strengthSummary(results: readonly StrengthStandard[]): StrengthS
       : null;
   return { level: STRENGTH_LEVELS[median]!, strongest, closest };
 }
+
+/* --- Kilo hızı ---------------------------------------------------------------------- */
+
+/**
+ * Haftalık değişim, kg/hafta — hareketli ortalamanın son değeriyle bir hafta
+ * önceki değeri arasındaki fark. Ham ölçüm değil: günlük dalgalanma (su,
+ * tuz, sindirim) ham farkı anlamsız kılıyor. 14 günden az veride `null`;
+ * ortalamanın kendisi ilk haftada henüz oturmamış oluyor.
+ */
+export function weeklyRate(points: readonly WeightPoint[]): number | null {
+  if (points.length < 14) return null;
+  const average = (point: WeightPoint | undefined) =>
+    point?.moving_average == null ? null : Number.parseFloat(point.moving_average);
+  const latest = average([...points].reverse().find((point) => point.moving_average !== null));
+  const earlier = average(points[points.length - 8]);
+  return latest !== null && earlier !== null ? latest - earlier : null;
+}
+
+export type BodyGoal = "cut" | "maintain" | "bulk";
+
+/**
+ * Hedefe göre sağlıklı haftalık hız bandı, kg/hafta.
+ *
+ * Yağ kaybında vücut ağırlığının haftada ~%0,5-1'i, kas kazanımında
+ * ~%0,25-0,5'i yaygın öneri; mutlak kg yerine orana bağlı çünkü 60 kg ile
+ * 100 kg'lık biri için aynı 0,5 kg aynı şey değil. Korumada ±%0,2 gürültü
+ * sayılıyor.
+ */
+export function rateBand(goal: BodyGoal, bodyweight: number): { min: number; max: number } {
+  const pct = (value: number) => Math.round(bodyweight * value * 100) / 100;
+  if (goal === "cut") return { min: -pct(0.01), max: -pct(0.005) };
+  if (goal === "bulk") return { min: pct(0.0025), max: pct(0.005) };
+  return { min: -pct(0.002), max: pct(0.002) };
+}
+
+export type RateVerdict = "in-band" | "too-fast" | "too-slow" | "wrong-way";
+
+export function rateVerdict(goal: BodyGoal, rate: number, bodyweight: number): RateVerdict {
+  const band = rateBand(goal, bodyweight);
+  if (rate >= band.min && rate <= band.max) return "in-band";
+  if (goal === "maintain") return "wrong-way";
+  const direction = goal === "cut" ? -1 : 1;
+  if (rate * direction <= 0) return "wrong-way";
+  // Doğru yönde ama bandın dışında: bandın uzak ucunu geçtiyse hızlı.
+  return Math.abs(rate) > Math.max(Math.abs(band.min), Math.abs(band.max)) ? "too-fast" : "too-slow";
+}
+
+export interface WeekAverage {
+  start: Date;
+  average: number;
+  count: number;
+  /** Bir önceki haftanın ortalamasına göre. Önceki hafta ölçüm yoksa `null`. */
+  change: number | null;
+}
+
+/** Son `count` haftanın ham ölçüm ortalaması, en yeniden eskiye. Ölçümsüz hafta atlanıyor. */
+export function weeklyAverages(points: readonly WeightPoint[], count = 8): WeekAverage[] {
+  const byWeek = new Map<number, number[]>();
+  for (const point of points) {
+    const key = weekStart(new Date(`${point.date}T00:00:00`)).getTime();
+    const list = byWeek.get(key) ?? [];
+    list.push(Number.parseFloat(point.weight_kg));
+    byWeek.set(key, list);
+  }
+  const weeks = [...byWeek.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([start, values]) => ({
+      start: new Date(start),
+      average: values.reduce((sum, value) => sum + value, 0) / values.length,
+      count: values.length,
+    }));
+  const oneWeek = 7 * 86_400_000;
+  return weeks
+    .map((week, index) => {
+      const previous = weeks[index - 1];
+      // Saat değişimi haftayı bir saat kaydırabiliyor; tam eşitlik yerine yakınlık.
+      const adjacent = previous && Math.abs(week.start.getTime() - previous.start.getTime() - oneWeek) < 2 * 3_600_000;
+      return { ...week, change: adjacent ? week.average - previous.average : null };
+    })
+    .reverse()
+    .slice(0, count);
+}

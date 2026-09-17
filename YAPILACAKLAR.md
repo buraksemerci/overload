@@ -7,7 +7,7 @@ Bir madde bitince altına kısa bir not düşülüyor.
 yazı) uygulamanın bütün ekranlarında. Koyu tema. Geniş, dolu, sade; grafikler,
 fotoğraflar, ödül alacak kalitede UI/UX.
 
-**Şu an:** `/weight` yeniden tasarımı → ardından `/soreness`, `/history`, `/programs`.
+**Şu an:** `/soreness` yeniden tasarımı → ardından `/history`, `/programs`, `/exercises`.
 
 ---
 
@@ -60,7 +60,13 @@ fotoğraflar, ödül alacak kalitede UI/UX.
   - Rekor rafı: kart başına tek büyük sayı. Tutarlılık: gün / haftada / en uzun seri +
     büyük ızgara (dar ekranda en yeniye kayıyor). Grafik: rekorlu hareket kısayolları.
   - `consistencySummary`, `strengthSummary` saf fonksiyon + 7 yeni birim testi.
-- [ ] `/weight` yeniden: büyük eğri, hedef çizgisi, hızlı tartı girişi (şimdilik bant var)
+- [x] `/weight` yeniden: büyük eğri, hedefe göre hız, hızlı tartı girişi
+  - Bantta tartı girişi: dünkü kiloyla dolu, ±0,1 düğmeleri, tek dokunuşla kaydet.
+  - Bant: güncel, haftalık hız, 30 gün, 7 günlük ortalama; cümle hedefe göre yorum.
+  - Gece karosunda 30/90/180 gün eğrisi (ortalama volt alan, ölçüm kesikli), tam sayı eksen.
+  - "Hedefe göre hız": beslenme hedefinden (yağ kaybı/koruma/kas) vücut ağırlığına oranlı
+    sağlıklı bant ve bugünkü hızın yeri. Haftalık ortalamalar tablosu.
+  - `weeklyRate`, `rateBand`, `rateVerdict`, `weeklyAverages` + 5 birim testi; 2 yeni e2e.
 - [ ] `/soreness` yeniden: vücut üzerinde ağrı işaretleme (şimdilik bant var)
 
 ## 3. Antrenman

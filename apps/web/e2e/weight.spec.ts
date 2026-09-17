@@ -78,13 +78,39 @@ test.describe("kilo", () => {
 
   });
 
-  test("güncel kilo ve haftalık eğilim görünüyor", async ({ page }) => {
+  test("güncel kilo ve haftalık hız görünüyor", async ({ page }) => {
     await page.goto("/weight");
     await page.waitForLoadState("networkidle");
 
     await expect(page.getByText("GÜNCEL")).toBeVisible();
     // Son kayıt: 80,6 - 19 × 0,07 = 79,27 → 79,3
-    await expect(page.getByText("79,3")).toBeVisible();
-    await expect(page.getByText("kg/hafta")).toBeVisible();
+    await expect(page.getByText("79,3", { exact: true })).toBeVisible();
+    await expect(page.getByText("Haftalık hız")).toBeVisible();
+    // Ortalama 7 günde 0,06 × 7 = 0,42 kg düştü.
+    await expect(page.getByText("−0,42", { exact: true }).first()).toBeVisible();
+  });
+
+  test("hız hedefe göre yorumlanıyor", async ({ page }) => {
+    // Taklit kullanıcının beslenme hedefi yok → koruma. Haftada 0,42 kg
+    // düşüş koruma bandının (±%0,2) dışında.
+    await page.goto("/weight");
+    await expect(page.getByText(/Sağlıklı bant/)).toBeVisible();
+    await expect(page.getByText("Bandın altında: kilo veriyorsun.").first()).toBeVisible();
+  });
+
+  test("giriş dünkü kiloyla dolu başlıyor ve 0,1 adımla değişiyor", async ({ page }) => {
+    let body: unknown = null;
+    await page.route(`${API}/bodyweight`, async (route) => {
+      body = route.request().postDataJSON();
+      await route.fulfill({ status: 201, contentType: "application/json", body: "{}" });
+    });
+    await page.goto("/weight");
+
+    const input = page.getByLabel("Bugünkü kilon (kg)");
+    await expect(input).toHaveValue("79,3");
+    await page.getByRole("button", { name: "0,1 kg azalt" }).click();
+    await expect(input).toHaveValue("79,2");
+    await page.getByRole("button", { name: "Kaydet" }).click();
+    await expect.poll(() => body).toEqual({ weight_kg: 79.2 });
   });
 });

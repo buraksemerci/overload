@@ -4,9 +4,13 @@ import {
   change,
   consistencySummary,
   muscleBalance,
+  rateBand,
+  rateVerdict,
   strengthSummary,
   tonnage,
   weekStart,
+  weeklyAverages,
+  weeklyRate,
   weeklyVolume,
   weightSummary,
 } from "./stats";
@@ -188,5 +192,51 @@ describe("strengthSummary", () => {
 
   it("boş liste", () => {
     expect(strengthSummary([]).level).toBeNull();
+  });
+});
+
+describe("kilo hızı", () => {
+  const series = (days: number, start: number, perDay: number): WeightPoint[] =>
+    Array.from({ length: days }, (_, index) => ({
+      date: new Date(Date.UTC(2026, 7, 1 + index)).toISOString().slice(0, 10),
+      weight_kg: (start + index * perDay).toFixed(2),
+      moving_average: index < 6 ? null : (start + (index - 3) * perDay).toFixed(2),
+    }));
+
+  it("14 günden az veride hız yok", () => {
+    expect(weeklyRate(series(10, 80, -0.05))).toBeNull();
+  });
+
+  it("ortalamadan haftalık hız", () => {
+    expect(weeklyRate(series(20, 80, -0.05))).toBeCloseTo(-0.35);
+  });
+
+  it("hedef bandı vücut ağırlığına göre", () => {
+    expect(rateBand("cut", 80)).toEqual({ min: -0.8, max: -0.4 });
+    expect(rateBand("bulk", 80)).toEqual({ min: 0.2, max: 0.4 });
+  });
+
+  it("karar", () => {
+    expect(rateVerdict("cut", -0.5, 80)).toBe("in-band");
+    expect(rateVerdict("cut", -1.2, 80)).toBe("too-fast");
+    expect(rateVerdict("cut", -0.1, 80)).toBe("too-slow");
+    expect(rateVerdict("cut", 0.3, 80)).toBe("wrong-way");
+    expect(rateVerdict("bulk", 0.6, 80)).toBe("too-fast");
+    expect(rateVerdict("maintain", 0.05, 80)).toBe("in-band");
+    expect(rateVerdict("maintain", -0.5, 80)).toBe("wrong-way");
+  });
+
+  it("haftalık ortalamalar en yeniden, bitişik haftayla fark", () => {
+    const points: WeightPoint[] = [
+      { date: "2026-08-31", weight_kg: "80.00", moving_average: null },
+      { date: "2026-09-02", weight_kg: "81.00", moving_average: null },
+      { date: "2026-09-08", weight_kg: "80.00", moving_average: null },
+      { date: "2026-09-21", weight_kg: "79.00", moving_average: null },
+    ];
+    const weeks = weeklyAverages(points);
+    expect(weeks.map((week) => week.average)).toEqual([79, 80, 80.5]);
+    expect(weeks[0]!.change).toBeNull(); // arada boş hafta var
+    expect(weeks[1]!.change).toBeCloseTo(-0.5);
+    expect(weeks[2]!.count).toBe(2);
   });
 });

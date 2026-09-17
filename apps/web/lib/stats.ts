@@ -7,7 +7,13 @@
  * biçimde yapardı.
  */
 
-import type { HistorySession, MuscleVolumeRow, WeightPoint } from "@/lib/queries";
+import type {
+  ConsistencyDay,
+  HistorySession,
+  MuscleVolumeRow,
+  StrengthStandard,
+  WeightPoint,
+} from "@/lib/queries";
 
 /** Haftanın pazartesisi, yerel saatle, 00:00. */
 export function weekStart(date: Date): Date {
@@ -125,3 +131,113 @@ export function muscleBalance(rows: readonly MuscleVolumeRow[]): MuscleBalance {
 /** "8 Eyl" */
 export const shortDay = (date: Date): string =>
   date.toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
+
+/* --- Tutarlılık ------------------------------------------------------------------ */
+
+export interface ConsistencySummary {
+  /** En az bir antrenman yapılan gün sayısı. */
+  trainingDays: number;
+  sessions: number;
+  /**
+   * Üst üste en az bir antrenman yapılan hafta sayısı, bugünden geriye.
+   * Bu hafta henüz antrenman yoksa seri BOZULMUYOR — pazartesi sabahı
+   * "seri: 0" yazmak, hafta daha bitmemişken cezalandırmak olurdu.
+   */
+  weekStreak: number;
+  longestWeekStreak: number;
+  /** Son 12 haftada haftalık ortalama antrenman. */
+  perWeek: number;
+}
+
+export function consistencySummary(
+  days: readonly ConsistencyDay[],
+  now: Date = new Date(),
+): ConsistencySummary {
+  const active = days.filter((day) => day.sessions > 0);
+  const weeks = new Set(
+    active.map((day) => weekStart(new Date(`${day.date}T00:00:00`)).getTime()),
+  );
+
+  const step = (time: number, by: number) => {
+    const date = new Date(time);
+    date.setDate(date.getDate() + by * 7);
+    return date.getTime();
+  };
+
+  const current = weekStart(now).getTime();
+  let cursor = weeks.has(current) ? current : step(current, -1);
+  let weekStreak = 0;
+  while (weeks.has(cursor)) {
+    weekStreak += 1;
+    cursor = step(cursor, -1);
+  }
+
+  let longestWeekStreak = 0;
+  for (const week of weeks) {
+    if (weeks.has(step(week, -1))) continue; // serinin başı değil
+    let length = 0;
+    let at = week;
+    while (weeks.has(at)) {
+      length += 1;
+      at = step(at, 1);
+    }
+    longestWeekStreak = Math.max(longestWeekStreak, length);
+  }
+
+  const since = step(current, -11);
+  const recent = active
+    .filter((day) => new Date(`${day.date}T00:00:00`).getTime() >= since)
+    .reduce((sum, day) => sum + day.sessions, 0);
+
+  return {
+    trainingDays: active.length,
+    sessions: active.reduce((sum, day) => sum + day.sessions, 0),
+    weekStreak,
+    longestWeekStreak,
+    perWeek: recent / 12,
+  };
+}
+
+/* --- Güç seviyesi ------------------------------------------------------------------ */
+
+/** Sunucudaki `StrengthLevel` sırası. Etiketler de sunucudakiyle aynı. */
+export const STRENGTH_LEVELS = [
+  { key: "untrained", label: "Başlangıç" },
+  { key: "novice", label: "Acemi" },
+  { key: "intermediate", label: "Orta" },
+  { key: "advanced", label: "İleri" },
+  { key: "elite", label: "Elit" },
+] as const;
+
+export const levelIndex = (level: string): number =>
+  Math.max(
+    0,
+    STRENGTH_LEVELS.findIndex((entry) => entry.key === level),
+  );
+
+export interface StrengthSummary {
+  /**
+   * Ortanca seviye. Ortalama değil: seviyeler sıralı ama aralıklı değil;
+   * "Acemi ile İleri'nin ortalaması Orta" demenin anlamı yok. Tek bir
+   * hareketteki uç değer de ortancayı oynatmıyor.
+   */
+  level: (typeof STRENGTH_LEVELS)[number] | null;
+  /** Vücut ağırlığına oranı en yüksek hareket. */
+  strongest: StrengthStandard | null;
+  /** Bir sonraki seviyeye en yakın hareket. */
+  closest: StrengthStandard | null;
+}
+
+export function strengthSummary(results: readonly StrengthStandard[]): StrengthSummary {
+  if (results.length === 0) return { level: null, strongest: null, closest: null };
+  const sorted = results.map((row) => levelIndex(row.level)).sort((a, b) => a - b);
+  const median = sorted[Math.floor((sorted.length - 1) / 2)]!;
+  const ratio = (row: StrengthStandard) => Number.parseFloat(row.bodyweight_ratio) || 0;
+  const strongest = results.reduce((best, row) => (ratio(row) > ratio(best) ? row : best));
+  const climbing = results.filter((row) => row.next_level !== null);
+  const closest =
+    climbing.length > 0
+      ? climbing.reduce((best, row) => (row.progress_to_next > best.progress_to_next ? row : best))
+      : null;
+  return { level: STRENGTH_LEVELS[median]!, strongest, closest };
+}

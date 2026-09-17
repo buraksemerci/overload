@@ -7,7 +7,7 @@ Bir madde bitince altına kısa bir not düşülüyor.
 yazı) uygulamanın bütün ekranlarında. Koyu tema. Geniş, dolu, sade; grafikler,
 fotoğraflar, ödül alacak kalitede UI/UX.
 
-**Şu an:** `/muscle-map` yeniden tasarımı → ardından `/progress`, `/weight`, `/soreness`.
+**Şu an:** `/weight` yeniden tasarımı → ardından `/soreness`, `/history`, `/programs`.
 
 ---
 
@@ -49,9 +49,17 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 - [x] Yeni özet ekranı `/body` — tek cümle + 4 sayı + harita + kilo + ağrı + güç + rekor
 - [x] Menüde "Vücut → Özet" ilk sırada; panodaki "Vücut" karosu buraya gidiyor
 - [x] Kas haritası bileşeni modernleşti: gece sahnesi, ön+arka yan yana, ışıma
-- [~] `/muscle-map` ekranı yeni harita ile: seçilen kasın detay paneli, aralık seçici,
+- [x] `/muscle-map` ekranı yeni harita ile: seçilen kasın detay paneli, aralık seçici,
       denge skoru, kas listesi
-- [ ] `/progress` yeniden: güç seviyeleri büyük, rekor rafı, hareket grafiği (şimdilik bant var)
+  - Bant: denge %, hedefte/eksik/fazla/toplam set. Sahne: gece zemininde ön+arka,
+    yanında seçili kas (seçim yoksa en geride kalan), "sonra gelenler", ön/arka dengesi.
+    Liste iki sütun, satıra dokununca kas seçiliyor, hedef çizgisi işaretli.
+- [x] `/progress` yeniden: güç seviyeleri büyük, rekor rafı, hareket grafiği
+  - Bant: ortanca güç seviyesi, en güçlü hareket (× VA), rekor sayısı, haftalık seri, 12 ay.
+  - Gece karosunda hareket başına büyük 1RM + beş basamaklı seviye merdiveni.
+  - Rekor rafı: kart başına tek büyük sayı. Tutarlılık: gün / haftada / en uzun seri +
+    büyük ızgara (dar ekranda en yeniye kayıyor). Grafik: rekorlu hareket kısayolları.
+  - `consistencySummary`, `strengthSummary` saf fonksiyon + 7 yeni birim testi.
 - [ ] `/weight` yeniden: büyük eğri, hedef çizgisi, hızlı tartı girişi (şimdilik bant var)
 - [ ] `/soreness` yeniden: vücut üzerinde ağrı işaretleme (şimdilik bant var)
 
@@ -90,8 +98,9 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 
 - [x] e2e testleri yeni tasarıma göre güncellendi (pano, antrenman, beslenme, hoş geldin)
 - [x] Tasarım kuralları testi: yeni ekran `/body` eklendi (124/124 geçti)
-- [ ] Tam test paketi + `pnpm build`
-- [ ] ROADMAP güncelle, commit
+- [~] Tam test paketi + `pnpm build` (e2e 385/387 → iki kırık kas haritası testi yeni ekranla düzeldi; build sırada)
+- [x] Commit: "Koyu tema ve sinematik ekranlar" (2026-09-17)
+- [ ] ROADMAP güncelle
 
 ---
 

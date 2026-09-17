@@ -10,8 +10,9 @@
  * standartları, hareket grafiği, rekorlar. Hiçbiri öne çıkmıyordu.
  *
  * Ekranın tek bir başlığı olmalı ve o **güç seviyesi**: vücut ağırlığına
- * göre nerede olduğun. Geri kalanı onu destekliyor. Tutarlılık ızgarası
- * ritmi, grafik eğilimi, rekorlar da kazanılmış olanı gösteriyor.
+ * göre nerede olduğun. Bant onu tek kelimeyle söylüyor (ortanca seviye),
+ * hemen altındaki gece karosu hareket hareket açıyor. Geri kalanı onu
+ * destekliyor: rekorlar kazanılmış olanı, tutarlılık ritmi, grafik eğilimi.
  *
  * --------------------------------------------------------------------------
  * REKORLAR ARTIK HAREKET ADIYLA
@@ -30,7 +31,7 @@
 import { useState } from "react";
 import { ConsistencyGrid } from "@/components/ConsistencyGrid";
 import { ExerciseChart } from "@/components/ExerciseChart";
-import { Page, PageHeader, Section } from "@/components/Layout";
+import { Hero, HeroStat, HeroStats, Page, Section } from "@/components/Layout";
 import { ErrorBox, Empty, Loading, fmt } from "@/components/States";
 import { prLabel, prUnit } from "@/lib/labels";
 import {
@@ -39,23 +40,9 @@ import {
   useExercises,
   useStrengthStandards,
   type ExerciseRecords,
+  type StrengthStandard,
 } from "@/lib/queries";
-
-/**
- * Seviyeler SIRALI, bu yüzden renkler de sıralı: soluktan güçlüye.
- *
- * Önceden "intermediate" volt, "advanced" ise ayrı bir yeşildi; açık temada
- * ikisi de metin olarak okunmuyordu (volt %90 parlaklıkta) ve aralarındaki
- * sıra da belli olmuyordu. Volt yalnızca "advanced"ta çıkıyor — kazanılmış
- * bir eşik olduğu için anlamlı.
- */
-const LEVEL_COLOR: Record<string, string> = {
-  untrained: "var(--color-ink-faint)",
-  novice: "var(--color-ink-muted)",
-  intermediate: "var(--color-ink)",
-  advanced: "var(--color-accent-deep)",
-  elite: "var(--color-warning)",
-};
+import { STRENGTH_LEVELS, consistencySummary, levelIndex, strengthSummary } from "@/lib/stats";
 
 export default function ProgressPage() {
   const standards = useStrengthStandards();
@@ -64,12 +51,54 @@ export default function ProgressPage() {
   const exercises = useExercises("");
   const [selected, setSelected] = useState<string | null>(null);
 
+  const results = standards.data?.results ?? [];
+  const strength = strengthSummary(results);
+  const rhythm = consistencySummary(consistency.data ?? []);
+  const shelf = records.data ?? [];
+
+  const lead = strength.level
+    ? strength.closest
+      ? `Temel kaldırışlarda seviyen ${strength.level.label}. ${strength.closest.next_level_label} seviyeye en yakın hareket: ${strength.closest.lift_label}.`
+      : `Temel kaldırışlarda seviyen ${strength.level.label}.`
+    : "Güç seviyen, rekorların ve antrenman ritmin.";
+
+  // Grafik için kısayol: rekoru olan hareketler. Yüzlerce satırlık seçiciyi
+  // açmadan en sık bakılan hareketlere tek dokunuşla geçiliyor.
+  const shortcuts = shelf.slice(0, 6);
+
   return (
     <Page>
-      <PageHeader title="İlerleme" photo="app-plates" eyebrow="Vücut" lead="Güç seviyen, tutarlılığın ve rekorların." />
+      <Hero photo="app-plates" size="lg" eyebrow="Vücut" title="İlerleme" lead={lead}>
+        <HeroStats>
+          <HeroStat
+            label="Güç seviyesi"
+            value={strength.level?.label ?? "—"}
+            foot={results.length > 0 ? `${results.length} temel harekette` : undefined}
+          />
+          <HeroStat
+            label="En güçlü"
+            value={strength.strongest ? fmt(strength.strongest.bodyweight_ratio, 2) : "—"}
+            unit={strength.strongest ? "× VA" : undefined}
+            foot={strength.strongest?.lift_label}
+          />
+          <HeroStat label="Rekor" value={records.data ? shelf.length : "—"} unit="hareket" />
+          <HeroStat
+            label="Seri"
+            value={consistency.data ? rhythm.weekStreak : "—"}
+            unit="hafta"
+            foot="üst üste antrenman"
+          />
+          <HeroStat
+            label="12 ay"
+            value={consistency.data ? rhythm.sessions : "—"}
+            unit="antrenman"
+          />
+        </HeroStats>
+      </Hero>
 
       {/* --- Başlık: güç seviyesi ---------------------------------------- */}
       <Section
+        night
         title="Güç standartları"
         info={
           <>
@@ -82,70 +111,32 @@ export default function ProgressPage() {
         }
       >
         {standards.isLoading ? (
-          <Loading />
+          <div aria-busy className="min-h-[18rem]" />
         ) : standards.isError ? (
           <ErrorBox error={standards.error} />
         ) : standards.data?.unavailable_reason ? (
-          <p className="text-sm text-[var(--color-ink-muted)]">
+          <p className="text-base" style={{ color: "var(--color-on-night-muted)" }}>
             {standards.data.unavailable_reason}
           </p>
         ) : (
           <>
             {standards.data?.is_estimated && (
-              <p className="mb-4 text-xs text-[var(--color-ink-faint)]">
-                Vücut ağırlığı tahmini ({fmt(standards.data.bodyweight_kg, 1)}{" "}
-                kg) — kilo kaydı girdiğinde kesinleşir.
+              <p className="-mt-2 mb-6 text-sm" style={{ color: "var(--color-on-night-faint)" }}>
+                Vücut ağırlığı tahmini ({fmt(standards.data.bodyweight_kg, 1)} kg) — kilo
+                kaydı girdiğinde kesinleşir.
               </p>
             )}
-            <ul className="grid gap-x-8 gap-y-5 lg:grid-cols-2">
-              {(standards.data?.results ?? []).map((row, index) => (
+            {/* Ayrı kenarlıklı hücreler: çizgiyi ızgaranın zemininden
+                boyamak, satır dolmayınca boş hücreyi gri bir blok olarak
+                bırakıyordu. */}
+            <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {results.map((row, index) => (
                 <li
                   key={row.lift_key}
-                  className="reveal"
-                  style={{ ["--i" as string]: index }}
+                  className="reveal border p-6 lg:p-7"
+                  style={{ ["--i" as string]: index, borderColor: "var(--color-night-line)" }}
                 >
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span className="min-w-0 truncate text-sm font-medium">
-                      {row.lift_label}
-                    </span>
-                    <span className="tnum shrink-0 text-sm">
-                      {fmt(row.estimated_1rm, 1)} kg
-                      <span className="ml-1.5 text-2xs text-[var(--color-ink-faint)]">
-                        {fmt(row.bodyweight_ratio, 2)}× VA
-                      </span>
-                    </span>
-                  </div>
-
-                  <div className="mt-2 flex items-center gap-2.5">
-                    <div className="h-1.5 flex-1 overflow-hidden bg-[var(--color-surface-raised)]">
-                      <div
-                        className="h-full"
-                        style={{
-                          width: `${Math.round(row.progress_to_next * 100)}%`,
-                          background:
-                            LEVEL_COLOR[row.level] ?? "var(--color-ink)",
-                          transition: "width var(--dur-long) var(--ease-out)",
-                        }}
-                      />
-                    </div>
-                    <span
-                      className="shrink-0 text-2xs font-medium tracking-wide uppercase"
-                      style={{
-                        color: LEVEL_COLOR[row.level] ?? "var(--color-ink)",
-                      }}
-                    >
-                      {row.level_label}
-                    </span>
-                  </div>
-
-                  {row.next_level_kg !== null && (
-                    <p className="tnum mt-1 text-2xs text-[var(--color-ink-faint)]">
-                      {/* "İleri için" değil "İleri seviye için": etiketler
-                          sıfat ("Orta", "İleri") ve tek başına ek almıyor. */}
-                      {row.next_level_label ?? "Bir sonraki"} seviye için{" "}
-                      {fmt(row.next_level_kg, 1)} kg
-                    </p>
-                  )}
+                  <LiftCard row={row} />
                 </li>
               ))}
             </ul>
@@ -153,13 +144,46 @@ export default function ProgressPage() {
         )}
       </Section>
 
+      {/* --- Rekorlar -----------------------------------------------------
+          Boşken BAŞLIK ŞERİDİ YOK: fotoğraflı davet kendi başına bir kart ve
+          üstüne bir başlık kartı daha koymak onu ikinci kez çerçeveliyordu.
+          Dolu hâlde başlık geri geliyor — o zaman altında sıralanacak bir
+          liste var. */}
+      {shelf.length === 0 && !records.isLoading && !records.isError ? (
+        <Empty
+          photo="goal-powerbuilding"
+          title="Henüz rekor yok"
+          hint="İlk antrenmanını tamamladığında her hareket için dört tür rekor takip edilmeye başlar."
+        />
+      ) : (
+        <Section
+          bare
+          title="Kişisel rekorlar"
+          info="Hareket başına GÜNCEL en iyi. Dört tür ayrı takip ediliyor çünkü farklı şeyler ölçüyorlar: ağır tek set, dayanıklılık, toplam iş ve ikisini birleştiren tahmini 1RM."
+        >
+          {records.isLoading ? (
+            <Loading />
+          ) : records.isError ? (
+            <ErrorBox error={records.error} />
+          ) : (
+            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {shelf.map((row, index) => (
+                <li key={row.exercise_id} className="reveal" style={{ ["--i" as string]: index }}>
+                  <RecordCard row={row} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
+      )}
+
       {/* --- Tutarlılık --------------------------------------------------- */}
       <Section
         title="Tutarlılık"
-        info="Son 12 ay. Koyuluk o günkü toplam tonajı gösteriyor — antrenman yapılmayan gün boş kalıyor."
+        info="Son 12 ay. Koyuluk o günkü toplam tonajı gösteriyor — antrenman yapılmayan gün boş kalıyor. Seri, en az bir antrenman yapılan ardışık haftaları sayıyor; bu hafta henüz antrenman yoksa seri bozulmuyor."
       >
         {consistency.isLoading ? (
-          <Loading />
+          <div aria-busy className="min-h-[10rem]" />
         ) : consistency.isError ? (
           <ErrorBox error={consistency.error} />
         ) : (consistency.data ?? []).length === 0 ? (
@@ -170,47 +194,18 @@ export default function ProgressPage() {
             dolmaya başlıyor.
           </p>
         ) : (
-          <ConsistencyGrid days={consistency.data ?? []} />
+          <div className="grid gap-8 xl:grid-cols-[14rem_minmax(0,1fr)] xl:items-center">
+            <dl className="grid grid-cols-2 gap-6 sm:grid-cols-3 xl:grid-cols-1">
+              <Figure label="Antrenman günü" value={fmt(rhythm.trainingDays, 0)} />
+              <Figure label="Haftada" value={fmt(rhythm.perWeek, 1)} unit="antrenman" foot="son 12 hafta" />
+              <Figure label="En uzun seri" value={fmt(rhythm.longestWeekStreak, 0)} unit="hafta" />
+            </dl>
+            <div className="min-w-0">
+              <ConsistencyGrid days={consistency.data ?? []} cell={16} className="w-fit max-w-full" />
+            </div>
+          </div>
         )}
       </Section>
-
-      {/* --- Rekorlar -----------------------------------------------------
-          Boşken BAŞLIK ŞERİDİ YOK: fotoğraflı davet kendi başına bir kart ve
-          üstüne bir başlık kartı daha koymak onu ikinci kez çerçeveliyordu.
-          Dolu hâlde başlık geri geliyor — o zaman altında sıralanacak bir
-          liste var. */}
-      {(records.data ?? []).length === 0 &&
-      !records.isLoading &&
-      !records.isError ? (
-        <Empty
-          photo="goal-powerbuilding"
-          title="Henüz rekor yok"
-          hint="İlk antrenmanını tamamladığında her hareket için dört tür rekor takip edilmeye başlar."
-        />
-      ) : (
-        <Section
-          title="Kişisel rekorlar"
-          info="Hareket başına GÜNCEL en iyi. Dört tür ayrı takip ediliyor çünkü farklı şeyler ölçüyorlar: ağır tek set, dayanıklılık, toplam iş ve ikisini birleştiren tahmini 1RM."
-        >
-          {records.isLoading ? (
-            <Loading />
-          ) : records.isError ? (
-            <ErrorBox error={records.error} />
-          ) : (
-            <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {(records.data ?? []).map((row, index) => (
-                <li
-                  key={row.exercise_id}
-                  className="reveal"
-                  style={{ ["--i" as string]: index }}
-                >
-                  <RecordCard row={row} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </Section>
-      )}
 
       {/* --- Hareket grafiği ---------------------------------------------- */}
       <Section
@@ -220,29 +215,48 @@ export default function ProgressPage() {
         {exercises.isLoading ? (
           <Loading />
         ) : (exercises.data ?? []).length === 0 ? (
-          <p className="text-sm text-[var(--color-ink-faint)]">
-            Hareket kütüphanesi yüklenemedi.
-          </p>
+          <p className="text-sm text-[var(--color-ink-faint)]">Hareket kütüphanesi yüklenemedi.</p>
         ) : (
           <>
-            <select
-              value={selected ?? ""}
-              onChange={(event) => setSelected(event.target.value || null)}
-              aria-label="Hareket seç"
-              className="field h-11 w-full max-w-[24rem] px-2.5 text-sm"
-            >
-              <option value="">Hareket seç…</option>
-              {(exercises.data ?? []).map((exercise) => (
-                <option key={exercise.id} value={exercise.id}>
-                  {exercise.name}
-                </option>
-              ))}
-            </select>
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={selected ?? ""}
+                onChange={(event) => setSelected(event.target.value || null)}
+                aria-label="Hareket seç"
+                className="field h-11 w-full max-w-[22rem] px-2.5 text-sm"
+              >
+                <option value="">Hareket seç…</option>
+                {(exercises.data ?? []).map((exercise) => (
+                  <option key={exercise.id} value={exercise.id}>
+                    {exercise.name}
+                  </option>
+                ))}
+              </select>
+              {shortcuts.length > 0 && (
+                <div role="group" aria-label="Rekoru olan hareketler" className="flex flex-wrap gap-2">
+                  {shortcuts.map((row) => (
+                    <button
+                      key={row.exercise_id}
+                      type="button"
+                      aria-pressed={selected === row.exercise_id}
+                      onClick={() => setSelected(row.exercise_id)}
+                      className="seg-item h-11 border border-[var(--color-border)] px-4 text-sm"
+                    >
+                      {row.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
-            {selected !== null && (
-              <div className="reveal mt-5">
+            {selected !== null ? (
+              <div className="reveal mt-6">
                 <ExerciseChart exerciseId={selected} />
               </div>
+            ) : (
+              <p className="mt-6 text-sm text-[var(--color-ink-faint)]">
+                Bir hareket seç — en ağır set, tahmini 1RM ve seans hacmi zaman içinde çizilir.
+              </p>
             )}
           </>
         )}
@@ -251,48 +265,171 @@ export default function ProgressPage() {
   );
 }
 
+/* --- Hareket başına güç kartı ------------------------------------------------ */
+
+/**
+ * Beş basamaklı merdiven. Geçilen basamaklar dolu, bulunulan basamak bir
+ * sonrakine ilerleme oranında dolu, kalanlar boş. Volt yalnızca İleri ve
+ * Elit'te: kazanılmış bir eşik olduğu için anlamlı; alt basamaklar kırık
+ * beyaz.
+ */
+function LiftCard({ row }: { row: StrengthStandard }) {
+  const current = levelIndex(row.level);
+  const earned = current >= 3;
+
+  return (
+    <div>
+      <p className="flex items-baseline justify-between gap-3">
+        <span className="text-base font-medium" style={{ color: "var(--color-on-night)" }}>
+          {row.lift_label}
+        </span>
+        <span
+          className="label"
+          style={{ color: earned ? "var(--color-accent)" : "var(--color-on-night-muted)" }}
+        >
+          {row.level_label}
+        </span>
+      </p>
+
+      <p className="mt-4 flex items-baseline gap-2">
+        <span
+          className="display tnum text-[3.25rem] leading-none lg:text-[4rem]"
+          style={{ color: "var(--color-on-night)" }}
+        >
+          {fmt(row.estimated_1rm, 1)}
+        </span>
+        <span className="text-sm" style={{ color: "var(--color-on-night-muted)" }}>
+          kg
+        </span>
+        <span className="tnum ml-auto text-sm" style={{ color: "var(--color-on-night-faint)" }}>
+          {fmt(row.bodyweight_ratio, 2)}× VA
+        </span>
+      </p>
+
+      <div className="mt-5 grid grid-cols-5 gap-1" aria-hidden>
+        {STRENGTH_LEVELS.map((level, index) => {
+          const fill = index < current ? 1 : index === current ? Math.max(row.progress_to_next, 0.04) : 0;
+          return (
+            <span key={level.key} className="h-1.5 overflow-hidden" style={{ background: "oklch(99% 0 0 / 0.1)" }}>
+              <span
+                className="block h-full"
+                style={{
+                  width: `${fill * 100}%`,
+                  background: index >= 3 && fill > 0 ? "var(--color-accent)" : "oklch(99% 0 0 / 0.72)",
+                  transition: "width var(--dur-long) var(--ease-out)",
+                }}
+              />
+            </span>
+          );
+        })}
+      </div>
+      <div className="mt-1.5 grid grid-cols-5 gap-1 text-[10px]" aria-hidden>
+        {STRENGTH_LEVELS.map((level, index) => (
+          <span
+            key={level.key}
+            className="truncate"
+            style={{
+              color: index === current ? "var(--color-on-night)" : "var(--color-on-night-faint)",
+            }}
+          >
+            {level.label}
+          </span>
+        ))}
+      </div>
+
+      <p className="tnum mt-4 min-h-[1.25rem] text-sm" style={{ color: "var(--color-on-night-muted)" }}>
+        {row.next_level_kg !== null ? (
+          <>
+            {/* "İleri için" değil "İleri seviye için": etiketler sıfat ("Orta",
+                "İleri") ve tek başına ek almıyor. */}
+            {row.next_level_label ?? "Bir sonraki"} seviye için {fmt(row.next_level_kg, 1)} kg
+          </>
+        ) : (
+          "En üst seviye"
+        )}
+      </p>
+    </div>
+  );
+}
+
+/* --- Küçük sayı ---------------------------------------------------------------- */
+
+function Figure({
+  label,
+  value,
+  unit,
+  foot,
+}: {
+  label: string;
+  value: string;
+  unit?: string;
+  foot?: string;
+}) {
+  return (
+    <div>
+      <dt className="label">{label}</dt>
+      <dd className="mt-1">
+        <span className="display tnum text-3xl">{value}</span>
+        {unit && <span className="ml-1.5 text-xs text-[var(--color-ink-muted)]">{unit}</span>}
+        {foot && <span className="block text-2xs text-[var(--color-ink-faint)]">{foot}</span>}
+      </dd>
+    </div>
+  );
+}
+
 /* --- Rekor kartı ---------------------------------------------------------- */
 
+/**
+ * Kartın başında TEK büyük sayı: tahmini 1RM, yoksa en ağır set. Altında
+ * dört türün tamamı. Büyük sayının yanında tür adı tekrar YAZILMIYOR — aynı
+ * etiket kartta iki kez geçince liste satırıyla karışıyordu.
+ */
 function RecordCard({ row }: { row: ExerciseRecords }) {
+  const headline =
+    row.records.find((record) => record.type === "estimated_1rm") ??
+    row.records.find((record) => record.type === "max_weight") ??
+    row.records[0];
+
   return (
-    <div className="card h-full px-4 py-3.5">
-      <p className="truncate text-sm font-medium" title={row.name}>
-        {row.name}
-      </p>
-      <ul className="mt-2.5 flex flex-col gap-1.5">
-        {row.records.map((record) => (
-          <li
-            key={record.type}
-            className="flex items-baseline justify-between gap-3 text-xs"
-          >
-            <span className="min-w-0 truncate text-[var(--color-ink-muted)]">
-              {prLabel(record.type)}
-            </span>
-            <span className="tnum shrink-0">
-              {/* "En çok tekrar" tam sayı; ağırlıklarda tek ondalık anlamlı
-                  (2,5 kg'lık plakalar). */}
-              {fmt(record.value, record.type === "max_reps" ? 0 : 1)}{" "}
-              <span className="text-[var(--color-ink-faint)]">
-                {prUnit(record.type)}
-              </span>
-              {record.type === "max_weight" && record.reps !== null && (
-                <span className="text-[var(--color-ink-faint)]">
-                  {" "}
-                  × {record.reps}
-                </span>
-              )}
-            </span>
-          </li>
-        ))}
-      </ul>
-      <p className="mt-2.5 border-t border-[var(--color-border)] pt-2 text-2xs text-[var(--color-ink-faint)]">
-        Son:{" "}
+    <div className="card lift flex h-full flex-col p-6">
+      <p className="label">
         {new Date(row.last_achieved_at).toLocaleDateString("tr-TR", {
           day: "numeric",
           month: "short",
           year: "numeric",
         })}
       </p>
+      <p className="display mt-2 truncate text-lg" title={row.name}>
+        {row.name}
+      </p>
+
+      {headline && (
+        <p className="mt-4 flex items-baseline gap-1.5">
+          <span className="display tnum text-5xl leading-none">
+            {fmt(headline.value, headline.type === "max_reps" ? 0 : 1)}
+          </span>
+          <span className="text-sm text-[var(--color-ink-muted)]">
+            {headline.type === "estimated_1rm" ? "kg · 1RM" : prUnit(headline.type)}
+          </span>
+        </p>
+      )}
+
+      <ul className="mt-5 flex flex-col border-t border-[var(--color-border)] pt-3">
+        {row.records.map((record) => (
+          <li key={record.type} className="flex items-baseline justify-between gap-3 py-1 text-sm">
+            <span className="min-w-0 truncate text-[var(--color-ink-muted)]">{prLabel(record.type)}</span>
+            <span className="tnum shrink-0">
+              {/* "En çok tekrar" tam sayı; ağırlıklarda tek ondalık anlamlı
+                  (2,5 kg'lık plakalar). */}
+              {fmt(record.value, record.type === "max_reps" ? 0 : 1)}{" "}
+              <span className="text-[var(--color-ink-faint)]">{prUnit(record.type)}</span>
+              {record.type === "max_weight" && record.reps !== null && (
+                <span className="text-[var(--color-ink-faint)]"> × {record.reps}</span>
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

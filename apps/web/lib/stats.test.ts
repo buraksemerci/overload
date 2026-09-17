@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
-import type { HistorySession, MuscleVolumeRow, WeightPoint } from "./queries";
-import { change, muscleBalance, tonnage, weekStart, weeklyVolume, weightSummary } from "./stats";
+import type { ConsistencyDay, HistorySession, MuscleVolumeRow, StrengthStandard, WeightPoint } from "./queries";
+import {
+  change,
+  consistencySummary,
+  muscleBalance,
+  strengthSummary,
+  tonnage,
+  weekStart,
+  weeklyVolume,
+  weightSummary,
+} from "./stats";
 
 const session = (startedAt: string, volume: number, completed = true): HistorySession => ({
   id: startedAt,
@@ -103,5 +112,81 @@ describe("muscleBalance", () => {
     expect(balance.lagging.map((r) => r.slug)).toEqual(["b", "a"]);
     expect(balance.onTarget).toBe(0.5);
     expect(balance.over.map((r) => r.slug)).toEqual(["d"]);
+  });
+});
+
+describe("consistencySummary", () => {
+  const day = (date: string, sessions = 1): ConsistencyDay => ({
+    date,
+    sessions,
+    total_volume_kg: "1000",
+  });
+  // 17 Eylül 2026 Perşembe; hafta 14 Eylül pazartesi başlıyor.
+  const now = new Date(2026, 8, 17, 12);
+
+  it("bu hafta boşsa seri geçen haftadan sayılıyor", () => {
+    const summary = consistencySummary(
+      [day("2026-08-31"), day("2026-09-02"), day("2026-09-08"), day("2026-09-10", 0)],
+      now,
+    );
+    expect(summary.weekStreak).toBe(2);
+    expect(summary.trainingDays).toBe(3);
+    expect(summary.sessions).toBe(3);
+  });
+
+  it("bu hafta antrenman varsa seriye giriyor", () => {
+    const summary = consistencySummary([day("2026-09-08"), day("2026-09-15")], now);
+    expect(summary.weekStreak).toBe(2);
+  });
+
+  it("boşluk seriyi kırıyor ama en uzun seri kalıyor", () => {
+    const summary = consistencySummary(
+      [day("2026-07-06"), day("2026-07-13"), day("2026-07-20"), day("2026-09-15")],
+      now,
+    );
+    expect(summary.weekStreak).toBe(1);
+    expect(summary.longestWeekStreak).toBe(3);
+  });
+
+  it("haftalık ortalama son 12 hafta", () => {
+    const summary = consistencySummary([day("2026-09-15", 2), day("2026-09-08"), day("2025-01-01", 5)], now);
+    expect(summary.perWeek).toBeCloseTo(3 / 12);
+  });
+});
+
+describe("strengthSummary", () => {
+  const lift = (key: string, level: string, ratio: string, progress: number, next: string | null = "x"): StrengthStandard => ({
+    lift_key: key,
+    lift_label: key,
+    estimated_1rm: "100",
+    bodyweight_ratio: ratio,
+    level,
+    level_label: level,
+    next_level: next,
+    next_level_label: next,
+    next_level_kg: next ? "120" : null,
+    progress_to_next: progress,
+  });
+
+  it("ortanca seviye, en güçlü ve en yakın", () => {
+    const summary = strengthSummary([
+      lift("bench", "novice", "1.0", 0.2),
+      lift("squat", "intermediate", "1.5", 0.9),
+      lift("deadlift", "advanced", "2.1", 0.4),
+      lift("press", "novice", "0.6", 0.5),
+    ]);
+    expect(summary.level?.key).toBe("novice");
+    expect(summary.strongest?.lift_key).toBe("deadlift");
+    expect(summary.closest?.lift_key).toBe("squat");
+  });
+
+  it("elit harekette bir sonraki seviye yok", () => {
+    const summary = strengthSummary([lift("bench", "elite", "2.0", 1, null)]);
+    expect(summary.level?.label).toBe("Elit");
+    expect(summary.closest).toBeNull();
+  });
+
+  it("boş liste", () => {
+    expect(strengthSummary([]).level).toBeNull();
   });
 });

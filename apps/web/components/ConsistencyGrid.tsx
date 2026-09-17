@@ -10,7 +10,7 @@
  * tamamen dolu gösterirdi.
  */
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { ConsistencyDay } from "@/lib/queries";
 
 const WEEKDAY_LABELS = ["Pzt", "", "Çar", "", "Cum", "", "Paz"];
@@ -44,10 +44,16 @@ const LEVEL_BACKGROUND = [
 export function ConsistencyGrid({
   days,
   className,
+  cell = 11,
 }: {
   days: ConsistencyDay[];
   className?: string;
+  /** Kare kenarı, piksel. Geniş ekranda ızgara satırı doldursun diye büyüyor. */
+  cell?: number;
 }) {
+  const scroller = useRef<HTMLDivElement | null>(null);
+  const gap = cell >= 14 ? 4 : 3;
+
   const { weeks, maxVolume, totalSessions } = useMemo(() => {
     const parsed = days.map((d) => ({
       date: new Date(`${d.date}T00:00:00`),
@@ -83,25 +89,36 @@ export function ConsistencyGrid({
     return { weeks: grid, maxVolume: max, totalSessions: sessions };
   }, [days]);
 
+  // Dar ekranda ızgara taşıyor ve en ESKİ aylar görünüyordu. Açılışta en
+  // yeniye (sağ uca) kaydırılıyor: bakılan şey son haftalar.
+  useEffect(() => {
+    const element = scroller.current;
+    if (element) element.scrollLeft = element.scrollWidth;
+  }, [weeks.length]);
+
   if (days.length === 0) return null;
 
   return (
     <div className={className}>
       {/* Izgara yatayda taşabilir; sayfanın tamamı değil SADECE burası kaysın. */}
-      <div className="overflow-x-auto pb-2">
+      <div ref={scroller} className="overflow-x-auto pb-2">
         <div className="flex gap-1">
-          <div className="flex shrink-0 flex-col gap-[3px] pr-1 pt-[15px]">
+          <div
+            className="flex shrink-0 flex-col pr-1"
+            style={{ gap, paddingTop: 12 + gap }}
+          >
             {WEEKDAY_LABELS.map((label, i) => (
               <span
                 key={i}
-                className="h-[11px] text-[9px] leading-[11px] text-[var(--color-ink-faint)]"
+                className="text-[9px] text-[var(--color-ink-faint)]"
+                style={{ height: cell, lineHeight: `${cell}px` }}
               >
                 {label}
               </span>
             ))}
           </div>
 
-          <div className="flex gap-[3px]">
+          <div className="flex" style={{ gap }}>
             {weeks.map((week, weekIndex) => {
               const firstReal = week.find((d) => d !== null);
               const showMonth =
@@ -109,15 +126,17 @@ export function ConsistencyGrid({
                 firstReal !== null &&
                 firstReal.date.getDate() <= 7;
               return (
-                <div key={weekIndex} className="flex flex-col gap-[3px]">
+                <div key={weekIndex} className="flex flex-col" style={{ gap }}>
                   <span className="h-3 text-[9px] leading-3 text-[var(--color-ink-faint)]">
                     {showMonth && firstReal ? MONTH_LABELS[firstReal.date.getMonth()] : ""}
                   </span>
                   {week.map((day, dayIndex) => (
                     <div
                       key={dayIndex}
-                      className="size-[11px] rounded-[2px]"
+                      className="rounded-[2px]"
                       style={{
+                        width: cell,
+                        height: cell,
                         background: day
                           ? LEVEL_BACKGROUND[levelOf(day.volume, maxVolume)]
                           : "transparent",

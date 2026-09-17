@@ -98,7 +98,7 @@ export function ExerciseChart({ exerciseId }: { exerciseId: string }) {
         </span>
       </div>
 
-      <div className="mt-3 h-48 w-full">
+      <div className="mt-5 h-64 w-full sm:h-80">
         <ResponsiveContainer width="100%" height="100%">
           {/* `left: 0`: negatif sol boşluk, eksen etiketinin ilk karakterini
               kırpıyordu ("102,5" → "02,5"). */}

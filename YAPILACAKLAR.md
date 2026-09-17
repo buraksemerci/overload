@@ -81,6 +81,8 @@ fotoğraflar, ödül alacak kalitede UI/UX.
   - Bant: bölge sayısı, en yüksek seviye, aktif sakatlık. Sağ sütun: bugün listesi
     (şiddet kutucukları), "bugün için" tavsiye kartı, son 7 gün şeridi.
   - `MuscleMap` artık `scale="soreness"` destekliyor; yeni e2e: haritadan işaretleme.
+  - Sakatlık ekleme/kapatma arayüzü (uç noktalar vardı, yolu yoktu): bölge + "ne oldu"
+    notu; "İyileşti" kaydı silmiyor, `resolved_on` dolduruyor.
 
 ## 3. Antrenman
 

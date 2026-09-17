@@ -36,9 +36,11 @@ import { MuscleMap, SORENESS_LABELS, sorenessColor } from "@/components/MuscleMa
 import { Sheet } from "@/components/Sheet";
 import { ErrorBox } from "@/components/States";
 import {
+  useCreateInjury,
   useInjuries,
   useLogSoreness,
   useMuscleGroups,
+  useResolveInjury,
   useSoreness,
   type MuscleGroupRow,
   type SorenessRow,
@@ -58,10 +60,14 @@ export default function SorenessPage() {
   const week = useSoreness(7);
   const injuries = useInjuries();
   const log = useLogSoreness();
+  const createInjury = useCreateInjury();
+  const resolveInjury = useResolveInjury();
 
   /** Panelde düzenlenen kas. `null` = panel kapalı. */
   const [picking, setPicking] = useState<MuscleGroupRow | null>(null);
   const [choosing, setChoosing] = useState(false);
+  /** Sakatlık ekleme paneli. */
+  const [addingInjury, setAddingInjury] = useState(false);
 
   const all = groups.data ?? [];
   const today = soreness.data ?? [];
@@ -101,14 +107,24 @@ export default function SorenessPage() {
           </>
         }
         actions={
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={!ready || groups.isError}
-            onClick={() => setChoosing(true)}
-          >
-            Ağrı işaretle
-          </button>
+          <>
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={!ready || groups.isError}
+              onClick={() => setChoosing(true)}
+            >
+              Ağrı işaretle
+            </button>
+            <button
+              type="button"
+              className="btn btn-on-photo"
+              disabled={!ready || groups.isError}
+              onClick={() => setAddingInjury(true)}
+            >
+              Sakatlık ekle
+            </button>
+          </>
         }
       >
         <HeroStats>
@@ -128,14 +144,26 @@ export default function SorenessPage() {
             <span className="badge badge-warning">SAKATLIK</span>
             <span className="tnum text-2xs text-[var(--color-ink-faint)]">{active.length} aktif</span>
           </div>
-          <ul className="mt-3 flex flex-col gap-1.5">
+          <ul className="mt-4 flex flex-col">
             {active.map((injury) => (
-              <li key={injury.id} className="text-sm">
-                <span className="font-medium">{injury.muscle_group_name}</span>
-                <span className="text-[var(--color-ink-muted)]">
-                  {" — "}
+              <li
+                key={injury.id}
+                className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-[var(--color-border)] py-3 last:border-b-0"
+              >
+                <span className="text-base font-medium">{injury.muscle_group_name}</span>
+                <span className="min-w-0 flex-1 text-sm text-[var(--color-ink-muted)]">
                   {injury.description}
                 </span>
+                {/* Kapatma SİLME değil: kayıt duruyor, `resolved_on` doluyor.
+                    Aynı bölge tekrar ağrırsa geçmiş bir bağlam. */}
+                <button
+                  type="button"
+                  className="btn btn-quiet shrink-0 text-sm"
+                  disabled={resolveInjury.isPending}
+                  onClick={() => resolveInjury.mutate(injury.id)}
+                >
+                  İyileşti
+                </button>
               </li>
             ))}
           </ul>
@@ -233,6 +261,21 @@ export default function SorenessPage() {
         için bir doktora ya da fizyoterapiste danış.
       </p>
 
+      {/* --- Sakatlık ekleme ---------------------------------------------- */}
+      {addingInjury && (
+        <Sheet title="Sakatlık ekle" onClose={() => setAddingInjury(false)} width="28rem">
+          <InjuryForm
+            groups={all}
+            pending={createInjury.isPending}
+            error={createInjury.isError ? createInjury.error : null}
+            onSubmit={async (values) => {
+              await createInjury.mutateAsync(values);
+              setAddingInjury(false);
+            }}
+          />
+        </Sheet>
+      )}
+
       {/* --- Kas seçme --------------------------------------------------- */}
       {choosing && (
         <Sheet title="Hangi kas?" onClose={() => setChoosing(false)} width="28rem">
@@ -325,6 +368,76 @@ function AdviceCard({ level, name }: { level: number; name?: string }) {
       <p className="label">{name && level > 0 ? `Bugün için · ${name}` : "Bugün için"}</p>
       <p className="mt-2 text-base leading-relaxed">{ADVICE[Math.max(0, Math.min(4, level))]}</p>
     </section>
+  );
+}
+
+/**
+ * Sakatlık formu.
+ *
+ * Ağrıdan ayrı bir kayıt: hangi bölge ve NE olduğu. Açıklama zorunlu çünkü
+ * "omuz" tek başına antrenman modunda işe yaramıyor — "omuz, sıkışma hissi,
+ * bench press ağrıtıyor" yarın hatırlanacak olan şey.
+ */
+function InjuryForm({
+  groups,
+  pending,
+  error,
+  onSubmit,
+}: {
+  groups: MuscleGroupRow[];
+  pending: boolean;
+  error: unknown;
+  onSubmit: (values: { muscle_group_slug: string; description: string }) => Promise<void>;
+}) {
+  const [slug, setSlug] = useState(groups[0]?.slug ?? "");
+  const [description, setDescription] = useState("");
+  const ready = slug !== "" && description.trim().length > 0;
+
+  return (
+    <form
+      className="flex flex-col gap-5"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (ready && !pending) void onSubmit({ muscle_group_slug: slug, description: description.trim() });
+      }}
+    >
+      <label className="flex flex-col gap-2">
+        <span className="label">Bölge</span>
+        <select
+          value={slug}
+          onChange={(event) => setSlug(event.target.value)}
+          className="field h-12 w-full px-3 text-base"
+        >
+          {groups.map((group) => (
+            <option key={group.id} value={group.slug}>
+              {group.name_tr}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="flex flex-col gap-2">
+        <span className="label">Ne oldu?</span>
+        <textarea
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          rows={3}
+          placeholder="Örn. omuzda sıkışma hissi; bench press ağrıtıyor"
+          className="field w-full px-3 py-2.5 text-base"
+        />
+      </label>
+
+      <p className="text-xs text-[var(--color-ink-faint)]">
+        Bu bölgeyi birincil çalıştıran hareketler antrenman modunda uyarı alıyor.
+        İyileşince listeden kapatabilirsin; kayıt geçmişte kalıyor.
+      </p>
+
+      {error !== null && <ErrorBox error={error} />}
+
+      <button type="submit" className="btn btn-primary" disabled={!ready || pending}>
+        {pending ? "Kaydediliyor…" : "Sakatlığı kaydet"}
+      </button>
+    </form>
   );
 }
 

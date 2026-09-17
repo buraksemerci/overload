@@ -895,6 +895,42 @@ export function useCreateSupplement(): UseMutationResult<
   });
 }
 
+/**
+ * Sakatlık notu ekler.
+ *
+ * Sakatlık ağrıdan FARKLI bir şey: ağrı birkaç günde geçiyor, sakatlık
+ * haftalarca sürüyor ve antrenman modunda o bölgeyi birincil çalıştıran
+ * hareketler uyarı alıyor. Uç nokta baştan vardı ama arayüzde yolu yoktu —
+ * yani uyarı sistemi hiç beslenemiyordu.
+ */
+export function useCreateInjury(): UseMutationResult<
+  InjuryRow,
+  Error,
+  { muscle_group_slug: string; description: string }
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body) => api.post<InjuryRow>("/injuries", body),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: keys.injuries });
+      // Antrenman uyarıları sakatlığa bakıyor.
+      void client.invalidateQueries({ queryKey: keys.workouts });
+    },
+  });
+}
+
+/** Sakatlığı kapatır. Kayıt SİLİNMİYOR — geçmiş, aynı bölge tekrar ağrırsa bağlam. */
+export function useResolveInjury(): UseMutationResult<unknown, Error, string> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (injuryId) => api.post(`/injuries/${injuryId}/resolve`),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: keys.injuries });
+      void client.invalidateQueries({ queryKey: keys.workouts });
+    },
+  });
+}
+
 export function useLogSoreness(): UseMutationResult<
   SorenessRow,
   Error,

@@ -103,4 +103,50 @@ test.describe("ağrı", () => {
     await expect.poll(() => posted).toHaveLength(1);
     expect(posted[0]).toMatchObject({ muscle_group_slug: "chest", level: 3 });
   });
+
+  test("sakatlık eklenip iyileşti diye kapatılıyor", async ({ page }) => {
+    /* Sakatlık ağrıdan farklı: haftalarca sürüyor ve antrenman modunda o
+       bölgeyi birincil çalıştıran hareketler uyarı alıyor. Uç nokta baştan
+       vardı ama arayüzde yolu yoktu — uyarı sistemi beslenemiyordu. */
+    let created: Record<string, unknown> | null = null;
+    let resolved = false;
+    const injury = {
+      id: "i1",
+      muscle_group_slug: "chest",
+      muscle_group_name: "Göğüs",
+      description: "Sıkışma hissi; bench press ağrıtıyor",
+      started_on: "2026-09-10",
+      resolved_on: null,
+      is_active: true,
+    };
+
+    await page.route(`${API}/injuries`, (route) => {
+      if (route.request().method() === "POST") {
+        created = route.request().postDataJSON() as Record<string, unknown>;
+        return route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify(injury) });
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(created === null ? [] : [injury]),
+      });
+    });
+    await page.route(`${API}/injuries/i1/resolve`, (route) => {
+      resolved = true;
+      return route.fulfill({ status: 204, body: "" });
+    });
+
+    await page.goto("/soreness");
+    await page.waitForLoadState("networkidle");
+
+    await page.getByRole("button", { name: "Sakatlık ekle" }).click();
+    await page.getByLabel("Ne oldu?").fill("Sıkışma hissi; bench press ağrıtıyor");
+    await page.getByRole("button", { name: "Sakatlığı kaydet" }).click();
+
+    await expect.poll(() => created).toMatchObject({ muscle_group_slug: "chest" });
+    await expect(page.getByText("Sıkışma hissi; bench press ağrıtıyor")).toBeVisible();
+
+    await page.getByRole("button", { name: "İyileşti" }).click();
+    await expect.poll(() => resolved).toBe(true);
+  });
 });

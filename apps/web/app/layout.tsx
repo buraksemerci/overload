@@ -38,8 +38,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  // Açık tema zemini (--color-ground). Tarayıcı arayüzü sayfayla aynı renkte.
-  themeColor: "#f8f9f3",
+  // Koyu tema zemini (--color-ground). Tarayıcı arayüzü sayfayla aynı renkte.
+  themeColor: "#0d0e0b",
   // Salonda tek elle kullanılacak: yanlışlıkla yakınlaştırma sinir bozucu,
   // ama tamamen engellemek erişilebilirliği kırar. maximumScale=5 ortası.
   width: "device-width",

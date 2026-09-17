@@ -1,38 +1,43 @@
 "use client";
 
 /**
- * Antrenman Modu — set set yürüyen bir akış.
+ * Antrenman — set set akış.
  *
  * --------------------------------------------------------------------------
- * NEDEN AKIŞ, NEDEN LİSTE DEĞİL
+ * DÜZEN
  * --------------------------------------------------------------------------
- * Önceki sürüm bugünün bütün hareketlerini alt alta kartlar hâlinde
- * gösteriyordu — yedi hareket, on üç set, hepsi ekranda. Doğru veriydi ama
- * antrenman sırasında yapılacak iş her an TEK: şu anki set. Geri kalan on iki
- * set o an sadece gürültü ve kullanıcı her sette "neredeydim" diye ekranı
- * taramak zorunda kalıyordu.
+ * Bant: günün adı, programın adı ve üç sayı — tamamlanan set, geçen süre,
+ * kalan hareket. Altında iki kolon:
  *
- * Şimdi ekranda bir seferde bir adım var. Sıradaki set girilir, dinlenme
- * sayacı ortada büyük görünür, ardından bir sonraki set gelir. Bütün programı
- * görmek isteyen açıkça isteyebiliyor ("Diğer hareketler") ama varsayılan
- * durum odaklanmış tek adım.
- *
- * Adım birimi HAREKET değil SET. "3 set squat" tek adım olsaydı, kullanıcı
- * setler arasında yine kendi kendini yönetmek zorunda kalırdı; oysa setler
- * arası dinlenme antrenmanın yarısı.
+ *   - SOLDA SAHNE: bir seferde tek iş. Başlamadan önce günün özeti, set
+ *     sırasında büyük sayı alanları, set arasında dev bir sayaç.
+ *   - SAĞDA GÜNÜN HARİTASI: bütün hareketler, her birinin set noktaları,
+ *     o anki hareket işaretli. Önce "diğer hareketleri gör" düğmesinin
+ *     arkasındaydı ve geniş ekranda sahnenin iki yanı boş kalıyordu; sıradaki
+ *     hareketi görmek için bir düğmeye basmak gerekiyordu. Harita dokununca
+ *     o harekete atlıyor.
  *
  * --------------------------------------------------------------------------
- * ALANLAR ÖNCEDEN DOLU GELİYOR
+ * SALONDA KULLANILAN EKRAN
  * --------------------------------------------------------------------------
- * Motor her hareket için somut bir hedef üretiyor (geçmiş varsa ilerleme
- * önerisi, yoksa vücut ağırlığı ve güce göre tahmini başlangıç). O sayılar
- * girdi alanlarına önceden yazılıyor: kullanıcının işi onaylamak ya da
- * düzeltmek, sıfırdan karar vermek değil.
+ * - Ekran seans boyunca KARARMIYOR (Wake Lock). Telefon masada dururken
+ *   30 saniyede kararan ekran dinlenme sayacını gizliyordu.
+ * - Ağırlık ve tekrar alanlarının yanında büyük +/− düğmeleri; tereli elle
+ *   küçük bir sayı alanına dokunmak yerine. Adım ekipmana göre (bar 2,5 kg).
+ * - Bar hareketlerinde PLAKA HESABI: "92,5 kg için bir tarafa 25 + 10 + 1,25".
+ * - Dinlenme ±15 sn uzatılıp kısaltılabiliyor; bitince titreşim ve ses.
+ * - Yazılan ama kaydedilmemiş değerler sayfa yenilense de kalıyor.
+ *
+ * --------------------------------------------------------------------------
+ * VOLT BÜTÇESİ
+ * --------------------------------------------------------------------------
+ * Sahnenin birincil düğmesi ve ilerleme çubuğu. Sayaç halkası ve harita
+ * işaretleri ince çizgi (`accent-deep`).
  */
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { InfoTip, Page, PageHeader, Section } from "@/components/Layout";
+import { Hero, HeroStat, HeroStats, InfoTip, Page } from "@/components/Layout";
 import {
   createAudioUnlock,
   formatClock,
@@ -40,8 +45,10 @@ import {
   type RestState,
 } from "@/components/RestTimer";
 import { Photo } from "@/components/Photo";
-import { ErrorBox, Empty, Loading, fmt } from "@/components/States";
+import { ErrorBox, fmt } from "@/components/States";
+import { formatElapsed, useNow, useWakeLock } from "@/lib/device";
 import { prLabel, prUnit } from "@/lib/labels";
+import { barFor, plateLoad, weightStep } from "@/lib/plates";
 import {
   useCompleteSession,
   useLogSet,
@@ -72,6 +79,29 @@ const weightText = (value: string | number) => {
   return Number.isNaN(n) ? "" : String(n).replace(".", ",");
 };
 
+const parseWeight = (value: string) => Number.parseFloat(value.replace(",", "."));
+
+/* --- Taslak kalıcılığı ------------------------------------------------------ */
+
+const draftStorageKey = (sessionId: string) => `overload.drafts.${sessionId}`;
+
+function loadDrafts(sessionId: string): Record<string, Draft> {
+  try {
+    const raw = window.localStorage.getItem(draftStorageKey(sessionId));
+    return raw ? (JSON.parse(raw) as Record<string, Draft>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveDrafts(sessionId: string, drafts: Record<string, Draft>): void {
+  try {
+    window.localStorage.setItem(draftStorageKey(sessionId), JSON.stringify(drafts));
+  } catch {
+    // Gizli sekme ya da dolu depolama: taslak yalnızca bellekte kalır.
+  }
+}
+
 export default function WorkoutPage() {
   const today = useToday();
   const startSession = useStartSession();
@@ -81,17 +111,27 @@ export default function WorkoutPage() {
   const complete = useCompleteSession();
 
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
+  const [draftsFor, setDraftsFor] = useState<string | null>(null);
   const [rest, setRest] = useState<RestState | null>(null);
   const [jump, setJump] = useState<number | null>(null);
-  const [showAll, setShowAll] = useState(false);
   const [newRecords, setNewRecords] = useState<PersonalRecordRow[] | null>(null);
   const audio = useRef<AudioContext | null>(null);
 
-  // Devam eden seansı devral. React'in önerdiği "prop değişince state'i
-  // ayarla" deseni; `useEffect`'ten bir render daha hızlı.
+  // Devam eden seansı devral.
   if (sessionId === null && today.data?.active_session_id) {
     setSessionId(today.data.active_session_id);
   }
+
+  // Seans değişince o seansın kayıtlı taslaklarını yükle (render sırasında,
+  // "prop değişince state'i ayarla" deseni).
+  if (sessionId !== null && draftsFor !== sessionId && typeof window !== "undefined") {
+    setDraftsFor(sessionId);
+    setDrafts(loadDrafts(sessionId));
+  }
+
+  useEffect(() => {
+    if (sessionId !== null && draftsFor === sessionId) saveDrafts(sessionId, drafts);
+  }, [sessionId, draftsFor, drafts]);
 
   const workout = today.data;
 
@@ -107,8 +147,6 @@ export default function WorkoutPage() {
     [workout],
   );
 
-  /* `?? []` her render'da YENİ bir dizi üretiyor ve `findLogged` bağımlılığı
-     olduğu için her render'da yeniden kuruluyordu. */
   const loggedSets = useMemo(() => session.data?.sets ?? [], [session.data]);
   const findLogged = useCallback(
     (exerciseId: string, setNumber: number): WorkoutSet | undefined =>
@@ -116,14 +154,20 @@ export default function WorkoutPage() {
     [loggedSets],
   );
 
-  // İmleç: kaydedilmemiş ilk set. Kullanıcı listeden başka bir harekete
-  // atladıysa o seçim öncelikli (`jump`), ama bir set kaydedilince temizlenip
-  // akış kendiliğinden devam ediyor.
+  // İmleç: kaydedilmemiş ilk set. Haritadan atlandıysa o seçim öncelikli.
   const firstPending = steps.findIndex((s) => !findLogged(s.exercise.exercise_id, s.setNumber));
   const cursor = jump ?? (firstPending === -1 ? steps.length : firstPending);
   const step: Step | undefined = steps[cursor];
 
   const doneCount = loggedSets.filter((s) => !s.is_warmup).length;
+  const volume = loggedSets
+    .filter((s) => !s.is_warmup)
+    .reduce((sum, s) => sum + Number.parseFloat(s.weight_kg) * s.reps, 0);
+
+  const active = sessionId !== null && newRecords === null;
+  useWakeLock(active);
+  const now = useNow(1000, active);
+  const startedAt = session.data?.started_at ? new Date(session.data.started_at).getTime() : null;
 
   const onRestDone = useCallback(() => setRest(null), []);
   const { remaining, progress } = useRestCountdown(rest, audio, onRestDone);
@@ -131,11 +175,8 @@ export default function WorkoutPage() {
   const draftKey = (exerciseId: string, setNumber: number) => `${exerciseId}:${setNumber}`;
 
   /**
-   * Alanların gösterilecek değeri.
-   *
-   * Sıra önemli: kaydedilmiş set varsa SUNUCUDAN, kullanıcı bir şey yazdıysa
-   * taslaktan, aksi halde MOTORUN ÖNERİSİNDEN. Üçüncü basamak kullanıcının
-   * "kaç kilo kaldırmalıyım" sorusuna verilen cevabın alana yazılmış hâli.
+   * Alanların gösterilecek değeri. Kaydedilmiş set varsa SUNUCUDAN, kullanıcı
+   * bir şey yazdıysa taslaktan, aksi halde MOTORUN ÖNERİSİNDEN.
    */
   const valuesFor = (target: Step): Draft => {
     const logged = findLogged(target.exercise.exercise_id, target.setNumber);
@@ -153,9 +194,8 @@ export default function WorkoutPage() {
     const suggestion = target.exercise.progression;
     return {
       // Vücut ağırlığı hareketinde öneri 0 kg; alan boş kalmalı.
-      weight: suggestion && Number.parseFloat(suggestion.weight_kg) > 0
-        ? weightText(suggestion.weight_kg)
-        : "",
+      weight:
+        suggestion && Number.parseFloat(suggestion.weight_kg) > 0 ? weightText(suggestion.weight_kg) : "",
       reps: suggestion ? String(suggestion.reps) : "",
       rir: "",
     };
@@ -175,15 +215,14 @@ export default function WorkoutPage() {
       sessionId,
       exercise_id: step.exercise.exercise_id,
       set_number: step.setNumber,
-      // Türkçe klavyede virgül yazılabiliyor; nokta bekleyen API'ye
-      // göndermeden önce normalize ediliyor.
-      weight_kg: values.weight ? Number.parseFloat(values.weight.replace(",", ".")) : 0,
+      // Türkçe klavyede virgül yazılabiliyor; API'ye göndermeden normalize.
+      weight_kg: values.weight ? parseWeight(values.weight) : 0,
       reps: Number.parseInt(values.reps, 10),
       rir: values.rir === "" ? null : Number.parseInt(values.rir, 10),
       technique: step.exercise.technique,
     });
 
-    setJump(null); // akış kendiliğinden ilerlesin
+    setJump(null);
 
     // Son set kaydedildiyse dinlenmeye gerek yok.
     const isLast = cursor >= steps.length - 1;
@@ -193,119 +232,159 @@ export default function WorkoutPage() {
     }
   };
 
-  if (today.isLoading) return <Loading />;
-  if (today.isError)
-    return <ErrorBox error={today.error} onRetry={() => void today.refetch()} />;
-
-  if (!workout || workout.exercises.length === 0) {
-    return (
-      <Page>
-        <Empty
-          photo="empty-workout"
-          title="Bugün için planlanmış antrenman yok"
-          hint="Önce bir program seçip aktif hâle getirmen gerekiyor."
-          action={
-            <Link href="/programs" className="btn btn-primary">
-              Programlara git
-            </Link>
-          }
-        />
-      </Page>
-    );
-  }
+  const finish = async () => {
+    if (!sessionId) return;
+    const result = await complete.mutateAsync(sessionId);
+    try {
+      window.localStorage.removeItem(draftStorageKey(sessionId));
+    } catch {
+      // yok say
+    }
+    setNewRecords(result.new_records);
+  };
 
   if (newRecords !== null) {
-    return <Celebration records={newRecords} doneCount={doneCount} />;
+    return <Celebration records={newRecords} doneCount={doneCount} volume={volume} />;
   }
 
-  const allDone = cursor >= steps.length;
+  const empty = !today.isLoading && !today.isError && (!workout || workout.exercises.length === 0);
+  const allDone = steps.length > 0 && cursor >= steps.length;
+  const exercisesLeft = new Set(
+    steps.filter((s) => !findLogged(s.exercise.exercise_id, s.setNumber)).map((s) => s.exerciseIndex),
+  ).size;
 
   return (
     <Page>
-      <PageHeader
-        title={workout.day_label ?? "Antrenman"}
-        lead={workout.program_name ?? undefined}
+      <Hero
+        photo={sessionId === null ? "app-squat" : "app-grip"}
+        position="65% center"
+        size={sessionId === null ? "lg" : "sm"}
+        eyebrow={workout?.program_name ?? "Antrenman"}
+        title={empty ? "Bugün antrenman yok" : (workout?.day_label ?? "Antrenman")}
+        lead={empty ? "Önce bir program seçip aktif hâle getirmen gerekiyor." : undefined}
         actions={
-          sessionId !== null && (
+          empty ? (
+            <Link href="/programs" className="btn btn-primary px-6 py-3">
+              Programlara git
+            </Link>
+          ) : sessionId !== null ? (
             <button
-              className="btn btn-ghost"
+              className="btn btn-on-photo"
               disabled={doneCount === 0 || complete.isPending}
-              onClick={async () => {
-                const result = await complete.mutateAsync(sessionId);
-                setNewRecords(result.new_records);
-              }}
+              onClick={() => void finish()}
             >
               {complete.isPending ? "Kapatılıyor…" : "Antrenmanı bitir"}
             </button>
-          )
+          ) : undefined
         }
-      />
-
-      <Progress done={doneCount} total={steps.length} />
+      >
+        {today.isError ? (
+          <div className="max-w-md">
+            <ErrorBox error={today.error} onRetry={() => void today.refetch()} />
+          </div>
+        ) : !empty && workout ? (
+          <>
+            <HeroStats>
+              <HeroStat label="Set" value={`${doneCount}/${steps.length}`} foot="tamamlanan" />
+              <HeroStat
+                label="Süre"
+                value={startedAt ? formatElapsed(now - startedAt) : "—"}
+                foot={startedAt ? "seans başladı" : "henüz başlamadı"}
+              />
+              <HeroStat
+                label="Hareket"
+                value={sessionId === null ? workout.exercises.length : exercisesLeft}
+                foot={sessionId === null ? "bugün" : "kaldı"}
+              />
+              <HeroStat
+                label="Tonaj"
+                value={volume > 0 ? fmt(volume, 0) : "—"}
+                unit={volume > 0 ? "kg" : undefined}
+                foot="ısınma hariç"
+              />
+            </HeroStats>
+            <Progress done={doneCount} total={steps.length} />
+          </>
+        ) : null}
+      </Hero>
 
       {startSession.isError && <ErrorBox error={startSession.error} />}
       {logSet.isError && <ErrorBox error={logSet.error} />}
       {complete.isError && <ErrorBox error={complete.error} />}
 
-      {/* --- Sahne: bir seferde tek adım --- */}
-      {sessionId === null ? (
-        <Intro
-          exerciseCount={workout.exercises.length}
-          setCount={steps.length}
-          pending={startSession.isPending}
-          onStart={async () => {
-            audio.current ??= createAudioUnlock();
-            const created = await startSession.mutateAsync({
-              program_day_id: workout.program_day_id,
-            });
-            setSessionId(created.id);
-          }}
-        />
-      ) : rest !== null ? (
-        <RestStage
-          remaining={remaining}
-          progress={progress}
-          next={step}
-          onSkip={() => setRest(null)}
-        />
-      ) : allDone ? (
-        <AllDoneStage
-          pending={complete.isPending}
-          onFinish={async () => {
-            if (!sessionId) return;
-            const result = await complete.mutateAsync(sessionId);
-            setNewRecords(result.new_records);
-          }}
-        />
-      ) : step ? (
-        <SetStage
-          step={step}
-          values={valuesFor(step)}
-          pending={logSet.isPending}
-          onChange={(patch) =>
-            updateDraft(
-              draftKey(step.exercise.exercise_id, step.setNumber),
-              patch,
-              valuesFor(step),
-            )
-          }
-          onSubmit={submit}
-        />
-      ) : null}
+      {!empty && workout && (
+        <div className="grid items-start gap-3 lg:grid-cols-12">
+          <div className="lg:col-span-8">
+            {sessionId === null ? (
+              <Intro
+                exerciseCount={workout.exercises.length}
+                setCount={steps.length}
+                pending={startSession.isPending}
+                onStart={async () => {
+                  audio.current ??= createAudioUnlock();
+                  const created = await startSession.mutateAsync({
+                    program_day_id: workout.program_day_id,
+                  });
+                  setSessionId(created.id);
+                }}
+              />
+            ) : rest !== null ? (
+              <RestStage
+                remaining={remaining}
+                progress={progress}
+                next={step}
+                onSkip={() => setRest(null)}
+                onAdjust={(seconds) =>
+                  setRest((current) =>
+                    current === null
+                      ? null
+                      : {
+                          endsAt: Math.max(Date.now() + 1000, current.endsAt + seconds * 1000),
+                          total: Math.max(1, current.total + seconds),
+                        },
+                  )
+                }
+              />
+            ) : allDone ? (
+              <AllDoneStage pending={complete.isPending} onFinish={() => void finish()} />
+            ) : step ? (
+              <SetStage
+                step={step}
+                values={valuesFor(step)}
+                previous={
+                  step.setNumber > 1
+                    ? findLogged(step.exercise.exercise_id, step.setNumber - 1)
+                    : undefined
+                }
+                pending={logSet.isPending}
+                onChange={(patch) =>
+                  updateDraft(
+                    draftKey(step.exercise.exercise_id, step.setNumber),
+                    patch,
+                    valuesFor(step),
+                  )
+                }
+                onSubmit={submit}
+              />
+            ) : null}
+          </div>
 
-      {/* --- İsteğe bağlı: bütün gün --- */}
-      <OtherExercises
-        steps={steps}
-        cursor={cursor}
-        open={showAll}
-        onToggle={() => setShowAll((v) => !v)}
-        findLogged={findLogged}
-        onJump={(index) => {
-          setJump(index);
-          setRest(null);
-          setShowAll(false);
-        }}
-      />
+          <DayMap
+            className="lg:col-span-4"
+            steps={steps}
+            cursor={sessionId === null ? -1 : cursor}
+            findLogged={findLogged}
+            onJump={
+              sessionId === null
+                ? undefined
+                : (index) => {
+                    setJump(index);
+                    setRest(null);
+                  }
+            }
+          />
+        </div>
+      )}
     </Page>
   );
 }
@@ -315,52 +394,37 @@ export default function WorkoutPage() {
 function Progress({ done, total }: { done: number; total: number }) {
   const ratio = total > 0 ? Math.min(1, done / total) : 0;
   return (
-    <div className="flex items-center gap-4">
-      <div className="h-1.5 flex-1 overflow-hidden bg-[var(--color-surface-raised)]">
-        <div
-          className="h-full"
-          style={{
-            width: `${ratio * 100}%`,
-            background: "var(--color-accent)",
-            transition: "width var(--dur-short) var(--ease-out)",
-          }}
-        />
-      </div>
-      <p className="tnum shrink-0 text-sm text-[var(--color-ink-muted)]">
-        {done} / {total} set
-      </p>
+    <div
+      className="mt-6 h-1 w-full overflow-hidden"
+      style={{ background: "oklch(99% 0 0 / 0.14)" }}
+      role="progressbar"
+      aria-label="Tamamlanan setler"
+      aria-valuemin={0}
+      aria-valuemax={total}
+      aria-valuenow={done}
+    >
+      <div
+        className="h-full"
+        style={{
+          width: `${ratio * 100}%`,
+          background: "var(--color-accent)",
+          transition: "width var(--dur-short) var(--ease-out)",
+        }}
+      />
     </div>
   );
 }
 
 /* --- Sahneler ------------------------------------------------------------- */
 
-/** Ortak sahne kabuğu: her durum aynı yükseklikte, aynı hizada. */
-function Stage({ children }: { children: React.ReactNode }) {
+/** Ortak sahne kabuğu: her durum aynı yükseklikte — sahneler arası geçişte
+ *  sayfa zıplamasın. */
+function Stage({ children, night = false }: { children: React.ReactNode; night?: boolean }) {
   return (
-    <section className="card flex min-h-[26rem] flex-col items-center justify-center gap-6 px-8 py-12 text-center">
+    <section
+      className={`${night ? "tile-night" : "card"} flex min-h-[40rem] flex-col items-center justify-center gap-8 px-6 py-12 text-center sm:px-10`}
+    >
       {children}
-    </section>
-  );
-}
-
-/**
- * Fotoğraflı sahne — YALNIZCA başlangıç ve bitiş anları için.
- *
- * Set kaydedilen sahne fotoğrafsız kalıyor ve bu bilinçli: orada sayı
- * okunuyor ve sayı yazılıyor. Çalışma yüzeyinin arkasına görsel koymak,
- * okunması gereken şeyin kontrastını düşürmekten başka bir işe yaramaz.
- * Fotoğraf motive ettiği yerde duruyor — başlamadan önce ve bittikten
- * sonra.
- */
-function PhotoStage({ slug, children }: { slug: string; children: React.ReactNode }) {
-  return (
-    <section className="card overflow-hidden">
-      <Photo slug={slug} ratio="21 / 9" scrim position="center">
-        <div className="flex size-full flex-col items-center justify-center gap-5 px-8 py-12 text-center">
-          {children}
-        </div>
-      </Photo>
     </section>
   );
 }
@@ -377,26 +441,31 @@ function Intro({
   onStart: () => void;
 }) {
   return (
-    <PhotoStage slug="workout-intro">
-      <p className="label on-photo-dark" style={{ color: "oklch(88% 0.01 115)" }}>
-        Bugün
-      </p>
-      <p className="display on-photo-dark text-3xl" style={{ color: "oklch(99% 0 0)" }}>
-        {exerciseCount} hareket · {setCount} set
-      </p>
-      <p
-        className="on-photo-dark max-w-[38ch] text-sm"
-        style={{ color: "oklch(90% 0.01 115)" }}
-      >
-        Setler sırayla gelecek. Ağırlıklar geçmişine ve gücüne göre önceden
-        dolu; onayla ya da düzelt.
-      </p>
-      {/* Voltu koruyor: ekranın tek eylemi bu ve koyu fotoğrafın üstünde
-          voltun kontrastı en yüksek olduğu yer. */}
-      <button className="btn btn-primary px-8 py-3.5 text-base" disabled={pending} onClick={onStart}>
-        {pending ? "Başlatılıyor…" : "Antrenmanı başlat"}
-      </button>
-    </PhotoStage>
+    <section className="card relative min-h-[40rem] overflow-hidden">
+      {/* Kap mutlak konumlu: `Photo` kendi kökünü `relative` yapıyor ve
+          yüksekliğini dışarıdan alıyor; min-height tek başına 0 bırakıyordu. */}
+      <div className="absolute inset-0">
+      <Photo slug="app-chalk" fill scrim position="70% center" className="size-full">
+        <div className="flex size-full flex-col justify-end gap-5 p-8 lg:p-12">
+          <p className="label on-photo-dark" style={{ color: "var(--color-on-night-faint)" }}>
+            Bugün
+          </p>
+          <p className="display on-photo-dark text-4xl" style={{ color: "var(--color-on-night)" }}>
+            {exerciseCount} hareket · {setCount} set
+          </p>
+          <p className="on-photo-dark max-w-[40ch] text-sm" style={{ color: "var(--color-on-night-muted)" }}>
+            Setler sırayla gelecek. Ağırlıklar geçmişine ve gücüne göre önceden dolu; onayla ya
+            da düzelt. Ekran seans boyunca kararmayacak.
+          </p>
+          <div>
+            <button className="btn btn-primary px-8 py-3.5 text-base" disabled={pending} onClick={onStart}>
+              {pending ? "Başlatılıyor…" : "Antrenmanı başlat"}
+            </button>
+          </div>
+        </div>
+      </Photo>
+      </div>
+    </section>
   );
 }
 
@@ -405,50 +474,69 @@ function RestStage({
   progress,
   next,
   onSkip,
+  onAdjust,
 }: {
   remaining: number;
   progress: number;
   next: Step | undefined;
   onSkip: () => void;
+  onAdjust: (seconds: number) => void;
 }) {
-  const circumference = 2 * Math.PI * 46;
+  const circumference = 2 * Math.PI * 47;
   return (
-    <Stage>
-      <p className="label">Dinlenme</p>
+    <Stage night>
+      <p className="label" style={{ color: "var(--color-on-night-faint)" }}>
+        Dinlenme
+      </p>
 
-      <div className="relative grid size-[15rem] place-items-center">
+      <div className="relative grid size-[17rem] place-items-center sm:size-[19rem]">
         <svg viewBox="0 0 100 100" className="absolute inset-0 -rotate-90" aria-hidden>
-          <circle cx="50" cy="50" r="46" fill="none" stroke="var(--color-border)" strokeWidth="3" />
+          <circle cx="50" cy="50" r="47" fill="none" stroke="oklch(99% 0 0 / 0.1)" strokeWidth="2" />
           <circle
             cx="50"
             cy="50"
-            r="46"
+            r="47"
             fill="none"
             stroke="var(--color-accent-deep)"
-            strokeWidth="3"
+            strokeWidth="2"
             strokeLinecap="round"
             strokeDasharray={`${progress * circumference} ${circumference}`}
+            style={{ transition: "stroke-dasharray 250ms linear" }}
           />
         </svg>
-        {/* Sayaç ekranın ortasında ve büyük — akışın o anki tek işi beklemek. */}
-        <p className="figure tnum text-[4.5rem]" role="timer">
+        <p className="display tnum text-[5.5rem] leading-none" role="timer" style={{ color: "var(--color-on-night)" }}>
           {formatClock(remaining)}
         </p>
       </div>
 
+      <div className="flex items-center gap-2">
+        <button type="button" className="btn btn-on-photo tnum" onClick={() => onAdjust(-15)}>
+          −15 sn
+        </button>
+        <button type="button" className="btn btn-on-photo tnum" onClick={() => onAdjust(15)}>
+          +15 sn
+        </button>
+      </div>
+
       {next ? (
         <div>
-          <p className="label">Sırada</p>
-          <p className="mt-1 text-md font-medium">{next.exercise.name}</p>
-          <p className="tnum mt-0.5 text-sm text-[var(--color-ink-muted)]">
+          <p className="label" style={{ color: "var(--color-on-night-faint)" }}>
+            Sırada
+          </p>
+          <p className="display mt-1 text-2xl" style={{ color: "var(--color-on-night)" }}>
+            {next.exercise.name}
+          </p>
+          <p className="tnum mt-0.5 text-sm" style={{ color: "var(--color-on-night-muted)" }}>
             Set {next.setNumber} / {next.exercise.target_sets}
           </p>
         </div>
       ) : (
-        <p className="text-sm text-[var(--color-ink-muted)]">Son set tamamlandı.</p>
+        <p className="text-sm" style={{ color: "var(--color-on-night-muted)" }}>
+          Son set tamamlandı.
+        </p>
       )}
 
-      <button className="btn btn-ghost" onClick={onSkip}>
+      <button className="btn btn-quiet" style={{ color: "var(--color-on-night-muted)" }} onClick={onSkip}>
         Dinlenmeyi atla
       </button>
     </Stage>
@@ -456,12 +544,7 @@ function RestStage({
 }
 
 /**
- * Motorun kararının kısa adı.
- *
- * Motorun tam mesajı üç satır olabiliyor ("İlk kez yapıyorsun. Boyun, kilon
- * ve diğer hareketlerdeki gücüne göre…"). Akış ekranında o kadar metin
- * okunmuyor; kısa etiket ne olduğunu söylüyor, gerekçenin tamamı "?"
- * arkasında duruyor.
+ * Motorun kararının kısa adı. Tam gerekçe "?" arkasında.
  */
 const KIND_LABEL: Record<string, string> = {
   establish_baseline: "Tahmini başlangıç",
@@ -474,12 +557,14 @@ const KIND_LABEL: Record<string, string> = {
 function SetStage({
   step,
   values,
+  previous,
   pending,
   onChange,
   onSubmit,
 }: {
   step: Step;
   values: Draft;
+  previous: WorkoutSet | undefined;
   pending: boolean;
   onChange: (patch: Partial<Draft>) => void;
   onSubmit: () => void;
@@ -487,41 +572,70 @@ function SetStage({
   const { exercise, setNumber } = step;
   const suggestion = exercise.progression;
   const ready = values.reps.trim().length > 0;
+  const stepKg = weightStep(exercise.equipment);
+  const bar = barFor(exercise.equipment);
+  const weight = parseWeight(values.weight);
+
+  const bump = (field: "weight" | "reps", delta: number) => {
+    if (field === "weight") {
+      const base = Number.isFinite(weight) ? weight : 0;
+      onChange({ weight: weightText(Math.max(0, Math.round((base + delta) * 100) / 100)) });
+    } else {
+      const base = Number.parseInt(values.reps, 10);
+      onChange({ reps: String(Math.max(0, (Number.isFinite(base) ? base : 0) + delta)) });
+    }
+  };
 
   return (
     <Stage>
       <div>
         <p className="label">
           Set {setNumber} / {exercise.target_sets}
+          <span className="mx-2 text-[var(--color-border-strong)]">·</span>
+          {exercise.target_rep_min}–{exercise.target_rep_max} tekrar
         </p>
-        {/* 3xl deneyip geri alındı: sıkışık display yüzü o puntoda ekranı
-            domine ediyor ve alanları alta itiyordu. Odak sayılarda olmalı. */}
-        <h2 className="display mt-2 text-xl lg:text-2xl">{exercise.name}</h2>
+        <h2 className="display mt-2 text-2xl lg:text-3xl">{exercise.name}</h2>
+        <SetDots total={exercise.target_sets} current={setNumber} />
       </div>
 
       <form
-        className="flex flex-col items-center gap-6"
+        className="flex w-full flex-col items-center gap-7"
         onSubmit={(event) => {
           event.preventDefault();
           if (ready && !pending) onSubmit();
         }}
       >
-        {/* Alanlar önerilen değerlerle DOLU geliyor; hedefi ayrıca büyük
-            yazmak aynı bilgiyi iki kez göstermek olurdu. Alanların kendisi
-            hedef. */}
-        <div className="flex items-end gap-3">
-          <Field
+        <div className="flex flex-wrap items-end justify-center gap-4 sm:gap-6">
+          <Stepper
             label="kg"
             value={values.weight}
             onChange={(v) => onChange({ weight: v })}
+            onStep={(direction) => bump("weight", direction * stepKg)}
+            stepLabel={`${weightText(stepKg)} kg`}
             autoFocus
           />
-          <Field label="Tekrar" value={values.reps} onChange={(v) => onChange({ reps: v })} />
-          <Field label="RIR" value={values.rir} onChange={(v) => onChange({ rir: v })} />
+          <Stepper
+            label="Tekrar"
+            value={values.reps}
+            onChange={(v) => onChange({ reps: v })}
+            onStep={(direction) => bump("reps", direction)}
+            stepLabel="1 tekrar"
+          />
+          <label className="flex flex-col items-center gap-2">
+            <span className="label">RIR</span>
+            <input
+              inputMode="numeric"
+              value={values.rir}
+              onChange={(event) => onChange({ rir: event.target.value })}
+              className="field display tnum h-20 w-20 text-center text-3xl"
+            />
+          </label>
         </div>
 
-        {suggestion && (
-          <div className="flex flex-col items-center gap-1.5">
+        {bar !== null && Number.isFinite(weight) && weight > 0 && <Plates weight={weight} bar={bar} />}
+
+        <div className="flex flex-col items-center gap-1.5">
+          {suggestion && (
             <span className="flex items-center gap-2">
               <span className="label">{KIND_LABEL[suggestion.kind] ?? "Hedef"}</span>
               <InfoTip label="Bu hedef nasıl belirlendi">
@@ -533,159 +647,273 @@ function SetStage({
                 )}
               </InfoTip>
             </span>
-            {exercise.last_session_summary && (
-              <p className="tnum text-xs text-[var(--color-ink-faint)]">
-                Geçen sefer: {exercise.last_session_summary}
-              </p>
-            )}
-            {suggestion.warnings.length > 0 && (
-              <p className="max-w-[40ch] text-xs" style={{ color: "var(--color-warning)" }}>
-                {suggestion.warnings[0]}
-              </p>
-            )}
-          </div>
-        )}
+          )}
+          {exercise.last_session_summary && (
+            <p className="tnum text-xs text-[var(--color-ink-faint)]">
+              Geçen sefer: {exercise.last_session_summary}
+            </p>
+          )}
+          {suggestion && suggestion.warnings.length > 0 && (
+            <p className="max-w-[40ch] text-xs" style={{ color: "var(--color-warning)" }}>
+              {suggestion.warnings[0]}
+            </p>
+          )}
+        </div>
 
-        <button
-          type="submit"
-          className="btn btn-primary px-8 py-3.5 text-base"
-          disabled={!ready || pending}
-        >
-          {pending ? "Kaydediliyor…" : "Seti kaydet"}
-        </button>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <button type="submit" className="btn btn-primary px-10 py-4 text-base" disabled={!ready || pending}>
+            {pending ? "Kaydediliyor…" : "Seti kaydet"}
+          </button>
+          {previous && (
+            <button
+              type="button"
+              className="btn btn-ghost py-4"
+              onClick={() =>
+                onChange({
+                  weight: weightText(previous.weight_kg),
+                  reps: String(previous.reps),
+                  rir: previous.rir === null ? "" : String(previous.rir),
+                })
+              }
+            >
+              Önceki seti tekrarla
+            </button>
+          )}
+        </div>
       </form>
     </Stage>
   );
 }
 
+function SetDots({ total, current }: { total: number; current: number }) {
+  return (
+    <div className="mt-4 flex justify-center gap-1.5" aria-hidden>
+      {Array.from({ length: total }, (_, i) => (
+        <span
+          key={i}
+          className="h-1 w-6"
+          style={{
+            background:
+              i + 1 < current
+                ? "var(--color-accent-deep)"
+                : i + 1 === current
+                  ? "var(--color-ink)"
+                  : "var(--color-border-strong)",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function Stepper({
+  label,
+  value,
+  onChange,
+  onStep,
+  stepLabel,
+  autoFocus,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  onStep: (direction: 1 | -1) => void;
+  stepLabel: string;
+  autoFocus?: boolean;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <label className="label" htmlFor={`field-${label}`}>
+        {label}
+      </label>
+      <div className="flex items-stretch">
+        <button
+          type="button"
+          aria-label={`${stepLabel} azalt`}
+          onClick={() => onStep(-1)}
+          className="grid w-12 place-items-center border border-r-0 border-[var(--color-border-strong)] text-xl text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-ink)]"
+          style={{ transitionDuration: "var(--dur-micro)" }}
+        >
+          −
+        </button>
+        <input
+          id={`field-${label}`}
+          aria-label={label}
+          // inputMode="decimal": sayısal klavye açar ama virgül de yazılabilir.
+          inputMode="decimal"
+          value={value}
+          autoFocus={autoFocus}
+          onChange={(event) => onChange(event.target.value)}
+          onKeyDown={(event) => {
+            // Klavyeyle: yukarı/aşağı ok adım kadar değiştiriyor.
+            if (event.key === "ArrowUp") {
+              event.preventDefault();
+              onStep(1);
+            } else if (event.key === "ArrowDown") {
+              event.preventDefault();
+              onStep(-1);
+            }
+          }}
+          className="field display tnum h-20 w-32 px-1 text-center text-4xl"
+        />
+        <button
+          type="button"
+          aria-label={`${stepLabel} artır`}
+          onClick={() => onStep(1)}
+          className="grid w-12 place-items-center border border-l-0 border-[var(--color-border-strong)] text-xl text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-ink)]"
+          style={{ transitionDuration: "var(--dur-micro)" }}
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Bara takılacak plakalar — bir taraf, gerçek oranlarda çizilmiş. */
+function Plates({ weight, bar }: { weight: number; bar: number }) {
+  const load = plateLoad(weight, bar);
+  if (load.belowBar) {
+    return <p className="text-xs text-[var(--color-ink-faint)]">Boş bar {bar} kg — hedef bardan hafif.</p>;
+  }
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="flex items-center gap-1" aria-hidden>
+        <span className="h-2 w-16 bg-[var(--color-border-strong)]" />
+        {load.perSide.map((plate, i) => (
+          <span
+            key={i}
+            className="block"
+            style={{
+              width: plate >= 10 ? 10 : 7,
+              height: 18 + Math.sqrt(plate) * 9,
+              background: plate >= 20 ? "var(--color-ink)" : plate >= 10 ? "var(--color-ink-muted)" : "var(--color-ink-faint)",
+            }}
+          />
+        ))}
+        <span className="h-2 w-5 bg-[var(--color-border-strong)]" />
+      </div>
+      <p className="tnum text-xs text-[var(--color-ink-muted)]">
+        {load.perSide.length > 0 ? (
+          <>
+            Bir tarafa: {load.perSide.map((p) => weightText(p)).join(" + ")} kg
+            {bar > 0 && <span className="text-[var(--color-ink-faint)]"> · bar {bar} kg</span>}
+          </>
+        ) : (
+          `Yalnızca bar (${bar} kg)`
+        )}
+        {load.remainder > 0 && (
+          <span style={{ color: "var(--color-warning)" }}> · {weightText(load.remainder)} kg plakayla tam oturmuyor</span>
+        )}
+      </p>
+    </div>
+  );
+}
+
 function AllDoneStage({ pending, onFinish }: { pending: boolean; onFinish: () => void }) {
   return (
-    <Stage>
+    <Stage night>
       <span
         aria-hidden
-        className="animate-check grid size-14 place-items-center rounded-full"
+        className="animate-check grid size-16 place-items-center rounded-full"
         style={{ background: "var(--color-accent)" }}
       >
-        <svg
-          width="30"
-          height="30"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="var(--color-ink)"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-accent)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
           <path d="M5 13l4 4L19 7" />
         </svg>
       </span>
-      <p className="display text-3xl">Bütün setler tamam</p>
-      <button
-        className="btn btn-primary px-8 py-3.5 text-base"
-        disabled={pending}
-        onClick={onFinish}
-      >
+      <p className="display text-4xl" style={{ color: "var(--color-on-night)" }}>
+        Bütün setler tamam
+      </p>
+      <button className="btn btn-on-photo px-8 py-3.5 text-base" disabled={pending} onClick={onFinish}>
         {pending ? "Kapatılıyor…" : "Antrenmanı bitir"}
       </button>
     </Stage>
   );
 }
 
-function Field({
-  label,
-  value,
-  onChange,
-  autoFocus,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  autoFocus?: boolean;
-}) {
-  return (
-    <label className="flex flex-col items-center gap-1.5">
-      <span className="label">{label}</span>
-      <input
-        // inputMode="decimal": sayısal klavye açar ama virgül de yazılabilir.
-        // type="number" kullanılmıyor — iOS'ta ok tuşları alanı daraltıyor.
-        inputMode="decimal"
-        value={value}
-        autoFocus={autoFocus}
-        onChange={(event) => onChange(event.target.value)}
-        className="field figure h-16 w-[6.5rem] text-center text-xl"
-      />
-    </label>
-  );
-}
+/* --- Günün haritası --------------------------------------------------------- */
 
-/* --- İsteğe bağlı tam program --------------------------------------------- */
-
-function OtherExercises({
+function DayMap({
+  className,
   steps,
   cursor,
-  open,
-  onToggle,
   findLogged,
   onJump,
 }: {
+  className: string;
   steps: Step[];
   cursor: number;
-  open: boolean;
-  onToggle: () => void;
   findLogged: (exerciseId: string, setNumber: number) => WorkoutSet | undefined;
-  onJump: (index: number) => void;
+  onJump?: (index: number) => void;
 }) {
-  // Hareket başına grupla: liste set değil hareket düzeyinde okunuyor.
+  // Hareket başına grupla: harita set değil hareket düzeyinde okunuyor.
   const byExercise = new Map<number, { exercise: PlannedExercise; firstStep: number }>();
-  steps.forEach((step, index) => {
-    if (!byExercise.has(step.exerciseIndex)) {
-      byExercise.set(step.exerciseIndex, { exercise: step.exercise, firstStep: index });
+  steps.forEach((s, index) => {
+    if (!byExercise.has(s.exerciseIndex)) {
+      byExercise.set(s.exerciseIndex, { exercise: s.exercise, firstStep: index });
     }
   });
-
   const current = steps[cursor]?.exerciseIndex;
 
   return (
-    <Section bare>
-      <button className="btn btn-quiet -ml-2.5" onClick={onToggle} aria-expanded={open}>
-        {open ? "Diğer hareketleri gizle" : "Diğer hareketleri gör"}
-      </button>
-
-      {open && (
-        <ul className="mt-3 divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
-          {[...byExercise.entries()].map(([exerciseIndex, { exercise, firstStep }]) => {
-            const done = Array.from({ length: exercise.target_sets }, (_, i) =>
-              findLogged(exercise.exercise_id, i + 1),
-            ).filter(Boolean).length;
-            const isCurrent = exerciseIndex === current;
-
-            return (
-              <li key={exercise.program_exercise_id}>
+    <aside className={`card p-6 lg:sticky lg:top-6 ${className}`} aria-label="Günün hareketleri">
+      <p className="label">Günün hareketleri</p>
+      <ol className="mt-4 flex flex-col">
+        {[...byExercise.entries()].map(([exerciseIndex, { exercise, firstStep }], order) => {
+          const done = Array.from({ length: exercise.target_sets }, (_, i) =>
+            findLogged(exercise.exercise_id, i + 1),
+          ).filter(Boolean).length;
+          const isCurrent = exerciseIndex === current;
+          const content = (
+            <>
+              <span
+                className="display tnum w-7 shrink-0 text-lg"
+                style={{ color: isCurrent ? "var(--color-ink)" : "var(--color-ink-faint)" }}
+              >
+                {String(order + 1).padStart(2, "0")}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className={`block truncate text-sm ${isCurrent ? "font-semibold" : ""}`}>{exercise.name}</span>
+                <span className="mt-1.5 flex gap-1" aria-hidden>
+                  {Array.from({ length: exercise.target_sets }, (_, i) => (
+                    <span
+                      key={i}
+                      className="h-1 flex-1"
+                      style={{
+                        maxWidth: "1.5rem",
+                        background: i < done ? "var(--color-accent-deep)" : "var(--color-border-strong)",
+                      }}
+                    />
+                  ))}
+                </span>
+              </span>
+              <span className="tnum shrink-0 text-xs text-[var(--color-ink-muted)]">
+                {done} / {exercise.target_sets} set
+              </span>
+            </>
+          );
+          return (
+            <li key={exercise.program_exercise_id} className="border-t border-[var(--color-border)] first:border-t-0">
+              {onJump ? (
                 <button
                   onClick={() => onJump(firstStep)}
-                  className="flex w-full items-center gap-4 py-3 text-left transition-colors hover:bg-[var(--color-surface-raised)]"
-                  style={{ transitionDuration: "var(--dur-micro)" }}
+                  className="-mx-3 flex w-[calc(100%+1.5rem)] items-center gap-3 px-3 py-3.5 text-left transition-colors hover:bg-[var(--color-surface-raised)]"
+                  style={{
+                    transitionDuration: "var(--dur-micro)",
+                    boxShadow: isCurrent ? "inset 3px 0 0 var(--color-accent-deep)" : undefined,
+                  }}
                 >
-                  <span
-                    aria-hidden
-                    className="h-6 w-[3px] shrink-0"
-                    style={{
-                      background: isCurrent ? "var(--color-accent-deep)" : "transparent",
-                    }}
-                  />
-                  <span className={`min-w-0 flex-1 truncate text-sm ${isCurrent ? "font-medium" : ""}`}>
-                    {exercise.name}
-                  </span>
-                  <span className="tnum shrink-0 text-xs text-[var(--color-ink-muted)]">
-                    {done} / {exercise.target_sets} set
-                  </span>
+                  {content}
                 </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </Section>
+              ) : (
+                <div className="flex items-center gap-3 py-3.5">{content}</div>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </aside>
   );
 }
 
@@ -694,80 +922,76 @@ function OtherExercises({
 function Celebration({
   records,
   doneCount,
+  volume,
 }: {
   records: PersonalRecordRow[];
   doneCount: number;
+  volume: number;
 }) {
   return (
     <Page>
-      <PageHeader title="Antrenman bitti" />
-
-      {/* Bitiş anı ekranın en az veri taşıyan yeri ve en çok hak edilmiş
-          olanı: fotoğraf burada kutlamanın kendisi. */}
-      <section className="card overflow-hidden">
-        <Photo slug="celebration" ratio="2 / 1" scrim>
-          <div className="flex size-full flex-col justify-end gap-2 p-6 lg:p-10">
-            <p className="display text-2xl" style={{ color: "oklch(99% 0 0)" }}>
-              {doneCount} set tamamlandı
-            </p>
-            <p className="text-sm" style={{ color: "oklch(90% 0.01 115)" }}>
-              Hacim birikiyor. Bir sonraki seansta motor ağırlıkları buna göre
-              önerecek.
-            </p>
-          </div>
-        </Photo>
-      </section>
+      <Hero
+        photo="app-plates"
+        size="lg"
+        eyebrow="Tamamlandı"
+        title="Antrenman bitti"
+        lead="Hacim birikiyor. Bir sonraki seansta motor ağırlıkları buna göre önerecek."
+        actions={
+          <>
+            <Link href="/" className="btn btn-primary px-6 py-3">
+              Panele dön
+            </Link>
+            <Link href="/progress" className="btn btn-on-photo px-6 py-3">
+              İlerlemeyi gör
+            </Link>
+          </>
+        }
+      >
+        <HeroStats>
+          <HeroStat label="Set" value={doneCount} foot={`${doneCount} set tamamlandı`} />
+          <HeroStat label="Tonaj" value={volume > 0 ? fmt(volume, 0) : "—"} unit={volume > 0 ? "kg" : undefined} />
+          <HeroStat label="Rekor" value={records.length} foot={records.length > 0 ? "yeni" : "bu seansta yok"} />
+        </HeroStats>
+      </Hero>
 
       {records.length > 0 ? (
-        <Section title={`${records.length} yeni rekor`}>
-          <ul className="divide-y divide-[var(--color-border)]">
+        <section className="tile-night p-6 lg:p-8">
+          <h2 className="display text-2xl" style={{ color: "var(--color-on-night)" }}>
+            {records.length} yeni rekor
+          </h2>
+          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
             {records.map((record, i) => (
-              <li key={i} className="flex items-center justify-between gap-4 py-3">
-                <span className="flex items-center gap-2.5 text-sm">
+              <li key={i} className="flex items-center justify-between gap-4 p-4" style={{ background: "var(--color-night-raised)" }}>
+                <span className="flex items-center gap-2.5 text-sm" style={{ color: "var(--color-on-night)" }}>
                   <span
                     aria-hidden
                     className="animate-check grid size-5 shrink-0 place-items-center rounded-full"
                     style={{ background: "var(--color-accent)" }}
                   >
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="var(--color-ink)"
-                      strokeWidth="3.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-accent)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M5 13l4 4L19 7" />
                     </svg>
                   </span>
                   {prLabel(record.type)}
                 </span>
-                <span className="tnum text-sm">
-                  {fmt(record.value, 1)} {prUnit(record.type)}
-                  {record.reps !== null && ` × ${record.reps}`}
+                <span className="display tnum text-2xl" style={{ color: "var(--color-on-night)" }}>
+                  {fmt(record.value, 1)}{" "}
+                  <span className="font-sans text-xs font-normal" style={{ color: "var(--color-on-night-muted)" }}>
+                    {prUnit(record.type)}
+                    {record.reps !== null && ` × ${record.reps}`}
+                  </span>
                 </span>
               </li>
             ))}
           </ul>
-        </Section>
+        </section>
       ) : (
-        <Section>
+        <section className="card p-6 lg:p-8">
           <p className="text-sm text-[var(--color-ink-muted)]">
             Bu seansta rekor kırılmadı — ama {doneCount} set tamamladın, hacim birikiyor.
           </p>
-        </Section>
+        </section>
       )}
-
-      <div className="flex gap-3">
-        <Link href="/" className="btn btn-primary">
-          Panele dön
-        </Link>
-        <Link href="/progress" className="btn btn-ghost">
-          İlerlemeyi gör
-        </Link>
-      </div>
     </Page>
   );
 }

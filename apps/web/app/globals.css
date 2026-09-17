@@ -41,52 +41,80 @@
    ============================================================================ */
 
 @theme {
-  /* --- Yüzeyler: açıktan koyuya ---
-     Saf beyaz (#fff) bilinçli olarak yok; kırık beyaz göz yormuyor ve
-     üstündeki beyaz kartlar ayırt edilebiliyor. */
-  --color-ground: oklch(97.5% 0.006 115); /* sayfa zemini */
-  --color-surface: oklch(99.2% 0.004 115); /* kart — zeminden AÇIK */
-  --color-surface-raised: oklch(95% 0.009 115); /* içe gömülü alan, hover */
-  --color-border: oklch(90% 0.008 115); /* ince çizgi */
-  --color-border-strong: oklch(80% 0.011 115); /* girdi kenarı, ayırıcı */
+  /* ==========================================================================
+     KOYU TEMA
+     ==========================================================================
+     Uygulama giriş ekranının gecesinde yaşıyor: karanlık salon, sıcak pencere
+     ışığı, volt. Önce kırık beyaz bir kağıttı ve giriş ekranından içeri
+     girince başka bir uygulamaya geçilmiş gibi oluyordu.
+
+     Zemin saf siyah DEĞİL: salonun gölgesi — hue 115'ten eser kroma, %13
+     parlaklık. Saf siyahın yanında volt ve fotoğraflar sert kesiliyordu;
+     sıcak bir koyu gri onları içine alıyor.
+
+     Derinlik açık temanın TERSİNE kuruluyor: yükseldikçe AÇILIYOR (zemin <
+     kart < gömülü alan). Gölge yok; koyuda gölge zaten görünmüyor.
+
+     Açık tema bir kapsam olarak duruyor (`.theme-light`): giriş ekranında
+     telefonun ekranı, videonun içindeki ekranla aynı renkte olmak zorunda. */
+
+  /* --- Yüzeyler: koyudan açığa --- */
+  --color-ground: oklch(13.5% 0.008 115); /* sayfa zemini */
+  --color-surface: oklch(18% 0.009 115); /* kart — zeminden AÇIK */
+  --color-surface-raised: oklch(22.5% 0.011 115); /* gömülü alan, hover */
+  --color-border: oklch(26.5% 0.01 115); /* ince çizgi */
+  --color-border-strong: oklch(36% 0.012 115); /* girdi kenarı, ayırıcı */
 
   /* --- Metin ---
-     Saf siyah yok: 21% parlaklık kağıt üzerinde daha yumuşak okunuyor ve
-     çapa hue'sundan gelen eser kroma metni sayfayla aynı aileye sokuyor. */
-  --color-ink: oklch(21% 0.014 115); /* ana metin */
-  --color-ink-muted: oklch(46% 0.011 115); /* ikincil metin, etiket */
-  --color-ink-faint: oklch(60% 0.010 115); /* ipucu, pasif */
+     Saf beyaz yok: %95 parlaklık koyu zeminde göz yormuyor. */
+  --color-ink: oklch(95% 0.006 115); /* ana metin */
+  --color-ink-muted: oklch(75% 0.01 115); /* ikincil metin, etiket */
+  --color-ink-faint: oklch(58% 0.01 115); /* ipucu, pasif */
 
   /* --- Volt ---
-     Kural 1'i oku. Bu renk metin taşıyamaz. */
+     Koyu zeminde volt metin olarak da okunuyor, ama kural 1 duruyor: volt
+     DOLGU. Metin ve ince işaretler `accent-deep` — koyu temada voltun biraz
+     yumuşatılmış, göz almayan hâli. */
   --color-accent: oklch(90% 0.19 118); /* dolgu */
-  --color-accent-hover: oklch(86% 0.19 118); /* dolgu, hover */
-  --color-accent-deep: oklch(56% 0.14 118); /* GÖRÜNÜR: odak, bağlantı, işaret */
-  --color-accent-wash: oklch(96.5% 0.05 118); /* çok soluk zemin yıkaması */
+  --color-accent-hover: oklch(94% 0.16 118); /* dolgu, hover */
+  --color-accent-deep: oklch(85% 0.16 118); /* GÖRÜNÜR: odak, bağlantı, işaret */
+  --color-accent-wash: oklch(27% 0.06 118); /* çok soluk zemin yıkaması */
+  /* Volt dolgunun üstündeki yazı. Koyu temada `ink` açık renk; volt üstünde
+     okunmuyor. */
+  --color-on-accent: oklch(17% 0.02 118);
 
   /* --- İkincil durumlar ---
      `success` YOK, bilinçli. Kural 3. */
-  --color-warning: oklch(72% 0.15 70); /* kehribar — "dikkat", hata değil */
-  --color-danger: oklch(55% 0.19 25); /* SADECE gerçek hatalar */
+  --color-warning: oklch(78% 0.15 70); /* kehribar — "dikkat", hata değil */
+  --color-warning-wash: oklch(27% 0.05 70);
+  --color-danger: oklch(68% 0.19 25); /* SADECE gerçek hatalar */
 
   /* --- Isı ölçeği ---
-     TEK bir ölçek, iki yerde kullanılıyor: kas haritası ve tutarlılık ızgarası.
-     İkisi de ısı haritası; ayrı ölçekler kurmak aynı rengin iki ekranda farklı
-     şey anlatması demek olurdu.
+     TEK bir ölçek: kas haritası, tutarlılık ızgarası, ağrı. Koyu zeminde
+     çalışılan yer YANIYOR: sönük gri → volt. Hem parlaklık hem doygunluk
+     birlikte artıyor; gri ekranda ve renk körlüğünde sıra korunuyor. */
+  --color-heat-0: oklch(24% 0.01 115); /* hiç */
+  --color-heat-1: oklch(40% 0.08 118);
+  --color-heat-2: oklch(58% 0.13 118);
+  --color-heat-3: oklch(74% 0.17 118);
+  --color-heat-4: oklch(90% 0.19 118); /* zirve */
+  --color-heat-over: oklch(78% 0.15 70); /* hedefin belirgin üstü — kehribar */
 
-     Ölçek hem parlaklık hem doygunlukta ilerliyor. Yalnızca doygunluk
-     artırmak yetmiyordu: volt zaten %90 parlaklıkta, ondan açık zeminde
-     beş basamak çıkarmaya çalışınca basamaklar birbirine yapışıyor ve 11
-     piksellik karelerde ayırt edilemiyordu. İki eksen birlikte değişince
-     hem renkli hem gri ekranda okunuyor.
+  /* --- Gece yüzeyleri ---
+     Panolardaki koyu karolar zeminden de koyu: derin bir kuyu. Grafikler ve
+     büyük sayılar orada ışık gibi duruyor. */
+  --color-night: oklch(9.5% 0.006 115); /* koyu karo, bant zemini */
+  --color-night-raised: oklch(16% 0.01 115); /* koyu karoda iç yüzey */
+  --color-night-line: oklch(99% 0 0 / 0.09); /* koyu zeminde çizgi */
+  --color-on-night: oklch(97% 0.004 115); /* koyu zeminde ana metin */
+  --color-on-night-muted: oklch(80% 0.01 115); /* koyu zeminde ikincil metin */
+  --color-on-night-faint: oklch(64% 0.01 115); /* koyu zeminde ipucu */
 
-     Tek hue olduğu için renk körlüğünde de sıralama korunuyor. */
-  --color-heat-0: oklch(94.5% 0.006 115); /* hiç */
-  --color-heat-1: oklch(94% 0.07 118);
-  --color-heat-2: oklch(92% 0.12 118);
-  --color-heat-3: oklch(89% 0.17 118);
-  --color-heat-4: oklch(85% 0.20 118); /* zirve */
-  --color-heat-over: oklch(72% 0.15 70); /* hedefin belirgin üstü — kehribar */
+  /* Kas haritası sahnesi. */
+  --color-heat-night-0: oklch(30% 0.012 115); /* hiç */
+  --color-heat-night-1: oklch(46% 0.08 118);
+  --color-heat-night-2: oklch(66% 0.15 118);
+  --color-silhouette: oklch(22% 0.01 115); /* kas olmayan bölgeler */
 
   /* --- Tipografi: iki aile ---
      Inter BİLİNÇLİ olarak yok. Her modelin varsayılanı olduğu için kullanılan
@@ -148,6 +176,29 @@
   --dur-blur-out: 560ms;
 }
 
+/* --- Açık kapsam ---
+   Koyu temanın içinde açık kalması ZORUNLU tek yer: giriş ekranında
+   telefonun ekranı. Videodaki telefon ekranı açık renkte (bulanık form
+   görüntüsü) ve üstüne oturan gerçek form aynı renkte olmalı; aksi hâlde
+   form belirirken ekran bir anda kararıyordu. Belirteçler yeniden
+   tanımlanıyor, bileşenler değişmiyor. */
+.theme-light {
+  --color-ground: oklch(97.5% 0.006 115);
+  --color-surface: oklch(99.2% 0.004 115);
+  --color-surface-raised: oklch(95% 0.009 115);
+  --color-border: oklch(90% 0.008 115);
+  --color-border-strong: oklch(80% 0.011 115);
+  --color-ink: oklch(21% 0.014 115);
+  --color-ink-muted: oklch(46% 0.011 115);
+  --color-ink-faint: oklch(60% 0.010 115);
+  --color-accent-deep: oklch(56% 0.14 118);
+  --color-accent-wash: oklch(96.5% 0.05 118);
+  --color-warning: oklch(72% 0.15 70);
+  --color-danger: oklch(55% 0.19 25);
+  color-scheme: light;
+  color: var(--color-ink);
+}
+
 /* --- Katman sırası: altı isimli seviye, serbest sayı yok --- */
 :root {
   --z-base: 1;
@@ -157,14 +208,18 @@
   --z-modal: 400;
   --z-toast: 500;
   --z-tooltip: 600;
+
+  /* Üst çubuğun yüksekliği. Her ekranın giriş bandı çubuğun ARKASINDAN
+     başlıyor ve içeriğini bu kadar aşağıdan başlatıyor. */
+  --bar-height: 4.5rem;
 }
 
 @layer base {
   html {
     background: var(--color-ground);
-    /* Açık tema tek tema. Koyu sonradan eklenirse hue sabit kalır,
-       yalnızca parlaklık ve kroma değişir. */
-    color-scheme: light;
+    /* Koyu tema. Tarayıcının kendi denetimleri (tarih seçici, kaydırma
+       çubuğu) da koyu çizilsin. */
+    color-scheme: dark;
     /* Taşan dekoratif öğeler sayfayı yatay kaydırtmasın.
        `clip` kullanılıyor, `hidden` değil: hidden yeni bir kaydırma bağlamı
        yaratıp `position: sticky`'yi bozuyor. */
@@ -258,7 +313,7 @@
 
   ::selection {
     background: var(--color-accent);
-    color: var(--color-ink);
+    color: var(--color-on-accent);
   }
 }
 
@@ -274,10 +329,10 @@
 
   /* Yalnızca gerçekten yükselmiş yüzeyler için (menü, modal). Tek gölge. */
   .card-raised {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border-strong);
     border-radius: var(--radius-lg);
-    box-shadow: 0 1px 2px oklch(21% 0.014 115 / 0.05);
+    box-shadow: 0 18px 48px -18px oklch(0% 0 0 / 0.7);
   }
 
   .btn {
@@ -307,7 +362,7 @@
   /* Birincil: volt dolgu, ink yazı. Kural 1'in tek doğru uygulaması. */
   .btn-primary {
     background: var(--color-accent);
-    color: var(--color-ink);
+    color: var(--color-on-accent);
     font-weight: 600;
   }
   .btn-primary:hover {
@@ -349,7 +404,8 @@
     display: inline-flex;
     gap: 2px;
     padding: 3px;
-    background: var(--color-surface-raised);
+    background: var(--color-ground);
+    box-shadow: inset 0 0 0 1px var(--color-border);
     border-radius: var(--radius-md);
   }
 
@@ -369,10 +425,10 @@
 
   .seg-item[aria-selected="true"],
   .seg-item[aria-pressed="true"] {
-    background: var(--color-surface);
+    background: var(--color-surface-raised);
     color: var(--color-ink);
     font-weight: 500;
-    box-shadow: 0 1px 2px oklch(21% 0.014 115 / 0.06);
+    box-shadow: inset 0 0 0 1px var(--color-border-strong);
   }
 
   /* Seçenek satırı — "hangisi sana uyuyor" soruları (tanışma akışı).
@@ -532,6 +588,49 @@
      üzerinde ikisi de kayboluyor. Bu varyant camdan: saydam zemin, açık
      kenarlık, açık metin. Volt birincil düğme fotoğraf üstünde zaten
      okunuyor, onun karşılığına gerek yok. */
+  /* --- Gece karosu ---
+     Panoların koyu karoları. Grafikler ve büyük sayılar koyu zeminde daha
+     parlak okunuyor ve volt orada gerçekten ışık gibi duruyor; açık kartların
+     arasına serpilince bento tek renk bir ızgara olmaktan çıkıyor. */
+  .tile-night {
+    background: var(--color-night);
+    border: 1px solid var(--color-night-line);
+    color: var(--color-on-night);
+  }
+
+  /* Fotoğrafın ya da gece karosunun üstündeki cam çip — giriş ekranının üst
+     çubuğuyla aynı malzeme. */
+  .glass {
+    background: oklch(12% 0.01 115 / 0.42);
+    border: 1px solid oklch(99% 0 0 / 0.14);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    color: var(--color-on-night);
+  }
+
+  /* Bağlantı olan karo: üstüne gelince hafifçe kalkıyor. Gölge değil
+     konum — açık temada gölge yığmak kartları plastiğe çeviriyor. */
+  .lift {
+    transition:
+      transform var(--dur-short) var(--ease-out),
+      border-color var(--dur-short) var(--ease-out);
+  }
+  .lift:hover {
+    transform: translateY(-3px);
+    border-color: var(--color-border-strong);
+  }
+
+  /* Asistan yazarken: üç nokta yerine tek, nefes alan bir çizgi. Yer
+     kaplamıyor ve metin gelince yerine hiçbir şey kaymıyor. */
+  .thinking {
+    display: inline-block;
+    width: 1.25rem;
+    height: 2px;
+    background: var(--color-ink-faint);
+    transform-origin: left center;
+    animation: thinking 1.1s var(--ease-out) infinite alternate;
+  }
+
   .btn-on-photo {
     background: transparent;
     border: 1px solid oklch(99% 0 0 / 0.45);
@@ -543,7 +642,7 @@
   }
 
   .badge-warning {
-    background: oklch(96% 0.04 70);
+    background: var(--color-warning-wash);
     color: var(--color-warning);
   }
 }
@@ -563,6 +662,23 @@
     opacity: 1;
     transform: none;
   }
+}
+
+/* Giriş bandının fotoğrafı açılışta çok yavaş yerine oturuyor — giriş
+   ekranındaki kameranın ekranın içinde de sürdüğü hissi. Ölçek yalnızca
+   %6'dan geliyor ve süre uzun: fark edilmeyecek kadar, ama sahne "canlı". */
+@keyframes hero-settle {
+  from {
+    transform: scale(1.06);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.hero-media {
+  animation: hero-settle 2.4s var(--ease-out) both;
+  transform-origin: 60% 50%;
 }
 
 /* Set tamamlandığında tek seferlik onay. Taşma yok — ölçek 1'e oturuyor. */
@@ -688,6 +804,17 @@
 
 .animate-tick {
   animation: tick var(--dur-short) var(--ease-out);
+}
+
+@keyframes thinking {
+  from {
+    transform: scaleX(0.25);
+    opacity: 0.5;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
 }
 
 /* Hareket azaltma tercihi: uzamsal hareket tamamen kalkıyor, yalnızca

@@ -53,6 +53,9 @@ export default function CoachPage() {
   return (
     <Page>
       <PageHeader
+        photo="app-review"
+        position="right center"
+        eyebrow="Asistan"
         title="Koç Raporu"
         info={
           <>

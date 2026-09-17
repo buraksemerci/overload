@@ -5,7 +5,7 @@ Bu klasördeki dosyalar `<Photo slug="..." />` bileşeni tarafından
 altındaki nötr işlem katmanı görünüyor. Yani bir fotoğraf eklemek dosyayı bu
 klasöre doğru adla atmaktan ibaret; kod değişmiyor.
 
-Şu an 19 dosya, toplam ~1.3 MB.
+Şu an 45 dosya, toplam ~6 MB.
 
 ## Hazırlama
 
@@ -118,6 +118,44 @@ tekrarlandı. Kesme yok; kamera boydan boya tek seferde ilerliyor.
 Bu dördü yalnızca **yedek**: video yüklenemezse anlatı onlara düşüyor.
 Videonun kendisi `scripts/story-video.mjs` ile hazırlanıyor.
 
+### Ekran bantları
+
+Oturum açıldıktan sonraki **her ekran** fotoğraflı bir bantla (`Hero`) açılıyor.
+Kareler giriş anlatısıyla **aynı salondan**: bir kısmı Higgsfield ile aynı mekân
+tarifiyle üretildi, bir kısmı anlatı videosunun geçiş parçalarından alınan
+kareler. Kaynaklar `~/Downloads/hf-app` ve `~/Downloads/hf2`; hazırlama
+`node scripts/app-photos.mjs` (2400×1350, kalite 80). Hiçbir karede yüz
+seçilmiyor, logo yok.
+
+| Slug | Kare | Nerede |
+|---|---|---|
+| `app-grip` | bara kavrayan eller | Menü: Antrenman; antrenman sırasında bant |
+| `app-squat` | squat rafı | Antrenman başlamadan; pano |
+| `app-chalk` | tebeşirli eller | Antrenman girişi; Geçmiş |
+| `app-plates` | plaka yığını | Bitiş; İlerleme; pano |
+| `app-gym-wide` | salonun tamamı | Program düzenleme; pano (program yok) |
+| `app-stretch` | esneme | Ağrı; pano (dinlenme günü) |
+| `app-body` | sırt siluet | Menü: Vücut; Vücut özeti |
+| `app-dumbbells` | dambıl rafı | Kas haritası; Hareketler |
+| `app-scale` | tartı | Kilo |
+| `app-shoes` | ayakkabı bağlama | Programlar |
+| `app-meal-bar` | bardaki öğün | Menü: Beslenme; Beslenme |
+| `app-supplements` | takviye kavanozları | Takviyeler |
+| `app-review` | defter ve telefon | Menü: Asistan; Koç raporu; program onayı |
+| `app-cafe` | salonun kafesi (hareket bulanık) | Asistan |
+| `app-entry` | salon girişi | Hesap |
+
+### Öğünler
+
+Beslenme ekranındaki öğün kartları. 1200×800, aynı bar tezgâhında.
+
+| Slug | Öğün |
+|---|---|
+| `meal-breakfast` | kahvaltı |
+| `meal-lunch` | öğle |
+| `meal-snack` | ara öğün |
+| `meal-dinner` | akşam |
+
 ## Nereden
 
 - **Unsplash** — <https://unsplash.com/license>
@@ -133,11 +171,12 @@ Videonun kendisi `scripts/story-video.mjs` ile hazırlanıyor.
    harekete odaklı kareler bu sorunu kaldırıyor.
 2. **Ticari markayı** kapsamıyor — karede logo olmasın.
 
-## Ana panelde ve canlı sayıların arkasında fotoğraf yok
+## Canlı sayılar fotoğrafın üstünde — perdeyle
 
-Kasıtlı. Ana panel, beslenme günlüğü ve ilerleme ekranları canlı sayı
-gösteriyor; fotoğraf arkalarına konunca okunabilirlik düşüyor ve ekran "o an
-ne yapmalıyım" sorusunu yanıtlamaktan çıkıyor.
+Önceki kural "sayı olan yerde fotoğraf yok"du. Koyu temayla birlikte
+değişti: bantlarda büyük sayılar fotoğrafın üstünde duruyor, ama üç yönlü bir
+perdenin (alttan, soldan, üstten) arkasında ve dar ekranda ek bir düz
+karartmayla. Sayılar bantın alt yarısında, perdenin en koyu olduğu yerde.
 
-Fotoğraflar gezinmede, giriş ekranında, kart kapaklarında ve boş
-durumlarda — yani okunacak sayının olmadığı yerlerde.
+Bandın altındaki karolarda (grafikler, listeler, formlar) fotoğraf **yok**:
+orada okunan şey veri ve zemin düz kalıyor.

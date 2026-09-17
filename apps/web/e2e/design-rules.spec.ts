@@ -13,6 +13,7 @@ const SCREENS = [
   "/",
   "/workout",
   "/nutrition",
+  "/body",
   "/progress",
   "/programs",
   "/exercises",

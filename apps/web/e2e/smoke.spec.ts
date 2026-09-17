@@ -78,17 +78,19 @@ test.describe("oturum açıkken", () => {
     await expect(page.getByText("g protein")).toBeVisible();
   });
 
-  test("panel hareket listesini ve kas haritasını GÖSTERMEZ", async ({ page }) => {
+  test("panelin altı grafiklerle dolu, bandı tek iş", async ({ page }) => {
     await page.goto("/");
 
-    // Bu test bir tasarım kararını kilitliyor: panelin sadelik bütçesi bir
-    // büyük kart + en fazla üç gösterge. Eski panel bunlara ek olarak bugünün
-    // hareket listesini, haftalık hacmi ve mini kas haritasını da gösteriyordu;
-    // hepsi doğru veriydi ama hiçbiri "şimdi ne yapayım" sorusuna cevap
-    // vermiyordu. Detay kendi ekranlarında duruyor.
+    // Bant tek soruya cevap veriyor; hareket listesi orada değil, antrenman
+    // ekranında.
     await expect(page.getByText("Plate Loaded Chest Press")).toHaveCount(0);
-    await expect(page.getByText("Haftalık kas hacmi")).toHaveCount(0);
-    await expect(page.getByRole("img", { name: /vücut kas hacmi haritası/ })).toHaveCount(0);
+
+    // Bandın altı "nasıl gidiyor"un görsel cevabı: tonaj, kalori, kas dengesi,
+    // kilo, tutarlılık. Her karo kendi ekranına gidiyor.
+    for (const label of ["Haftalık tonaj", "Bugün yenilen", "Kas dengesi · 7 gün", "Kilo · 90 gün"]) {
+      await expect(page.getByText(label, { exact: true })).toBeVisible();
+    }
+    await expect(page.getByRole("img", { name: /vücut kas hacmi haritası/ }).first()).toBeVisible();
   });
 
   test("aktif program yoksa yönlendirici boş durum gösterilir", async ({ page }) => {
@@ -421,13 +423,19 @@ test.describe("antrenman modu", () => {
     // ALANLAR ÖNCEDEN DOLU. Kullanıcının sorusu "kaç kilo kaldırmalıyım" ve
     // cevabı alana yazılmış hâlde geliyor — işi onaylamak, sıfırdan karar
     // vermek değil. Öneri 42.50 kg x 5; ağırlık Türkçe biçimde virgüllü.
-    await expect(page.getByLabel("kg")).toHaveValue("42,5");
-    await expect(page.getByLabel("Tekrar")).toHaveValue("5");
-    await expect(page.getByLabel("RIR")).toHaveValue("");
+    await expect(page.getByLabel("kg", { exact: true })).toHaveValue("42,5");
+    await expect(page.getByLabel("Tekrar", { exact: true })).toHaveValue("5");
+    await expect(page.getByLabel("RIR", { exact: true })).toHaveValue("");
+
+    // +/− düğmeleri ekipmanın adımıyla: bar 2,5 kg.
+    await page.getByRole("button", { name: "2,5 kg artır" }).click();
+    await expect(page.getByLabel("kg", { exact: true })).toHaveValue("45");
+    // Plaka yüklemeli makinede bir tarafa düşen plakalar yazıyor.
+    await expect(page.getByText(/Bir tarafa: 20 \+ 2,5 kg/)).toBeVisible();
 
     // Virgülle yazılan değer noktaya normalize edilip gönderilmeli.
-    await page.getByLabel("kg").fill("45,5");
-    await page.getByLabel("RIR").fill("1");
+    await page.getByLabel("kg", { exact: true }).fill("45,5");
+    await page.getByLabel("RIR", { exact: true }).fill("1");
     await page.getByRole("button", { name: "Seti kaydet" }).click();
 
     await expect.poll(() => loggedBody).not.toBeNull();
@@ -464,22 +472,34 @@ test.describe("antrenman modu", () => {
     const save = page.getByRole("button", { name: "Seti kaydet" });
     await expect(save).toBeEnabled();
 
-    await page.getByLabel("Tekrar").fill("");
+    await page.getByLabel("Tekrar", { exact: true }).fill("");
     await expect(save).toBeDisabled();
   });
 
-  test("diğer hareketler isteğe bağlı olarak açılıyor", async ({ page }) => {
+  test("günün hareketleri sahnenin yanında hep görünüyor", async ({ page }) => {
+    await page.route("http://localhost:8000/workouts/sessions", (route) =>
+      route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: "44444444-4444-4444-4444-444444444444",
+          program_day_id: null,
+          started_at: new Date().toISOString(),
+          completed_at: null,
+          notes: null,
+          is_deload: false,
+          sets: [],
+        }),
+      }),
+    );
     await page.goto("/workout");
 
-    // Varsayılan durum odaklanmış tek adım; bütün program gizli.
-    await expect(page.getByText("Plate Loaded Chest Press")).toHaveCount(0);
+    // Başlamadan önce de plan görünüyor: kullanıcı neye başladığını biliyor.
+    const map = page.getByRole("complementary", { name: "Günün hareketleri" });
+    await expect(map.getByText("Plate Loaded Chest Press")).toBeVisible();
 
-    await page.getByRole("button", { name: "Diğer hareketleri gör" }).click();
-
-    // Satırın kendisi hedefleniyor: "0 / 2 set" metni üstteki ilerleme
-    // çubuğunda da geçiyor, düz metin seçicisi iki öğeye birden uyuyor.
-    await expect(
-      page.getByRole("button", { name: /Plate Loaded Chest Press\s+0 \/ 2 set/ }),
-    ).toBeVisible();
+    // Seans başlayınca satırlar atlama düğmesi oluyor.
+    await page.getByRole("button", { name: "Antrenmanı başlat" }).click();
+    await expect(map.getByRole("button", { name: /Plate Loaded Chest Press\s+0 \/ 2 set/ })).toBeVisible();
   });
 });

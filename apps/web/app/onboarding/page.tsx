@@ -726,7 +726,7 @@ function GoalCard({
         <span
           aria-hidden
           className="absolute right-2 top-2 grid size-6 place-items-center"
-          style={{ background: "oklch(99% 0 0)", color: "var(--color-ink)" }}
+          style={{ background: "oklch(99% 0 0)", color: "oklch(17% 0.02 118)" }}
         >
           <IconCheck className="size-4" />
         </span>

@@ -107,7 +107,7 @@ test.describe("panel", () => {
     await expect(page.getByText("Gün 1")).toBeVisible();
     await expect(page.getByText("Gün 3")).toBeVisible();
     // Rekor kırılan seans işaretli.
-    await expect(page.getByText("REKOR")).toBeVisible();
+    await expect(page.getByText("REKOR", { exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "Tümü" })).toBeVisible();
   });
 

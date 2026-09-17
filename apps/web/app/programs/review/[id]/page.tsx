@@ -14,7 +14,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Page } from "@/components/Layout";
+import { Hero, HeroStat, HeroStats, Page } from "@/components/Layout";
 import { ErrorBox, Loading } from "@/components/States";
 import {
   useExercises,
@@ -73,10 +73,42 @@ export default function ProgramReviewPage() {
     }
   }, [pending.data, draft]);
 
-  if (pending.isLoading || draft === null) return <Loading />;
+  // Bant her durumda ilk: yüklenirken de, hata verince de saydam başlık
+  // içeriğin üstüne binmiyor ve sayfa aynı yerden açılıyor.
+  const hero = (stats?: React.ReactNode) => (
+    <Hero
+      photo="app-review"
+      eyebrow="Onayın gerekiyor"
+      title="Programı gözden geçir"
+      lead={
+        <>
+          Her satırı değiştirebilirsin.{" "}
+          <strong className="font-medium text-[var(--color-on-night)]">
+            Onaylayana kadar hiçbir şey kaydedilmiyor
+          </strong>{" "}
+          — vazgeçersen program hiç var olmamış olur.
+        </>
+      }
+    >
+      {stats}
+    </Hero>
+  );
+
+  // Hata önce: hata olunca `draft` hiç dolmuyordu ve ekran sonsuza dek
+  // "yükleniyor" gösteriyordu.
   if (pending.isError)
     return (
-      <ErrorBox error={pending.error} onRetry={() => void pending.refetch()} />
+      <Page>
+        {hero()}
+        <ErrorBox error={pending.error} onRetry={() => void pending.refetch()} />
+      </Page>
+    );
+  if (pending.isLoading || draft === null)
+    return (
+      <Page>
+        {hero()}
+        <Loading />
+      </Page>
     );
 
   const isOpen = pending.data?.status === "pending";
@@ -94,20 +126,21 @@ export default function ProgramReviewPage() {
     (sum, day) => sum + day.exercises.length,
     0,
   );
+  const totalSets = draft.days.reduce(
+    (sum, day) =>
+      sum + day.exercises.reduce((inner, row) => inner + row.target_sets, 0),
+    0,
+  );
 
   return (
     <Page>
-      <header>
-        {/* Volt DOLGU olarak: metin rengi olarak kırık beyaz üzerinde
-            ~1.3:1 kontrast veriyor ve okunmuyordu. */}
-        <span className="badge badge-accent">ONAYIN GEREKİYOR</span>
-        <h1 className="mt-1 text-xl lg:text-2xl">Programı gözden geçir</h1>
-        <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
-          Aşağıdaki her satırı değiştirebilirsin.{" "}
-          <strong>Onaylayana kadar hiçbir şey kaydedilmiyor</strong> —
-          vazgeçersen program hiç var olmamış olur.
-        </p>
-      </header>
+      {hero(
+        <HeroStats>
+          <HeroStat label="Gün" value={draft.days.length} />
+          <HeroStat label="Hareket" value={totalExercises} />
+          <HeroStat label="Set" value={totalSets} foot="haftalık toplam" />
+        </HeroStats>,
+      )}
 
       {!isOpen && (
         <div className="card p-6">
@@ -119,11 +152,13 @@ export default function ProgramReviewPage() {
       )}
 
       {draft.rationale && (
-        <section className="card p-6">
-          <h2 className="text-xs font-medium text-[var(--color-ink-muted)]">
+        <section className="tile-night p-6 sm:p-8">
+          <h2 className="label" style={{ color: "var(--color-on-night-faint)" }}>
             Asistanın gerekçesi
           </h2>
-          <p className="mt-2 whitespace-pre-wrap text-sm">{draft.rationale}</p>
+          <p className="mt-3 max-w-[70ch] whitespace-pre-wrap text-base leading-relaxed text-[var(--color-on-night-muted)] sm:text-lg">
+            {draft.rationale}
+          </p>
         </section>
       )}
 

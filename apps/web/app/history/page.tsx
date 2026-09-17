@@ -106,16 +106,25 @@ export default function HistoryPage() {
     return [...groups.values()];
   }, [history.data]);
 
-  if (history.isLoading) return <Loading />;
-  if (history.isError)
-    return <ErrorBox error={history.error} onRetry={() => void history.refetch()} />;
+  // Bant veri beklemiyor: yüklenirken de aynı yerden açılıyor.
+  if (history.isLoading || history.isError)
+    return (
+      <Page>
+        <PageHeader title="Geçmiş" photo="app-chalk" position="right center" eyebrow="Antrenman" />
+        {history.isError ? (
+          <ErrorBox error={history.error} onRetry={() => void history.refetch()} />
+        ) : (
+          <Loading />
+        )}
+      </Page>
+    );
 
   const rows = history.data ?? [];
 
   if (rows.length === 0) {
     return (
       <Page>
-        <PageHeader title="Geçmiş" />
+        <PageHeader title="Geçmiş" photo="app-chalk" position="right center" eyebrow="Antrenman" />
         <Empty
           photo="empty-history"
           title="Henüz tamamlanmış antrenmanın yok"
@@ -132,7 +141,7 @@ export default function HistoryPage() {
 
   return (
     <Page>
-      <PageHeader title="Geçmiş" />
+      <PageHeader title="Geçmiş" photo="app-chalk" position="right center" eyebrow="Antrenman" />
 
       {/* --- Birikim ------------------------------------------------------
           Üç eşit kutu yerine bir büyük iki küçük: tonaj bu ekranın başlığı.

@@ -115,20 +115,46 @@ export default function ProgramEditPage() {
       .sort((a, b) => a.name.localeCompare(b.name, "tr"));
   }, [program.data, library.data]);
 
-  if (program.isLoading || days === null) return <Loading />;
+  // Bant veri beklemiyor: yüklenirken, hata verirken de aynı yerden açılıyor
+  // ve üstteki saydam başlık hiçbir durumda içeriğin üstüne binmiyor.
+  const hero = (
+    <PageHeader
+      photo="app-gym-wide"
+      size="sm"
+      eyebrow="Programı düzenle"
+      title={program.data?.name ?? "Program"}
+      lead="Sıralamak için tutamağı sürükle ya da tutamağa odaklanıp boşluk + ok tuşlarını kullan."
+    />
+  );
+
+  // Hata önce: hata olunca `days` hiç dolmuyor ve eski sırayla ekran sonsuza
+  // dek "yükleniyor" gösteriyordu.
   if (program.isError)
     return (
-      <ErrorBox error={program.error} onRetry={() => void program.refetch()} />
+      <Page>
+        {hero}
+        <ErrorBox error={program.error} onRetry={() => void program.refetch()} />
+      </Page>
+    );
+  if (program.isLoading || days === null)
+    return (
+      <Page>
+        {hero}
+        <Loading />
+      </Page>
     );
 
   if (program.data?.is_template) {
     return (
-      <div className="card p-6">
-        <p className="text-sm">
-          Şablon programlar düzenlenemez. Önce kendi kopyanı çıkar — Programlar
-          ekranındaki &ldquo;Başlat&rdquo; butonu bunu yapıyor.
-        </p>
-      </div>
+      <Page>
+        {hero}
+        <div className="card p-6">
+          <p className="text-sm">
+            Şablon programlar düzenlenemez. Önce kendi kopyanı çıkar — Programlar
+            ekranındaki &ldquo;Başlat&rdquo; butonu bunu yapıyor.
+          </p>
+        </div>
+      </Page>
     );
   }
 
@@ -145,10 +171,7 @@ export default function ProgramEditPage() {
 
   return (
     <Page>
-      <PageHeader
-        title={program.data?.name ?? "Program"}
-        lead="Sıralamak için tutamağı sürükle ya da tutamağa odaklanıp boşluk + ok tuşlarını kullan."
-      />
+      {hero}
 
       <SortableList
         items={days}

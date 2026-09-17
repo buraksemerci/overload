@@ -32,8 +32,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Page, PageHeader, Section } from "@/components/Layout";
-import { Photo } from "@/components/Photo";
+import { Hero, Page, Section } from "@/components/Layout";
 import { ErrorBox, Loading } from "@/components/States";
 import { api } from "@/lib/api";
 import { setToken } from "@/lib/api";
@@ -97,6 +96,56 @@ const ACTIVITY_OPTIONS = [
   { value: "very_active", label: "Çok aktif — günde iki seans / fiziksel iş" },
 ];
 
+/**
+ * Hesabın bandı — kimlik ve güvence.
+ *
+ * Ad, e-posta ve baş harf bandın içinde; hesap ekranı baştan sona formdu ve
+ * hiçbir yerinde "bu benim hesabım" hissi yoktu. Fotoğraf portre DEĞİL:
+ * kullanıcının kendi fotoğrafını yüklemesi yok ve yerine rastgele bir yüz
+ * koymak yanlış olurdu — salonun kapısı.
+ *
+ * Güvence cümlesi GÖRÜNÜR kalıyor, "?" arkasına girmiyor: bir açıklama
+ * değil, kullanıcının asistanın neye dokunamadığını görmek için baktığı yer.
+ */
+function AccountHero({ letter, name, email }: { letter: string; name: string | null; email: string }) {
+  return (
+    <Hero
+      photo="app-entry"
+      position="center 40%"
+      size="md"
+      eyebrow="Ayarlar"
+      title="Hesap"
+      lead="Bu sayfadaki bilgileri yalnızca sen değiştirebilirsin — AI asistanının bu alanlara erişimi yok."
+      info={
+        <>
+          Bu sayfadaki hiçbir alan sohbet üzerinden değiştirilemez ve bu bir istem talimatı
+          değil: karşılık gelen bir AI tool&apos;u <strong>yok</strong>. Model olmayan bir
+          tool&apos;u çağıramaz. Asistan verilerini okuyabilir ve yeni kayıt ekleyebilir; var
+          olan bir kaydı değiştirmek için senin onayını isteyen bir kart gösterir.
+        </>
+      }
+    >
+      <div className="flex items-center gap-4 border-t pt-6" style={{ borderColor: "oklch(99% 0 0 / 0.18)" }}>
+        <span
+          aria-hidden
+          className="display grid size-16 shrink-0 place-items-center border text-2xl"
+          style={{ borderColor: "oklch(99% 0 0 / 0.5)", color: "var(--color-on-night)" }}
+        >
+          {letter}
+        </span>
+        <div className="min-w-0">
+          <p className="display on-photo-dark truncate text-2xl" style={{ color: "var(--color-on-night)" }}>
+            {name ?? "Adını ekle"}
+          </p>
+          <p className="on-photo-dark truncate text-sm" style={{ color: "var(--color-on-night-muted)" }}>
+            {email}
+          </p>
+        </div>
+      </div>
+    </Hero>
+  );
+}
+
 export default function AccountPage() {
   const me = useMe();
   const trend = useWeightTrend(1);
@@ -151,8 +200,17 @@ export default function AccountPage() {
     },
   });
 
-  if (me.isLoading || form === null || initial === null) return <Loading />;
-  if (me.isError) return <ErrorBox error={me.error} onRetry={() => void me.refetch()} />;
+  /* Bant veri beklemiyor: yüklenirken de ekran aynı yerden açılıyor, içerik
+     altına geliyor. Önce yükleme yazısı tek başına basılıyor ve veri gelince
+     bütün sayfa aşağı kayıyordu. */
+  if (me.isLoading || me.isError || form === null || initial === null) {
+    return (
+      <Page>
+        <AccountHero letter="·" name={null} email={me.data?.email ?? ""} />
+        {me.isError ? <ErrorBox error={me.error} onRetry={() => void me.refetch()} /> : <Loading />}
+      </Page>
+    );
+  }
 
   const set = (patch: Partial<ProfileForm>) => setForm({ ...form, ...patch });
   const dirty = (Object.keys(form) as Array<keyof ProfileForm>).some(
@@ -167,62 +225,7 @@ export default function AccountPage() {
 
   return (
     <Page>
-      <PageHeader
-        title="Hesap"
-        /* Bu satır GÖRÜNÜR kalıyor, "?" arkasına girmiyor. Ekranın geri
-           kalanında açıklamalar gizlendi ama bu bir açıklama değil, bir
-           güvence: kullanıcının asistanın neye dokunamadığını görmek için
-           baktığı tek yer burası. */
-        lead="Bu sayfadaki bilgileri yalnızca sen değiştirebilirsin — AI asistanının bu alanlara erişimi yok."
-        info={
-          <>
-            Bu sayfadaki hiçbir alan sohbet üzerinden değiştirilemez ve bu bir
-            istem talimatı değil: karşılık gelen bir AI tool&apos;u{" "}
-            <strong>yok</strong>. Model olmayan bir tool&apos;u çağıramaz.
-            Asistan verilerini okuyabilir ve yeni kayıt ekleyebilir; var olan
-            bir kaydı değiştirmek için senin onayını isteyen bir kart gösterir.
-          </>
-        }
-      />
-
-      {/* --- Kimlik kartı -------------------------------------------------
-          Hesap ekranı baştan sona formdu ve hiçbir yerinde "bu benim
-          hesabım" hissi yoktu. Kapak kartı o boşluğu dolduruyor: ad,
-          e-posta ve baş harf tek bakışta.
-
-          Fotoğraf bir portre DEĞİL, bölüm görseli — kullanıcının kendi
-          fotoğrafını yüklemesi henüz yok ve yerine rastgele bir yüz koymak
-          yanlış olurdu. */}
-      <section className="card overflow-hidden">
-        <Photo slug="nav-vucut" ratio="21 / 9" scrim position="center 35%">
-          <div className="flex size-full items-end gap-4 p-6 lg:p-8">
-            <span
-              aria-hidden
-              className="grid size-14 shrink-0 place-items-center border text-lg font-semibold lg:size-16"
-              style={{
-                borderColor: "oklch(99% 0 0 / 0.5)",
-                color: "oklch(99% 0 0)",
-              }}
-            >
-              {letter}
-            </span>
-            <div className="min-w-0">
-              <p
-                className="display truncate text-xl lg:text-2xl"
-                style={{ color: "oklch(99% 0 0)" }}
-              >
-                {form.display_name.trim() || "Adını ekle"}
-              </p>
-              <p
-                className="truncate text-sm"
-                style={{ color: "oklch(88% 0.01 115)" }}
-              >
-                {me.data?.email}
-              </p>
-            </div>
-          </div>
-        </Photo>
-      </section>
+      <AccountHero letter={letter} name={form.display_name.trim() || null} email={me.data?.email ?? ""} />
 
       <form
         className="flex flex-col gap-2"

@@ -1,211 +1,672 @@
 "use client";
 
 /**
- * Karşılama ekranı.
+ * Pano — giriş yaptıktan sonra ilk ekran.
  *
  * --------------------------------------------------------------------------
- * ÜÇ KATMAN
+ * İKİ KATMAN
  * --------------------------------------------------------------------------
- * 1. **Bugün** — kullanıcı adıyla karşılanıyor, altında o an yapılacak tek
- *    iş ve üç gösterge. Buraya her gün gelen kişi için ekranın tamamı bu.
- * 2. **Son antrenmanlar** — "şimdi ne yapayım"dan sonraki soru: "geçen sefer
- *    ne yapmıştım". Üç satır.
- * 3. **Bölümler** — dört ana bölüme giden bento kartlar.
+ * 1. **Bant** — salondan bir kare, üstünde bugünün tek işi ve dört sayı:
+ *    seri, kalan kalori, kilo, bu haftanın tonajı. Her gün gelen kişi için
+ *    ekranın katlanma çizgisinin üstü bu; kaydırmadan karar verilebiliyor.
+ * 2. **Bento** — o sayıların GRAFİKLERİ: haftalık tonajın gidişi, günün
+ *    kalori halkası, kas dengesi, kilo eğilimi, tutarlılık ızgarası, son
+ *    antrenmanlar. Detay isteyen kaydırıyor; her karo kendi ekranına gidiyor.
  *
- * Her blok TEK soruya cevap veriyor ve sıraları o soruların sırası.
- *
- * --------------------------------------------------------------------------
- * ANLATI BURADAN GİTTİ
- * --------------------------------------------------------------------------
- * Ortada kaydırmaya bağlı bir video vardı ve yanlış yerdeydi: "bu uygulama
- * ne işe yarıyor" sorusunu cevaplıyordu, oysa buraya gelen kişi o soruyu
- * aylar önce bir kez sordu ve her gün beş ekran boyu videoyu geçmek zorunda
- * kalıyordu. Anlatı giriş ekranına taşındı (`app/login/page.tsx`) — orada
- * soru gerçekten canlı.
- *
- * --------------------------------------------------------------------------
- * SADELİK BÜTÇESİ — "Bugün" katmanının tek kuralı
- * --------------------------------------------------------------------------
- * Bir büyük kart, en fazla üç küçük gösterge. Başka hiçbir şey.
- *
- * Eski panel dört şeyi birden gösteriyordu: seri, haftalık hacim, bugünün
- * hareket listesi ve mini kas haritası. Hepsi doğru veriydi ama hiçbiri
- * "şimdi ne yapayım" sorusuna cevap vermiyordu — kullanıcı dört bloğu okuyup
- * kararı kendi çıkarmak zorundaydı.
- *
- * Şimdi büyük kart o kararı veriyor, göstergeler yalnızca bağlam.
- * Kas haritası, tutarlılık ızgarası, rekor listesi kendi ekranlarında kalıyor;
- * detay isteyen kenar çubuğundan gidiyor.
+ * Önceki sürüm bilinçli olarak sadeydi ("bir büyük kart, üç gösterge") ve
+ * grafikleri kendi ekranlarına sürgün etmişti. Geniş ekranda sağı solu boş,
+ * bir tablonun ilk satırı gibi duruyordu. Sadelik korunuyor ama başka bir
+ * yoldan: katlanmanın üstü hâlâ tek soruya cevap veriyor, altı ise
+ * "nasıl gidiyor" sorusunun görsel cevabı.
  *
  * --------------------------------------------------------------------------
  * DURUMA GÖRE, SAATE GÖRE DEĞİL
  * --------------------------------------------------------------------------
- * Büyük kart neyi göstereceğini saatten değil durumdan çıkarıyor. Saat tek
- * başına yanıltıcı: vardiyalı çalışan ya da gece antrenman yapan biri için
- * "akşam oldu, günü özetle" yanlış an. Saat yalnızca ikincil bir ipucu
- * olarak kullanılıyor (sabah kilo sormak gibi).
+ * Bant neyi göstereceğini saatten değil durumdan çıkarıyor (antrenman sürüyor
+ * mu, bugün yapıldı mı, dinlenme günü mü). Fotoğraf da duruma göre: yapılacak
+ * bir antrenman varsa rafın başında biri, dinlenme gününde esneme.
  */
 
 import Link from "next/link";
-import { Page } from "@/components/Layout";
+import { Bars, Meter, Ring, Trend } from "@/components/Charts";
+import { ConsistencyGrid } from "@/components/ConsistencyGrid";
+import { Hero, HeroStat, HeroStats, Page } from "@/components/Layout";
+import { MuscleMap } from "@/components/MuscleMap";
 import { Photo } from "@/components/Photo";
-import { ErrorBox, Loading, fmt } from "@/components/States";
+import { ErrorBox, fmt } from "@/components/States";
 import {
+  useConsistency,
   useHistory,
   useMe,
+  useMuscleVolume,
   useNutritionDay,
   useSessions,
   useStreak,
   useToday,
   useWeightTrend,
+  type HistorySession,
   type TodayWorkout,
   type WorkoutSession,
 } from "@/lib/queries";
+import {
+  change,
+  muscleBalance,
+  shortDay,
+  tonnage,
+  weeklyVolume,
+  weightSummary,
+} from "@/lib/stats";
 
 // Next 16 rotaları tipliyor; `href` gerçekten var olan bir rota olmak zorunda.
-// Yanlış yazılmış bir rota derleme zamanında yakalanıyor.
 type Href = React.ComponentProps<typeof Link>["href"];
 
 export default function DashboardPage() {
+  const me = useMe();
   const today = useToday();
   const streak = useStreak();
   const sessions = useSessions(8);
-  const nutrition = useNutritionDay(null, "maintain");
-  const weight = useWeightTrend(14);
-
-  if (today.isLoading) return <Loading />;
-  if (today.isError)
-    return <ErrorBox error={today.error} onRetry={() => void today.refetch()} />;
+  const history = useHistory(60);
+  const nutritionGoal = me.data?.nutrition_goal ?? "maintain";
+  const nutrition = useNutritionDay(null, nutritionGoal);
+  const weight = useWeightTrend(90);
 
   const workout = today.data;
   const finishedToday =
     (sessions.data ?? []).find((s) => s.completed_at !== null && isToday(s.started_at)) ??
     null;
+  const state = primaryState(workout, finishedToday);
 
-  const target = nutrition.data?.target ?? null;
+  const weeks = weeklyVolume(history.data ?? [], 8);
+  const thisWeek = weeks.at(-1)!;
   const remaining = nutrition.data?.remaining ?? null;
-  const latestWeight = weight.data?.at(-1) ?? null;
-  const weighedToday = latestWeight ? isToday(latestWeight.date) : false;
+  const summary = weightSummary(weight.data ?? []);
+  const weekTons = tonnage(thisWeek.volume);
 
   return (
-    // `flush`: panel kendi ızgarasını ve kademeli açılış gecikmelerini
-    // kuruyor, `Page`in dikey ritmi onun aralıklarını bozuyordu.
-    <Page flush>
-      <Greeting />
-
-      <div className="reveal mt-6" style={{ "--i": 1 } as React.CSSProperties}>
-        <PrimaryCard workout={workout} finishedToday={finishedToday} />
-      </div>
-
-      {/* Kolonlar BİLEREK eşit değil. Üç özdeş kutu yan yana dizmek en
-          tanınabilir "üretilmiş arayüz" deseni; ayrıca eşit genişlik, eşit
-          önem demek — oysa gün içinde en çok bakılan gösterge kalan makro.
-          Ortadaki kolon geniş olduğu için iki rakamı birden taşıyabiliyor. */}
-      <div
-        className="reveal mt-4 grid gap-4 lg:grid-cols-[1fr_1.5fr_1fr]"
-        style={{ "--i": 2 } as React.CSSProperties}
-      >
-        <StreakTile
-          weeks={streak.data?.intact_weeks}
-          thisWeek={streak.data?.this_week_sessions}
-          weeklyTarget={streak.data?.weekly_target}
-        />
-
-        {target && remaining ? (
-          <MacroTile calories={remaining.calories} protein={remaining.protein_g} />
-        ) : (
-          <Tile
-            label="Beslenme"
-            value="—"
-            foot="Hedef için profilini tamamla"
-            href="/account"
-          />
+    <Page>
+      <Hero photo={state.photo} position="center" size="lg" quietTitle title={<Greeting />}>
+        <PrimaryBlock state={state} loading={today.isLoading} />
+        {today.isError && (
+          <div className="mt-4 max-w-md">
+            <ErrorBox error={today.error} onRetry={() => void today.refetch()} />
+          </div>
         )}
 
-        {latestWeight ? (
-          <Tile
-            label="Kilo"
-            value={fmt(latestWeight.weight_kg, 1)}
-            unit="kg"
-            foot={weighedToday ? "bugün ölçüldü" : "bugün ölçülmedi"}
-            href="/weight"
-          />
-        ) : (
-          <Tile label="Kilo" value="—" foot="İlk ölçümünü gir" href="/weight" />
-        )}
+        <div className="mt-10">
+          <HeroStats>
+            <HeroStat
+              label={(streak.data?.intact_weeks ?? 0) > 0 ? "Seri" : "Bu hafta"}
+              value={
+                (streak.data?.intact_weeks ?? 0) > 0
+                  ? streak.data!.intact_weeks
+                  : (streak.data?.this_week_sessions ?? "—")
+              }
+              unit={(streak.data?.intact_weeks ?? 0) > 0 ? "hafta" : undefined}
+              foot={
+                streak.data
+                  ? `bu hafta ${streak.data.this_week_sessions}/${streak.data.weekly_target}`
+                  : undefined
+              }
+            />
+            <HeroStat
+              label="Kalan"
+              value={remaining ? fmt(remaining.calories, 0) : "—"}
+              unit={remaining ? "kcal" : undefined}
+              foot={remaining ? `${fmt(remaining.protein_g, 0)} g protein` : "hedef için profilini tamamla"}
+            />
+            <HeroStat
+              label="Kilo"
+              value={summary ? fmt(summary.latest, 1) : "—"}
+              unit={summary ? "kg" : undefined}
+              foot={
+                summary
+                  ? isToday(summary.date)
+                    ? "bugün ölçüldü"
+                    : "bugün ölçülmedi"
+                  : "ilk ölçümünü gir"
+              }
+            />
+            <HeroStat
+              label="Bu hafta"
+              value={thisWeek.volume > 0 ? weekTons.value : "—"}
+              unit={thisWeek.volume > 0 ? weekTons.unit : undefined}
+              foot={`${thisWeek.sessions} antrenman · ${thisWeek.sets} set`}
+            />
+          </HeroStats>
+        </div>
+      </Hero>
+
+      <div className="grid gap-3 lg:grid-cols-12">
+        <VolumeTile weeks={weeks} className="lg:col-span-8" />
+        <NutritionTile className="lg:col-span-4" goal={nutritionGoal} />
+        <MuscleTile className="lg:col-span-5" />
+        <WeightTile className="lg:col-span-7" />
+        <ConsistencyTile className="lg:col-span-7" />
+        <CoachTile className="lg:col-span-5" />
       </div>
 
-      {/* --- Son antrenmanlar --------------------------------------------
-          "Şimdi ne yapayım"dan sonraki soru "geçen sefer ne yapmıştım".
-          Üç satır yetiyor: dördüncüsü geçmiş ekranının işi. */}
-      <RecentSessions />
+      <RecentSessions sessions={history.data ?? []} />
 
-      {/* --- Bölümler ---------------------------------------------------- */}
-      <section className="mt-12">
-        <h2 className="label mb-3">Bölümler</h2>
+      <section>
+        <h2 className="display mb-4 text-xl lg:text-2xl">Bölümler</h2>
         <SectionGrid />
       </section>
     </Page>
   );
 }
 
-/* --- Son antrenmanlar ------------------------------------------------------
-   Panelin ikinci sorusu. "Şimdi ne yapayım" büyük kartta cevaplanıyor;
-   hemen ardından gelen soru "geçen sefer ne yapmıştım" ve cevabı tek satırda
-   veriliyor: gün, kaç set, kaç kilo.
+/* --- Bant: günün işi ------------------------------------------------------------ */
 
-   ÜÇ SATIR. Dördüncüsü geçmiş ekranının işi ve o ekran zaten bir bağlantı
-   uzaklıkta. Panelin kuralı değişmedi: her blok TEK soruya cevap veriyor. */
+interface PrimaryState {
+  photo: string;
+  eyebrow: string;
+  title: string;
+  note: string;
+  action: { href: Href; label: string; quiet?: boolean };
+  warn?: string;
+  done?: boolean;
+}
 
-function RecentSessions() {
-  const history = useHistory(3);
-  const rows = history.data ?? [];
+function primaryState(
+  workout: TodayWorkout | undefined,
+  finishedToday: WorkoutSession | null,
+): PrimaryState {
+  if (workout?.active_session_id) {
+    return {
+      photo: "app-grip",
+      eyebrow: "Devam ediyor",
+      title: workout.day_label ?? "Antrenman",
+      note: `${workout.exercises.length} hareket planlı`,
+      action: { href: "/workout", label: "Devam et" },
+    };
+  }
+  if (!workout || workout.program_name === null) {
+    return {
+      photo: "app-gym-wide",
+      eyebrow: "Başlangıç",
+      title: "Bir program seç",
+      note: "Hazır şablonlardan birini başlat ya da asistana kendi programını kurdur.",
+      action: { href: "/programs", label: "Programlara git" },
+    };
+  }
+  if (workout.exercises.length === 0) {
+    return {
+      photo: "app-stretch",
+      eyebrow: workout.program_name,
+      title: "Dinlenme günü",
+      note: "Bugün planlı antrenman yok. Toparlanma da programın parçası.",
+      action: { href: "/programs", label: "Programı gör", quiet: true },
+      warn: workout.is_deload_suggested ? "Bu hafta deload önerilir" : undefined,
+    };
+  }
+  if (finishedToday) {
+    const working = finishedToday.sets.filter((s) => !s.is_warmup);
+    const kg = working.reduce((sum, s) => sum + Number.parseFloat(s.weight_kg) * s.reps, 0);
+    return {
+      photo: "app-plates",
+      eyebrow: "Tamamlandı",
+      title: workout.day_label ?? "Antrenman",
+      note: kg > 0 ? `${working.length} set · ${fmt(kg, 0)} kg tonaj` : `${working.length} set`,
+      action: { href: "/history", label: "Seansı gör", quiet: true },
+      done: true,
+    };
+  }
+  return {
+    photo: "app-squat",
+    eyebrow: workout.program_name ?? "Bugün",
+    title: workout.day_label ?? "Antrenman",
+    note: `${workout.exercises.length} hareket · ${totalSets(workout)} set`,
+    action: { href: "/workout", label: "Antrenmanı başlat" },
+    warn: workout.is_deload_suggested ? "Bu hafta deload önerilir" : undefined,
+  };
+}
 
-  // Hiç antrenman yoksa blok tümden YOK. Boş bir "henüz antrenman yok"
-  // kutusu, zaten üstteki büyük kartın söylediği şeyi tekrar ediyor.
+function PrimaryBlock({ state, loading }: { state: PrimaryState; loading: boolean }) {
+  if (loading) {
+    return <div className="h-40" aria-busy="true" />;
+  }
+  return (
+    <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+      <div className="min-w-0">
+        <p className="flex items-center gap-2">
+          {state.done && (
+            <span
+              aria-hidden
+              className="grid size-[18px] shrink-0 place-items-center rounded-full"
+              style={{ background: "var(--color-accent)" }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-accent)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 13l4 4L19 7" />
+              </svg>
+            </span>
+          )}
+          <span className="label on-photo-dark" style={{ color: "var(--color-on-night-muted)" }}>
+            {state.eyebrow}
+          </span>
+        </p>
+        {/* Ekranın tek odak noktası: giriş ekranının başlıkları kadar büyük. */}
+        <h2
+          className="display on-photo-dark mt-2 max-w-[18ch] text-3xl leading-[1.02] sm:text-4xl lg:text-[4.75rem]"
+          style={{ color: "var(--color-on-night)" }}
+        >
+          {state.title}
+        </h2>
+        <p
+          className="on-photo-dark mt-4 max-w-[46ch] text-sm sm:text-base"
+          style={{ color: "var(--color-on-night-muted)" }}
+        >
+          {state.note}
+        </p>
+        {state.warn && (
+          <p className="on-photo-dark mt-2 text-sm" style={{ color: "var(--color-warning)" }}>
+            {state.warn}
+          </p>
+        )}
+      </div>
+
+      <Link
+        href={state.action.href}
+        className={`${state.action.quiet ? "btn btn-on-photo" : "btn btn-primary"} shrink-0 px-6 py-3 text-base`}
+      >
+        {state.action.label}
+      </Link>
+    </div>
+  );
+}
+
+function Greeting() {
+  const me = useMe();
+  const now = new Date();
+  const hour = now.getHours();
+  const part =
+    hour < 6 ? "İyi geceler" : hour < 12 ? "Günaydın" : hour < 18 ? "İyi günler" : "İyi akşamlar";
+
+  /* Ad varsa selamlamaya giriyor; yoksa selamlama tek başına kalıyor.
+     E-posta adresi ad yerine KULLANILMIYOR. */
+  const name = me.data?.display_name?.trim();
+  const date = now.toLocaleDateString("tr-TR", { day: "numeric", month: "long", weekday: "long" });
+
+  return (
+    <>
+      {name ? `${part}, ${name}` : part}
+      <span className="sr-only"> — </span>
+      <span
+        className="ml-3 align-middle font-sans text-sm font-normal tracking-normal"
+        style={{ color: "var(--color-on-night-muted)" }}
+      >
+        {date}
+      </span>
+    </>
+  );
+}
+
+/* --- Karolar ----------------------------------------------------------------------- */
+
+function TileHead({
+  eyebrow,
+  title,
+  href,
+  linkLabel = "Aç",
+  night = false,
+}: {
+  eyebrow: string;
+  title?: React.ReactNode;
+  href?: Href;
+  linkLabel?: string;
+  night?: boolean;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div className="min-w-0">
+        <p className="label" style={{ color: night ? "var(--color-on-night-faint)" : undefined }}>
+          {eyebrow}
+        </p>
+        {title && <div className="mt-1.5">{title}</div>}
+      </div>
+      {href && (
+        <Link
+          href={href}
+          className="shrink-0 text-xs underline-offset-4 hover:underline"
+          style={{ color: night ? "var(--color-on-night-muted)" : "var(--color-ink-muted)" }}
+        >
+          {linkLabel} →
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function BigNumber({
+  value,
+  unit,
+  night = false,
+  size = "lg",
+}: {
+  value: React.ReactNode;
+  unit?: string;
+  night?: boolean;
+  size?: "lg" | "md";
+}) {
+  return (
+    <p className="flex items-baseline gap-1.5">
+      <span
+        className={`display tnum leading-none ${size === "lg" ? "text-4xl" : "text-3xl"}`}
+        style={{ color: night ? "var(--color-on-night)" : "var(--color-ink)" }}
+      >
+        {value}
+      </span>
+      {unit && (
+        <span className="text-sm" style={{ color: night ? "var(--color-on-night-muted)" : "var(--color-ink-muted)" }}>
+          {unit}
+        </span>
+      )}
+    </p>
+  );
+}
+
+function Delta({ percent, night = false }: { percent: number | null; night?: boolean }) {
+  if (percent === null) return null;
+  const up = percent >= 0;
+  return (
+    <span
+      className="tnum text-xs"
+      style={{
+        color: up
+          ? night
+            ? "var(--color-accent)"
+            : "var(--color-accent-deep)"
+          : "var(--color-warning)",
+      }}
+    >
+      {up ? "▲" : "▼"} {Math.abs(percent).toLocaleString("tr-TR", { maximumFractionDigits: 0 })}%
+    </span>
+  );
+}
+
+function VolumeTile({ weeks, className }: { weeks: ReturnType<typeof weeklyVolume>; className: string }) {
+  const current = weeks.at(-1)!;
+  const previous = weeks.at(-2);
+  const tons = tonnage(current.volume);
+  const hasAny = weeks.some((w) => w.volume > 0);
+
+  return (
+    <section className={`tile-night flex flex-col p-6 lg:p-8 ${className}`}>
+      <TileHead eyebrow="Haftalık tonaj" href="/history" linkLabel="Geçmiş" night />
+      <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <BigNumber value={current.volume > 0 ? tons.value : "0"} unit={current.volume > 0 ? tons.unit : "kg"} night />
+        <Delta percent={previous ? change(current.volume, previous.volume) : null} night />
+        <span className="text-xs" style={{ color: "var(--color-on-night-faint)" }}>
+          bu hafta · geçen haftaya göre
+        </span>
+      </div>
+      <div className="mt-6 flex-1">
+        {hasAny ? (
+          <Bars
+            night
+            height={200}
+            unit="kg"
+            data={weeks.map((week, index) => ({
+              label: index === weeks.length - 1 ? "Bu hafta" : shortDay(week.start),
+              value: Math.round(week.volume),
+              current: index === weeks.length - 1,
+            }))}
+          />
+        ) : (
+          <p className="text-sm" style={{ color: "var(--color-on-night-muted)" }}>
+            İlk antrenmanını tamamladığında haftalık tonaj burada birikmeye başlıyor.
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function NutritionTile({ className, goal }: { className: string; goal: string }) {
+  const day = useNutritionDay(null, goal);
+  const target = day.data?.target ?? null;
+  const totals = day.data?.totals;
+  const eaten = totals ? Number.parseFloat(totals.calories) || 0 : 0;
+
+  return (
+    <Link href="/nutrition" className={`card lift flex flex-col p-6 lg:p-8 ${className}`}>
+      <TileHead eyebrow="Bugün yenilen" />
+      {target && totals ? (
+        <>
+          <div className="mt-4 flex items-center gap-6">
+            <Ring value={eaten} max={target.calories} size={132} stroke={11}>
+              <div>
+                <p className="display tnum text-2xl leading-none">{fmt(eaten, 0)}</p>
+                <p className="mt-1 text-2xs text-[var(--color-ink-faint)]">/ {fmt(target.calories, 0)} kcal</p>
+              </div>
+            </Ring>
+            <div className="flex min-w-0 flex-1 flex-col gap-3">
+              {(
+                [
+                  ["Protein", totals.protein_g, target.protein_g],
+                  ["Karb.", totals.carbs_g, target.carbs_g],
+                  ["Yağ", totals.fat_g, target.fat_g],
+                ] as const
+              ).map(([label, value, max]) => (
+                <div key={label}>
+                  <p className="mb-1 flex justify-between text-2xs text-[var(--color-ink-muted)]">
+                    <span>{label}</span>
+                    <span className="tnum">
+                      {fmt(value, 0)} / {fmt(max, 0)} g
+                    </span>
+                  </p>
+                  <Meter value={Number.parseFloat(String(value)) || 0} max={max} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      ) : (
+        <p className="mt-4 text-sm text-[var(--color-ink-muted)]">
+          Kalori hedefi için boy, doğum tarihi, cinsiyet ve kilo gerekiyor.
+        </p>
+      )}
+    </Link>
+  );
+}
+
+function MuscleTile({ className }: { className: string }) {
+  const volume = useMuscleVolume(7);
+  const rows = volume.data ?? [];
+  const balance = muscleBalance(rows);
+  const lagging = balance.lagging.slice(0, 3);
+
+  return (
+    <Link href="/muscle-map" className={`tile-night lift flex flex-col p-6 lg:p-8 ${className}`}>
+      <TileHead eyebrow="Kas dengesi · 7 gün" night />
+      <div className="mt-4 grid flex-1 grid-cols-[minmax(0,1fr)_minmax(0,11rem)] items-center gap-6">
+        <MuscleMap
+          night
+          pair
+          interactive={false}
+          volumes={rows.map((row) => ({
+            slug: row.slug,
+            nameTr: row.name_tr,
+            svgId: row.svg_id,
+            region: row.region,
+            sets: row.sets,
+            target: row.target,
+          }))}
+        />
+        <div className="min-w-0">
+          <BigNumber
+            night
+            size="md"
+            value={balance.total > 0 ? Math.round(balance.onTarget * 100) : "—"}
+            unit={balance.total > 0 ? "% hedefte" : undefined}
+          />
+          {lagging.length > 0 && (
+            <>
+              <p className="label mt-5" style={{ color: "var(--color-on-night-faint)" }}>
+                Geride
+              </p>
+              <ul className="mt-2 flex flex-col gap-2">
+                {lagging.map((row) => (
+                  <li key={row.slug}>
+                    <p className="flex justify-between text-xs" style={{ color: "var(--color-on-night-muted)" }}>
+                      <span className="truncate">{row.name_tr}</span>
+                      <span className="tnum">
+                        {fmt(row.sets, 0)}/{row.target}
+                      </span>
+                    </p>
+                    <div className="mt-1">
+                      <Meter night value={row.sets} max={row.target} tone="neutral" />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function WeightTile({ className }: { className: string }) {
+  const weight = useWeightTrend(90);
+  const points = weight.data ?? [];
+  const summary = weightSummary(points);
+
+  return (
+    <Link href="/weight" className={`card lift flex flex-col p-6 lg:p-8 ${className}`}>
+      <TileHead eyebrow="Kilo · 90 gün" />
+      {summary ? (
+        <>
+          <div className="mt-3 flex flex-wrap items-baseline gap-x-4">
+            <BigNumber value={fmt(summary.latest, 1)} unit="kg" />
+            {summary.delta !== null && (
+              <span className="tnum text-xs text-[var(--color-ink-muted)]">
+                {summary.delta > 0 ? "+" : ""}
+                {fmt(summary.delta, 1)} kg · 30 günde (ortalama)
+              </span>
+            )}
+          </div>
+          <div className="mt-4 flex-1">
+            {points.length >= 2 ? (
+              <Trend
+                id="panel-kilo"
+                unit="kg"
+                height={150}
+                data={points.map((point) => ({
+                  label: shortDay(new Date(`${point.date}T00:00:00`)),
+                  value: Number.parseFloat(point.weight_kg),
+                  average: point.moving_average === null ? null : Number.parseFloat(point.moving_average),
+                }))}
+              />
+            ) : (
+              <p className="text-sm text-[var(--color-ink-muted)]">
+                İkinci tartıdan sonra eğilim çizgisi çiziliyor.
+              </p>
+            )}
+          </div>
+        </>
+      ) : (
+        <p className="mt-4 text-sm text-[var(--color-ink-muted)]">İlk tartını gir; eğilim burada çizilecek.</p>
+      )}
+    </Link>
+  );
+}
+
+function ConsistencyTile({ className }: { className: string }) {
+  const consistency = useConsistency(182);
+  const days = consistency.data ?? [];
+  const sessions = days.reduce((sum, day) => sum + day.sessions, 0);
+
+  return (
+    <Link href="/progress" className={`card lift flex flex-col p-6 lg:p-8 ${className}`}>
+      <TileHead eyebrow="Tutarlılık · 6 ay" />
+      <div className="mt-3">
+        <BigNumber value={sessions} unit="antrenman" size="md" />
+      </div>
+      <div className="mt-5 min-w-0">
+        {days.length > 0 ? (
+          <ConsistencyGrid days={days} />
+        ) : (
+          <p className="text-sm text-[var(--color-ink-muted)]">Antrenmanların burada gün gün işaretlenecek.</p>
+        )}
+      </div>
+    </Link>
+  );
+}
+
+function CoachTile({ className }: { className: string }) {
+  return (
+    <Link href="/coach" className={`card lift block overflow-hidden ${className}`}>
+      <Photo slug="app-review" fill scrim className="size-full min-h-[16rem]">
+        <div className="flex size-full flex-col justify-end p-6 lg:p-8">
+          <p className="label on-photo-dark" style={{ color: "var(--color-on-night-faint)" }}>
+            Asistan
+          </p>
+          <p className="display on-photo-dark mt-1 text-2xl lg:text-3xl" style={{ color: "var(--color-on-night)" }}>
+            Haftalık rapor
+          </p>
+          <p className="on-photo-dark mt-1 max-w-[36ch] text-sm" style={{ color: "var(--color-on-night-muted)" }}>
+            Haftanın hacmi, rekorları ve bir sonraki haftanın önerisi — pazartesi sabahı hazır.
+          </p>
+        </div>
+      </Photo>
+    </Link>
+  );
+}
+
+/* --- Son antrenmanlar -------------------------------------------------------------- */
+
+function RecentSessions({ sessions }: { sessions: readonly HistorySession[] }) {
+  const rows = sessions.slice(0, 3);
   if (rows.length === 0) return null;
 
   return (
-    <section className="reveal mt-12" style={{ "--i": 3 } as React.CSSProperties}>
-      <div className="mb-3 flex items-baseline justify-between gap-3">
-        <h2 className="label">Son antrenmanlar</h2>
+    <section>
+      <div className="mb-4 flex items-baseline justify-between gap-3">
+        <h2 className="display text-xl lg:text-2xl">Son antrenmanlar</h2>
         <Link href="/history" className="link text-xs">
           Tümü
         </Link>
       </div>
 
-      <ul className="flex flex-col gap-1.5">
-        {rows.map((session) => (
-          <li key={session.id}>
-            <Link
-              href="/history"
-              className="card flex items-center gap-4 px-4 py-3 transition-colors hover:bg-[var(--color-surface-raised)]"
-              style={{ transitionDuration: "var(--dur-micro)" }}
-            >
-              <span className="min-w-0 flex-1">
-                <span className="flex flex-wrap items-center gap-2">
-                  <span className="truncate text-sm font-medium">
-                    {session.day_label ?? dayName(session.started_at)}
-                  </span>
+      <ul className="grid gap-3 md:grid-cols-3">
+        {rows.map((session, index) => {
+          const tons = tonnage(Number.parseFloat(session.volume_kg) || 0);
+          return (
+            <li key={session.id}>
+              <Link href="/history" className="card lift flex h-full flex-col p-6">
+                <p className="flex items-center justify-between gap-2">
+                  <span className="label">{shortDate(session.started_at)}</span>
                   {session.records.length > 0 && (
                     <span className="badge badge-accent">
-                      {session.records.length > 1
-                        ? `${session.records.length} REKOR`
-                        : "REKOR"}
+                      {session.records.length > 1 ? `${session.records.length} REKOR` : "REKOR"}
                     </span>
                   )}
+                </p>
+                <p className="display mt-3 text-xl leading-tight">
+                  {session.day_label ?? dayName(session.started_at)}
+                </p>
+                <div className="mt-auto flex items-end justify-between gap-3 pt-6">
+                  <BigNumber value={tons.value} unit={tons.unit} size="md" />
+                  <p className="tnum text-right text-xs text-[var(--color-ink-faint)]">
+                    {session.total_sets} set
+                    {session.duration_min ? ` · ${session.duration_min} dk` : ""}
+                  </p>
+                </div>
+                <span aria-hidden className="mt-4 block h-1 w-full bg-[var(--color-surface-raised)]">
+                  <span
+                    className="block h-full"
+                    style={{
+                      width: `${100 - index * 22}%`,
+                      background: "var(--color-ink)",
+                      opacity: 0.12 + (2 - index) * 0.1,
+                    }}
+                  />
                 </span>
-                <span className="tnum mt-0.5 block text-2xs text-[var(--color-ink-faint)]">
-                  {shortDate(session.started_at)} · {session.total_sets} set
-                </span>
-              </span>
-              <span className="tnum shrink-0 text-right text-sm">
-                {fmt(Number.parseFloat(session.volume_kg) || 0, 0)}
-                <span className="ml-1 text-2xs text-[var(--color-ink-faint)]">kg</span>
-              </span>
-            </Link>
-          </li>
-        ))}
+              </Link>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );
@@ -217,70 +678,59 @@ const dayName = (iso: string): string =>
     .replace(/^./, (c) => c.toLocaleUpperCase("tr-TR"));
 
 const shortDate = (iso: string): string =>
-  new Date(iso).toLocaleDateString("tr-TR", { day: "numeric", month: "long" });
+  new Date(iso).toLocaleDateString("tr-TR", { day: "numeric", month: "long", weekday: "short" });
 
-/* --- Bölüm kartları -------------------------------------------------------
-   Bento: kartlar eşit değil. İlk kart iki sütun kaplıyor çünkü uygulamanın
-   ana işi orada; kalan üçü eşit. Dört özdeş kutu dizmek en tanınabilir
-   "üretilmiş arayüz" deseni ve hepsinin aynı önemde olduğunu söylüyor. */
+/* --- Bölümler ------------------------------------------------------------------------ */
 
 const SECTIONS: ReadonlyArray<{
   href: Href;
   photo: string;
   title: string;
   note: string;
-  wide?: boolean;
+  className: string;
 }> = [
   {
     href: "/workout",
-    photo: "nav-antrenman",
+    photo: "app-grip",
     title: "Antrenman",
     note: "Bugünün akışı, programlar, hareket kütüphanesi, geçmiş",
-    wide: true,
+    className: "lg:col-span-7 lg:row-span-2",
   },
   {
     href: "/nutrition",
-    photo: "nav-beslenme",
+    photo: "app-meal-bar",
     title: "Beslenme",
     note: "Günlük ve supplement",
+    className: "lg:col-span-5",
   },
   {
-    href: "/progress",
-    photo: "nav-vucut",
+    href: "/body",
+    photo: "app-body",
     title: "Vücut",
-    note: "İlerleme, kas haritası, kilo, ağrı",
+    note: "Durum özeti, kas haritası, kilo, ağrı",
+    className: "lg:col-span-5",
   },
   {
     href: "/chat",
-    photo: "nav-asistan",
+    photo: "app-review",
     title: "Asistan",
     note: "Sohbet ve haftalık rapor",
+    className: "lg:col-span-12",
   },
 ];
 
 function SectionGrid() {
   return (
-    <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-      {SECTIONS.map((section, index) => (
-        <li
-          key={String(section.href)}
-          className={`reveal ${section.wide ? "lg:col-span-2" : ""}`}
-          style={{ ["--i" as string]: index }}
-        >
-          <Link href={section.href} className="card block h-full overflow-hidden">
-            <Photo
-              slug={section.photo}
-              ratio={section.wide ? "2 / 1" : "4 / 3"}
-              scrim
-            >
-              <div className="flex size-full flex-col justify-end p-5 lg:p-6">
-                <p
-                  className="display text-lg lg:text-xl"
-                  style={{ color: "oklch(99% 0 0)" }}
-                >
+    <ul className="grid auto-rows-[15rem] gap-3 sm:grid-cols-2 lg:auto-rows-[17rem] lg:grid-cols-12">
+      {SECTIONS.map((section) => (
+        <li key={String(section.href)} className={section.className}>
+          <Link href={section.href} className="card lift block size-full overflow-hidden">
+            <Photo slug={section.photo} fill scrim className="size-full">
+              <div className="flex size-full flex-col justify-end p-6 lg:p-8">
+                <p className="display on-photo-dark text-2xl lg:text-3xl" style={{ color: "var(--color-on-night)" }}>
                   {section.title}
                 </p>
-                <p className="mt-1 text-xs" style={{ color: "oklch(86% 0.01 115)" }}>
+                <p className="on-photo-dark mt-1 text-sm" style={{ color: "var(--color-on-night-muted)" }}>
                   {section.note}
                 </p>
               </div>
@@ -292,293 +742,7 @@ function SectionGrid() {
   );
 }
 
-/* --- Selamlama ------------------------------------------------------------ */
-
-function Greeting() {
-  const me = useMe();
-  const now = new Date();
-  const hour = now.getHours();
-  const part =
-    hour < 6 ? "İyi geceler" : hour < 12 ? "Günaydın" : hour < 18 ? "İyi günler" : "İyi akşamlar";
-
-  /* Ad varsa selamlamaya giriyor. Yoksa selamlama tek başına kalıyor —
-     "Hoş geldin, " diye biten bir cümle, boş bir ada işaret etmekten kötü.
-     E-posta ADRESİ ad yerine KULLANILMIYOR: "Günaydın, kbura@gmail.com"
-     karşılama değil, veritabanı çıktısı. */
-  const name = me.data?.display_name?.trim();
-
-  // Selamlama tek başına bilgi taşımıyor; tarih onu işe yarar hâle getiriyor.
-  const date = now.toLocaleDateString("tr-TR", {
-    day: "numeric",
-    month: "long",
-    weekday: "long",
-  });
-
-  return (
-    <div className="reveal" style={{ "--i": 0 } as React.CSSProperties}>
-      <h1 className="display text-2xl lg:text-3xl">
-        {name ? `${part}, ${name}` : part}
-      </h1>
-      <p className="mt-1 text-sm text-[var(--color-ink-faint)]">{date}</p>
-    </div>
-  );
-}
-
-/* --- Büyük kart ----------------------------------------------------------- */
-
-function PrimaryCard({
-  workout,
-  finishedToday,
-}: {
-  workout: TodayWorkout | undefined;
-  finishedToday: WorkoutSession | null;
-}) {
-  // 1. Yarım kalmış seans her şeyin önünde: kullanıcı salonun ortasında.
-  if (workout?.active_session_id) {
-    return (
-      <Hero
-        eyebrow="Devam ediyor"
-        title={workout.day_label ?? "Antrenman"}
-        note={`${workout.exercises.length} hareket planlı`}
-        action={{ href: "/workout", label: "Devam et" }}
-      />
-    );
-  }
-
-  // 2. Hiç aktif program yok — yeni kullanıcının düştüğü yer.
-  if (!workout || workout.program_name === null) {
-    return (
-      <Hero
-        eyebrow="Başlangıç"
-        title="Bir program seç"
-        note="Hazır şablonlardan birini başlat ya da asistana kendi programını kurdur."
-        action={{ href: "/programs", label: "Programlara git" }}
-      />
-    );
-  }
-
-  // 3. Program var ama bugün hareket yok — dinlenme günü.
-  //    Bunu "program yok" ile aynı kefeye koymak yanlıştı: kullanıcıyı zaten
-  //    sahip olduğu programı seçmeye yönlendiriyordu.
-  if (workout.exercises.length === 0) {
-    return (
-      <Hero
-        eyebrow={workout.program_name}
-        title="Dinlenme günü"
-        note="Bugün planlı antrenman yok. Toparlanma da programın parçası."
-        action={{ href: "/programs", label: "Programı gör", quiet: true }}
-        warn={workout.is_deload_suggested ? "Bu hafta deload önerilir" : undefined}
-      />
-    );
-  }
-
-  // 4. Bugün tamamlandı — muğlak bir tebrik cümlesi yerine ne yapıldığı.
-  if (finishedToday) {
-    const working = finishedToday.sets.filter((s) => !s.is_warmup);
-    const tonnage = working.reduce(
-      (sum, s) => sum + Number.parseFloat(s.weight_kg) * s.reps,
-      0,
-    );
-    return (
-      <Hero
-        eyebrow="Tamamlandı"
-        title={workout.day_label ?? "Antrenman"}
-        note={
-          tonnage > 0
-            ? `${working.length} set · ${fmt(tonnage, 0)} kg tonaj`
-            : `${working.length} set`
-        }
-        action={{ href: "/history", label: "Seansı gör", quiet: true }}
-        done
-      />
-    );
-  }
-
-  // 5. Varsayılan: bugün sırada olan antrenman.
-  return (
-    <Hero
-      eyebrow={workout.program_name ?? "Bugün"}
-      title={workout.day_label ?? "Antrenman"}
-      note={`${workout.exercises.length} hareket · ${totalSets(workout)} set`}
-      action={{ href: "/workout", label: "Antrenmanı başlat" }}
-      warn={workout.is_deload_suggested ? "Bu hafta deload önerilir" : undefined}
-    />
-  );
-}
-
-function Hero({
-  eyebrow,
-  title,
-  note,
-  action,
-  warn,
-  done,
-}: {
-  eyebrow: string;
-  title: string;
-  note: string;
-  action: { href: Href; label: string; quiet?: boolean };
-  warn?: string;
-  done?: boolean;
-}) {
-  return (
-    // Cömert dikey dolgu bilinçli. Bu kart ekranın tek karar noktası; ince bir
-    // şerit hâlinde durduğunda altındaki üç küçük kutuyla aynı ağırlığa
-    // düşüyor ve hiyerarşi kayboluyor. Yüksekliği veriyle değil boşlukla
-    // kazanıyor — sade kalması bu yüzden mümkün.
-    <section className="card px-8 py-10 lg:px-12 lg:py-16">
-      <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-        <div className="min-w-0">
-          {/* Tamamlandı işareti küçük bir volt madalyon.
-              İlk denemede kartın TAMAMINI soluk bir volt yıkamasıyla
-              doldurmuştum; ekranda çeyrek alan kaplıyordu ve "ekran başına bir
-              volt öğesi" kuralını açıkça ihlal ediyordu — vurgu olmaktan çıkıp
-              zemin rengine dönüşüyordu. Aynı bilgiyi 18px'lik bir madalyon
-              taşıyor. */}
-          <p className="flex items-center gap-2">
-            {done && (
-              <span
-                aria-hidden
-                className="grid size-[18px] shrink-0 place-items-center rounded-full"
-                style={{ background: "var(--color-accent)" }}
-              >
-                <svg
-                  width="11"
-                  height="11"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="var(--color-ink)"
-                  strokeWidth="3.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M5 13l4 4L19 7" />
-                </svg>
-              </span>
-            )}
-            <span className="label">{eyebrow}</span>
-          </p>
-          {/* Ekranın tek odak noktası. Big Shoulders sıkışık bir yüz; aynı
-              optik ağırlığa ulaşmak için geniş bir gövde yazısından daha
-              büyük punto gerekiyor. */}
-          <h2 className="display mt-2.5 text-3xl leading-[1.02] lg:text-4xl">{title}</h2>
-          <p className="mt-4 max-w-[46ch] text-sm text-[var(--color-ink-muted)]">{note}</p>
-
-          {warn && (
-            <p className="mt-3 text-xs" style={{ color: "var(--color-warning)" }}>
-              {warn}
-            </p>
-          )}
-        </div>
-
-        <Link
-          href={action.href}
-          className={`${action.quiet ? "btn btn-ghost" : "btn btn-primary"} shrink-0 lg:px-6 lg:py-3 lg:text-base`}
-        >
-          {action.label}
-        </Link>
-      </div>
-    </section>
-  );
-}
-
-/* --- Küçük göstergeler ---------------------------------------------------- */
-
-function Tile({
-  label,
-  value,
-  unit,
-  foot,
-  href,
-}: {
-  label: string;
-  value: string | number;
-  unit?: string;
-  foot?: string;
-  href: Href;
-}) {
-  return (
-    <Link
-      href={href}
-      className="card group flex flex-col justify-between p-5 transition-colors hover:bg-[var(--color-surface-raised)]"
-      style={{ transitionDuration: "var(--dur-micro)" }}
-    >
-      <p className="label">{label}</p>
-      <p className="mt-4 flex items-baseline gap-1.5">
-        <span className="figure text-3xl">{value}</span>
-        {unit && <span className="text-sm text-[var(--color-ink-muted)]">{unit}</span>}
-      </p>
-      {foot && <p className="mt-1 text-xs text-[var(--color-ink-faint)]">{foot}</p>}
-    </Link>
-  );
-}
-
-/** Geniş kolon: kalan kalori ve protein birlikte. Gün içinde en çok bakılan yer. */
-function MacroTile({ calories, protein }: { calories: string; protein: string }) {
-  return (
-    <Link
-      href="/nutrition"
-      className="card flex flex-col justify-between p-5 transition-colors hover:bg-[var(--color-surface-raised)]"
-      style={{ transitionDuration: "var(--dur-micro)" }}
-    >
-      <p className="label">Kalan</p>
-      <div className="mt-4 flex items-baseline gap-6">
-        <p className="flex items-baseline gap-1.5">
-          <span className="figure text-3xl">{fmt(calories, 0)}</span>
-          <span className="text-sm text-[var(--color-ink-muted)]">kcal</span>
-        </p>
-        {/* Ayırıcı çizgi: iki rakamı gruplamak yerine ayırıyor, çünkü
-            farklı birimler ve kullanıcı ikisine ayrı ayrı bakıyor. */}
-        <span aria-hidden className="h-7 w-px bg-[var(--color-border)]" />
-        <p className="flex items-baseline gap-1.5">
-          <span className="figure text-3xl">{fmt(protein, 0)}</span>
-          <span className="text-sm text-[var(--color-ink-muted)]">g protein</span>
-        </p>
-      </div>
-      <p className="mt-1 text-xs text-[var(--color-ink-faint)]">günlük hedefe kalan</p>
-    </Link>
-  );
-}
-
-function StreakTile({
-  weeks,
-  thisWeek,
-  weeklyTarget,
-}: {
-  weeks: number | undefined;
-  thisWeek: number | undefined;
-  weeklyTarget: number | undefined;
-}) {
-  // Seri varsa onu göster; yoksa bu haftanın doluluğu daha kullanışlı bir bilgi.
-  const hasStreak = (weeks ?? 0) > 0;
-
-  return (
-    <Link
-      href="/progress"
-      className="card flex flex-col justify-between p-5 transition-colors hover:bg-[var(--color-surface-raised)]"
-      style={{ transitionDuration: "var(--dur-micro)" }}
-    >
-      <p className="label">{hasStreak ? "Seri" : "Bu hafta"}</p>
-      <p className="mt-4 flex items-baseline gap-1.5">
-        <span className="figure text-3xl">
-          {hasStreak ? weeks : (thisWeek ?? "—")}
-        </span>
-        <span className="text-sm text-[var(--color-ink-muted)]">
-          {hasStreak ? "hafta" : weeklyTarget ? `/ ${weeklyTarget}` : ""}
-        </span>
-      </p>
-      <p className="mt-1 text-xs text-[var(--color-ink-faint)]">
-        {hasStreak
-          ? `bu hafta ${thisWeek ?? 0}/${weeklyTarget ?? "—"}`
-          : (thisWeek ?? 0) >= (weeklyTarget ?? Infinity)
-            ? "hedef tamamlandı"
-            : "planlanan antrenman"}
-      </p>
-    </Link>
-  );
-}
-
-/* --- Yardımcılar ---------------------------------------------------------- */
+/* --- Yardımcılar ---------------------------------------------------------------------- */
 
 function totalSets(workout: TodayWorkout): number {
   return workout.exercises.reduce((sum, e) => sum + e.target_sets, 0);
@@ -586,7 +750,7 @@ function totalSets(workout: TodayWorkout): number {
 
 /** ISO tarih/zaman damgasının kullanıcının yerel gününe denk gelip gelmediği. */
 function isToday(iso: string): boolean {
-  const d = new Date(iso);
+  const d = new Date(iso.length === 10 ? `${iso}T00:00:00` : iso);
   const now = new Date();
   return (
     d.getFullYear() === now.getFullYear() &&

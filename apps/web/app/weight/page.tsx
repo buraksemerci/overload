@@ -70,6 +70,9 @@ export default function WeightPage() {
   return (
     <Page>
       <PageHeader
+        photo="app-scale"
+        position="right center"
+        eyebrow="Vücut"
         title="Kilo"
         info={
           <>

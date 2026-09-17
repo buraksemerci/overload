@@ -541,7 +541,7 @@ export function Scrollytelling({ finale, onFinaleChange }: Props) {
             <div className="relative flex justify-center px-5 py-16 sm:px-8 lg:px-12">
               {/* Burada telefona oturtulmuyor: kart kaydırmaya bağlı değil ve
                   fotoğraf kartın yüksekliğine göre kırpılıyor. Zemini kendi. */}
-              <div className="w-full max-w-sm" style={{ background: "var(--color-ground)" }}>
+              <div className="theme-light w-full max-w-sm" style={{ background: "var(--color-ground)" }}>
                 {finale}
               </div>
             </div>
@@ -662,7 +662,7 @@ export function Scrollytelling({ finale, onFinaleChange }: Props) {
             <div
               aria-hidden
               data-phone-screen
-              className="absolute"
+              className="theme-light absolute"
               style={{
                 ...boxStyle(layout.screen),
                 borderRadius: layout.radius,
@@ -684,7 +684,7 @@ export function Scrollytelling({ finale, onFinaleChange }: Props) {
                 ekranda aynı formun bulanık görüntüsü var ve form onun
                 netleşmesi gibi görünüyor. */}
             <div
-              className="absolute"
+              className="theme-light absolute"
               style={{
                 left: layout.screen.left,
                 top: layout.screen.top,

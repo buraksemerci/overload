@@ -1,0 +1,104 @@
+# Yapılacaklar — tasarım yenilemesi
+
+Bu liste çalışırken güncelleniyor. `[x]` bitti, `[~]` sürüyor, `[ ]` sırada.
+Bir madde bitince altına kısa bir not düşülüyor.
+
+**Hedef:** giriş ekranındaki sinematik dil (karanlık salon, sıcak ışık, büyük
+yazı) uygulamanın bütün ekranlarında. Koyu tema. Geniş, dolu, sade; grafikler,
+fotoğraflar, ödül alacak kalitede UI/UX.
+
+**Şu an:** `/muscle-map` yeniden tasarımı → ardından `/progress`, `/weight`, `/soreness`.
+
+---
+
+## 0. Temel
+
+- [x] İçerik genişliği 68rem → 88rem (`CONTENT_WIDTH`), üst çubuk aynı çizgide
+- [x] Her ekran fotoğraflı giriş bandıyla açılıyor (`Hero`, `HeroStats`)
+- [x] Üst çubuk bandın üstünde cam (giriş ekranındaki gibi)
+- [x] Gece karosu, cam, `lift` sınıfları; gece belirteçleri
+- [x] Grafik bileşenleri: `Bars`, `Trend`, `Ring`, `Meter` (`components/Charts.tsx`)
+- [x] Pano hesapları saf fonksiyonlarda + birim testleri (`lib/stats.ts`)
+- [x] Fotoğraflar: giriş videosunun salonundan 15 kare (Higgsfield + video kareleri,
+      `scripts/app-photos.mjs`)
+- [x] **Koyu tema** — belirteçler, volt üstü yazı rengi (`--color-on-accent`), rozetler,
+      ısı ölçeği, tema rengi/manifest `#0d0e0b`
+  - Giriş ekranının telefon ekranı `.theme-light` ile açık kalıyor (videoyla aynı)
+- [x] Bütün ekranlar bantla açılıyor — yüklenirken ve hata verirken de
+      (pano, beslenme, antrenman, hesap, vücut, geçmiş, ağrı, program düzenleme,
+      program onayı, asistan). Saydam üst çubuk artık hiçbir durumda içeriğin
+      üstüne binmiyor.
+  - Program düzenleme ve onay ekranında hata durumunda sonsuz "yükleniyor"
+    hatası da düzeldi (hata kontrolü önce).
+- [ ] Kayma (CLS) denetimi: her ekranda ölçüm, yükleme iskeletleri sabit yükseklikte
+- [ ] Mobil (390px) ve tablet (768px) turu
+- [ ] Hareket azaltma tercihinde bantların animasyonu
+- [ ] Eksik fotoğraflar: akşam yemeği, ara öğün, tebeşir (yeniden üret)
+
+## 1. Pano (`/`)
+
+- [x] Bant: selamlama, günün işi, 4 büyük sayı
+- [x] Haftalık tonaj grafiği, kalori halkası + makrolar, kas dengesi mini harita,
+      kilo eğrisi, tutarlılık ızgarası, haftalık rapor karosu, son antrenmanlar,
+      bölüm karoları
+- [x] Koyu temada kontrol
+- [ ] Boş hesap (hiç veri yok) görünümü: karolar anlamlı davet göstermeli
+
+## 2. Vücut
+
+- [x] Yeni özet ekranı `/body` — tek cümle + 4 sayı + harita + kilo + ağrı + güç + rekor
+- [x] Menüde "Vücut → Özet" ilk sırada; panodaki "Vücut" karosu buraya gidiyor
+- [x] Kas haritası bileşeni modernleşti: gece sahnesi, ön+arka yan yana, ışıma
+- [~] `/muscle-map` ekranı yeni harita ile: seçilen kasın detay paneli, aralık seçici,
+      denge skoru, kas listesi
+- [ ] `/progress` yeniden: güç seviyeleri büyük, rekor rafı, hareket grafiği (şimdilik bant var)
+- [ ] `/weight` yeniden: büyük eğri, hedef çizgisi, hızlı tartı girişi (şimdilik bant var)
+- [ ] `/soreness` yeniden: vücut üzerinde ağrı işaretleme (şimdilik bant var)
+
+## 3. Antrenman
+
+- [x] `/workout` bant + seans akışı yeniden (sahne + günün hareketleri yan sütunu,
+      bantta set/süre/hareket/tonaj, ilerleme çubuğu)
+- [x] Kod geliştirmeleri: ekran uyanık kalıyor (Wake Lock), titreşim, plaka
+      hesaplayıcı (`lib/plates.ts` + test), ±15 sn dinlenme, ağırlık adımı ekipmana göre,
+      yarım kalan set taslakları yerelde saklanıyor, önceki seti tekrarla
+- [ ] Klavye kısayolları (Enter = seti kaydet, +/- ağırlık)
+- [~] `/programs` bant (var) + kartlar
+- [~] `/exercises` bant (var) + ekipman karoları + kas etiketleri
+- [~] `/history` bant (var) + haftalık grafik + seans kartları
+- [x] Program onayı ekranı: bant + gün/hareket/set sayıları + gece karosunda gerekçe
+
+## 4. Beslenme
+
+- [x] `/nutrition` bant (kalan kalori halkası) + öğün fotoğrafları + makrolar + gün gezinmesi
+- [~] `/supplements` bant (var) + kartlar
+
+## 5. Asistan
+
+- [x] `/chat` bant + büyük örnek kartları + "nasıl çalışıyor" yan sütunu +
+      günlük kullanım göstergesi + yapışık yazı alanı
+- [~] `/coach` bant (var) + rapor okuma düzeni
+
+## 6. Hesap ve diğerleri
+
+- [x] `/account` bant + kimlik bloğu
+- [ ] `/onboarding` koyu temada kontrol
+- [ ] Giriş ekranı koyu temada kontrol (telefon ekranı açık kalmalı)
+- [ ] Parola kurtarma / doğrulama ekranları koyu tema
+
+## 7. Kalite
+
+- [x] e2e testleri yeni tasarıma göre güncellendi (pano, antrenman, beslenme, hoş geldin)
+- [x] Tasarım kuralları testi: yeni ekran `/body` eklendi (124/124 geçti)
+- [ ] Tam test paketi + `pnpm build`
+- [ ] ROADMAP güncelle, commit
+
+---
+
+## Notlar
+
+- Higgsfield kredisi: ~11 kaldı (2026-09-17). Görsel başına 1,5 kredi (2k orta).
+- Üretilen ham görseller: `~/Downloads/hf-app`. Anlatı segmentleri: `~/Downloads/hf2`.
+- Tur ekran görüntüleri için geçici test: `apps/web/e2e/_tour.spec.ts`
+  (`MSYS_NO_PATHCONV=1 TOUR=/,/body TOUR_TAG=dk npx playwright test e2e/_tour.spec.ts --project=masaüstü`).
+  Commit'e girmiyor (`_tour`, `_flow`).

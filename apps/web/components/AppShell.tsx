@@ -18,6 +18,7 @@ import {
   IconScale,
   IconSupplement,
 } from "@/components/Icons";
+import { CONTENT_WIDTH } from "@/components/Layout";
 import { Photo } from "@/components/Photo";
 import { logout } from "@/lib/auth";
 import { useMe } from "@/lib/queries";
@@ -142,7 +143,7 @@ const PANEL: NavItem = {
 const GROUPS: readonly NavGroup[] = [
   {
     title: "Antrenman",
-    photo: "nav-antrenman",
+    photo: "app-grip",
     tone: "dark",
     items: [
       { href: "/workout", label: "Bugün", hint: "Set set akış", Icon: IconDumbbell },
@@ -153,8 +154,8 @@ const GROUPS: readonly NavGroup[] = [
   },
   {
     title: "Beslenme",
-    photo: "nav-beslenme",
-    tone: "light",
+    photo: "app-meal-bar",
+    tone: "dark",
     items: [
       { href: "/nutrition", label: "Günlük", hint: "Kalan kalori ve öğünler", Icon: IconNutrition },
       { href: "/supplements", label: "Supplement", hint: "Bugün alınacaklar", Icon: IconSupplement },
@@ -162,9 +163,10 @@ const GROUPS: readonly NavGroup[] = [
   },
   {
     title: "Vücut",
-    photo: "nav-vucut",
+    photo: "app-body",
     tone: "dark",
     items: [
+      { href: "/body", label: "Özet", hint: "Vücudun şu an ne durumda", Icon: IconPanel },
       { href: "/progress", label: "İlerleme", hint: "Güç seviyesi ve rekorlar", Icon: IconProgress },
       { href: "/muscle-map", label: "Kas Haritası", hint: "Haftalık hacim dengesi", Icon: IconBody },
       { href: "/weight", label: "Kilo", hint: "Trend ve hareketli ortalama", Icon: IconScale },
@@ -173,7 +175,7 @@ const GROUPS: readonly NavGroup[] = [
   },
   {
     title: "Asistan",
-    photo: "nav-asistan",
+    photo: "app-review",
     tone: "dark",
     items: [
       { href: "/chat", label: "Sohbet", hint: "Sor, anlat, fotoğraf gönder", Icon: IconChat },
@@ -390,12 +392,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const groupActive = (group: NavGroup) => group.items.some((item) => isActive(item.href));
 
-  /** Çubuk panelin üstünde mi? Metin ve zemin renkleri buna bağlı. */
+  /** Çubuk panelin üstünde mi? Zemin rengi buna bağlı. */
   const overPhoto = open !== null;
   /* Çubuk yazısı panelin TONUNA uyuyor: aydınlık bir panelde (kahvaltı)
-     beyaz yazı okunmuyordu. Panel kapalıyken normal koyu metin. */
+     beyaz yazı okunmuyordu. Panel kapalıyken çubuk her ekranın giriş
+     bandının üstünde duruyor — yani koyu tonda, beyaz yazıyla. */
   const openGroup = GROUPS.find((g) => g.title === open) ?? null;
-  const tone = openGroup ? TONES[openGroup.tone] : null;
+  const tone = openGroup ? TONES[openGroup.tone] : TONES.dark;
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -406,8 +409,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           bilinçli bir hareket yapıyor.
 
           `relative`: fotoğraf örtüsü buna göre konumlanıyor. */}
+      {/* Çubuk akışta DEĞİL, sayfanın üstünde: her ekran bir fotoğraf
+          bandıyla açılıyor ve çubuk o bandın üstünde cam — giriş ekranındaki
+          gibi. Akışta dururken bandın üstünde kırık beyaz bir şerit
+          kalıyordu. */}
       <header
-        className="relative"
+        className="absolute inset-x-0 top-0"
         style={{ zIndex: "var(--z-sticky)" }}
         onMouseLeave={closeSoon}
       >
@@ -433,23 +440,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             height: BAR_HEIGHT,
             zIndex: 1,
             // Fotoğraf açıkken zemin ŞEFFAF: altındaki görsel görünsün.
-            background: overPhoto
-              ? "transparent"
-              : "color-mix(in oklab, var(--color-ground) 88%, transparent)",
-            borderColor: overPhoto ? "transparent" : "var(--color-border)",
+            // Kapalıyken giriş ekranının çubuğuyla aynı cam.
+            background: overPhoto ? "transparent" : "oklch(12% 0.01 115 / 0.38)",
+            borderColor: overPhoto ? "transparent" : "oklch(99% 0 0 / 0.1)",
             backdropFilter: overPhoto ? "none" : "blur(12px)",
+            WebkitBackdropFilter: overPhoto ? "none" : "blur(12px)",
             // Kısa: metin rengiyle fotoğrafın gelişi aynı anda olmalı, yoksa
             // bir an koyu yazı koyu fotoğrafın üstünde kalıyor.
             transitionDuration: "var(--dur-micro)",
           }}
         >
-          <div className="mx-auto flex h-full max-w-[84rem] items-center px-5 sm:px-8">
+          <div className={`mx-auto flex h-full items-center px-5 sm:px-8 ${CONTENT_WIDTH}`}>
             <button
               type="button"
               onClick={() => setDrawer(true)}
               aria-label="Menüyü aç"
               className="btn-quiet -ml-2 grid size-9 place-items-center md:hidden"
-              style={{ color: tone?.bar }}
+              style={{ color: tone.bar }}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden>
                 <path d="M4 7h16M4 12h16M4 17h16" />
@@ -462,7 +469,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               href="/"
               className="display text-xl leading-none tracking-tight transition-colors"
               style={{
-                color: tone?.bar ?? "var(--color-ink)",
+                color: tone.bar,
                 transitionDuration: "var(--dur-micro)",
               }}
             >
@@ -490,7 +497,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       aria-hidden
                       className="h-4 w-px shrink-0 transition-colors"
                       style={{
-                        background: tone?.divider ?? "var(--color-border-strong)",
+                        background: tone.divider,
                         transitionDuration: "var(--dur-micro)",
                       }}
                     />
@@ -510,18 +517,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     onFocus={() => hoverOpen(group.title)}
                     className="display relative block px-5 py-2 text-base tracking-tight transition-colors"
                     style={{
-                      color: tone
-                        ? open === group.title
+                      color:
+                        open === group.title || (open === null && groupActive(group))
                           ? tone.bar
-                          : tone.barDim
-                        : groupActive(group)
-                          ? "var(--color-ink)"
-                          : "var(--color-ink-muted)",
+                          : tone.barDim,
                       transitionDuration: "var(--dur-micro)",
                     }}
                   >
                     {group.title}
-                    <ActiveMark shown={groupActive(group)} onPhoto={tone !== null} />
+                    <ActiveMark shown={groupActive(group)} />
                   </Link>
                 </div>
               ))}
@@ -540,7 +544,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {drawer && <Drawer isActive={isActive} onClose={() => setDrawer(false)} />}
 
       <main
-        className={`mx-auto w-full max-w-[80rem] flex-1 px-5 pt-8 pb-16 sm:px-8 ${
+        className={`w-full flex-1 px-5 pb-20 sm:px-8 ${
           open !== null ? "behind-panel" : "behind-panel-idle"
         }`}
         // Panel açıkken arkadaki içerik tıklanamaz: bulanık bir yüzeye
@@ -553,14 +557,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Aktif konum işareti: alt kenarda ince bir çizgi. */
-function ActiveMark({ shown, onPhoto }: { shown: boolean; onPhoto: boolean }) {
+/** Aktif konum işareti: alt kenarda ince bir çizgi. Çubuk hep koyu bir
+    zeminin üstünde, volt dolgu orada ışık gibi okunuyor. */
+function ActiveMark({ shown }: { shown: boolean }) {
   return (
     <span
       aria-hidden
       className="absolute inset-x-5 bottom-0 h-[2px] transition-opacity"
       style={{
-        background: onPhoto ? "var(--color-accent)" : "var(--color-accent-deep)",
+        background: "var(--color-accent)",
         opacity: shown ? 1 : 0,
         transitionDuration: "var(--dur-micro)",
       }}
@@ -769,7 +774,7 @@ function DrawerLink({
 
 /* --- Profil --------------------------------------------------------------- */
 
-function ProfileMenu({ tone = null }: { tone?: (typeof TONES)[keyof typeof TONES] | null }) {
+function ProfileMenu({ tone }: { tone: (typeof TONES)[keyof typeof TONES] }) {
   const me = useMe();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -808,9 +813,9 @@ function ProfileMenu({ tone = null }: { tone?: (typeof TONES)[keyof typeof TONES
         style={{
           // Panel üstündeyken cam gibi: dolu bir daire görselin üzerinde
           // yapıştırılmış duruyordu.
-          borderColor: tone?.divider ?? "var(--color-border-strong)",
-          background: tone ? "transparent" : "var(--color-surface)",
-          color: tone?.bar ?? "var(--color-ink)",
+          borderColor: tone.divider,
+          background: "transparent",
+          color: tone.bar,
           transitionDuration: "var(--dur-micro)",
         }}
       >

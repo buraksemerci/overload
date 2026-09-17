@@ -84,6 +84,8 @@ export default function ProgramsPage() {
   return (
     <Page>
       <PageHeader
+        photo="app-shoes"
+        eyebrow="Antrenman"
         title="Programlar"
         info={
           <>

@@ -152,12 +152,16 @@ describe("eski desenler", () => {
 
   /**
    * Sayfa genişliği tek yerde: `components/Layout.tsx` içindeki `Page`.
-   * Elle yazılan `max-w-[68rem]` ekranlar arası kaymaya yol açıyor — biri
+   * Elle yazılan `max-w-[88rem]` ekranlar arası kaymaya yol açıyor — biri
    * değişince diğerleri sessizce farklı kalıyor.
    */
   it("sayfa genişliği elle yazılmıyor", () => {
+    // Eski genişlik de izleniyor: bir ekran eski değerde kalırsa ızgaralar
+    // komşularından dar durur.
     const offenders = SOURCES.filter(
-      (path) => !path.endsWith("Layout.tsx") && read(path).includes("max-w-[68rem]"),
+      (path) =>
+        !path.endsWith("Layout.tsx") &&
+        ["max-w-[68rem]", "max-w-[88rem]"].some((width) => read(path).includes(width)),
     );
     expect(offenders.map(rel)).toEqual([]);
   });

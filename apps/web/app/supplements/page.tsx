@@ -51,6 +51,9 @@ export default function SupplementsPage() {
   return (
     <Page>
       <PageHeader
+        photo="app-supplements"
+        position="right center"
+        eyebrow="Beslenme"
         title="Supplement"
         info={
           <>
@@ -219,7 +222,7 @@ function Answer({
                 // bir durum. Metin `--color-ink`, volt üstünde okunuyor.
                 background: "var(--color-accent)",
                 borderColor: "transparent",
-                color: "var(--color-ink)",
+                color: "var(--color-on-accent)",
               }
             : {
                 borderColor: "var(--color-border-strong)",

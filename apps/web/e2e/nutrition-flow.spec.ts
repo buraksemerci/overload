@@ -123,14 +123,15 @@ test.describe("beslenme gün görünümü", () => {
     await expect(page.getByText("450", { exact: true })).toBeVisible();
   });
 
-  test("makrolar istek üzerine açılıyor", async ({ page }) => {
+  test("makroların kalanı bantta görünüyor", async ({ page }) => {
     await mockDay(page, [LOGGED]);
     await page.goto("/nutrition");
 
-    // Varsayılan ekranda makro çubukları YOK — istenen sadelik bu.
-    await expect(page.getByText("Karbonhidrat")).toBeHidden();
-    await page.getByRole("button", { name: "Makroları gör" }).click();
-    await expect(page.getByText("Karbonhidrat")).toBeVisible();
+    // Önce bir düğmenin arkasındaydı; kalan proteini görmek için bir adım
+    // fazladan gerekiyordu. Geniş bantta üçü de görünür.
+    for (const label of ["Protein", "Karbonhidrat", "Yağ"]) {
+      await expect(page.getByText(label, { exact: true })).toBeVisible();
+    }
   });
 
   test("kayıtlı olmayan öğünler tek satırlık özet", async ({ page }) => {

@@ -3,16 +3,28 @@
 /**
  * Kas ısı haritası — anatomik vücut üzerinde.
  *
- * Önceki sürüm şematik bloklar kullanıyordu ve bu bilinçli bir tercihti:
- * "dekorasyon yok, hız ve netlik var". Ama blokların bir maliyeti vardı —
- * hangi bloğun hangi kas olduğunu çıkarmak için etikete bakmak gerekiyordu.
- * Anatomik siluet o adımı ortadan kaldırıyor: şekil kendi adını söylüyor.
+ * --------------------------------------------------------------------------
+ * GECE SAHNESİ
+ * --------------------------------------------------------------------------
+ * Harita kırık beyaz bir kartta açık yeşil tonlarla çiziliyordu; "çalışılmış"
+ * ile "çalışılmamış" arasındaki fark, zemine yakın iki açık rengin farkıydı.
+ * Koyu sahnede tersine: vücut karanlık bir heykel, çalışılan kas YANIYOR.
+ * Hedefe ulaşmış kas voltla ve hafif bir ışımayla, hedefin çok üstündeki
+ * kehribarla. Göz ekranı açtığı anda nerenin çalışıp nerenin sönük kaldığını
+ * görüyor — lejanta bakmadan.
+ *
+ * Açık tema hâli (`night={false}`) gömülü küçük haritalar için duruyor.
+ *
+ * --------------------------------------------------------------------------
+ * ÖN VE ARKA BİRLİKTE
+ * --------------------------------------------------------------------------
+ * `pair`: iki görünüm yan yana. Önce bir sekmeyle geçiliyordu ve sırt günü
+ * yapmış biri ilk bakışta boş bir ön vücut görüyordu. Denge sorusu (ön mü
+ * geride, arka mı) ancak ikisi aynı anda görününce cevaplanıyor.
  *
  * Yollar `lib/bodyPaths.ts` içinde; kaynağı ve MIT bildirimi orada ve
- * THIRD-PARTY-NOTICES.md dosyasında.
- *
- * `svgId` değerleri backend'deki `muscle_group.svg_id` ile eşleşmek ZORUNDA
- * (bkz. seed/data.py). Birini değiştiren diğerini de değiştirmeli.
+ * THIRD-PARTY-NOTICES.md dosyasında. `svgId` değerleri backend'deki
+ * `muscle_group.svg_id` ile eşleşmek ZORUNDA (bkz. seed/data.py).
  */
 
 import { useId, useMemo, useState } from "react";
@@ -28,49 +40,72 @@ type Region = "front" | "back";
  * %100-150 = hedef tutturulmuş, >%150 = fazla (kehribar — toparlanma riski).
  * Kırmızı BİLİNÇLİ olarak kullanılmıyor; fazla hacim bir hata değil, bir uyarı.
  */
-function heatColor(sets: number, target: number): string {
-  if (sets <= 0) return "var(--color-heat-0)";
+export function heatStep(sets: number, target: number): 0 | 1 | 2 | 3 | 4 {
+  if (sets <= 0) return 0;
   const ratio = sets / Math.max(target, 1);
-  if (ratio < 0.5) return "var(--color-heat-1)";
-  if (ratio < 1) return "var(--color-heat-2)";
-  if (ratio <= 1.5) return "var(--color-heat-4)";
-  return "var(--color-heat-over)";
+  if (ratio < 0.5) return 1;
+  if (ratio < 1) return 2;
+  if (ratio <= 1.5) return 3;
+  return 4;
 }
 
-const HEAT_STEPS: ReadonlyArray<[string, string]> = [
-  ["Çalışılmadı", "var(--color-heat-0)"],
-  ["Eksik", "var(--color-heat-1)"],
-  ["Yolda", "var(--color-heat-2)"],
-  ["Hedefte", "var(--color-heat-4)"],
-  ["Fazla", "var(--color-heat-over)"],
-];
+const LIGHT_HEAT = [
+  "var(--color-heat-0)",
+  "var(--color-heat-1)",
+  "var(--color-heat-2)",
+  "var(--color-heat-4)",
+  "var(--color-heat-over)",
+] as const;
+
+const NIGHT_HEAT = [
+  "var(--color-heat-night-0)",
+  "var(--color-heat-night-1)",
+  "var(--color-heat-night-2)",
+  "var(--color-accent)",
+  "var(--color-warning)",
+] as const;
+
+export const HEAT_LABELS = ["Çalışılmadı", "Eksik", "Yolda", "Hedefte", "Fazla"] as const;
+
+export function heatColor(step: number, night: boolean): string {
+  return (night ? NIGHT_HEAT : LIGHT_HEAT)[step]!;
+}
 
 interface Props {
   volumes: MuscleVolume[];
-  /** Tam ekran sayfada true; küçük gömülü haritada false. */
+  /** Üzerine gelince açıklama, tıklayınca seçim. Küçük gömülü haritada false. */
   interactive?: boolean;
   /** Dışarıdan (yandaki listeden) işaretlenen kas grubu. */
   highlight?: string | null;
+  /** Koyu sahne. */
+  night?: boolean;
+  /** Ön ve arka yan yana. */
+  pair?: boolean;
+  /** Bir kas grubuna tıklandı. Seçimi kaldırmak çağıranın kararı. */
+  onSelect?: (svgId: string) => void;
   className?: string;
 }
 
 /**
- * Set sayısı — VİRGÜLLE.
- *
- * `toFixed(1)` her zaman nokta üretiyor ve haritanın üstündeki sayı "10.0",
- * yanındaki listede duran aynı sayı "10,0" oluyordu. Aynı ekranda iki farklı
- * ondalık ayırıcı.
+ * Set sayısı — VİRGÜLLE. `toFixed(1)` her zaman nokta üretiyor ve haritanın
+ * üstündeki sayı "10.0", yanındaki listede duran aynı sayı "10,0" oluyordu.
  */
-const setText = (value: number): string =>
+export const setText = (value: number): string =>
   value.toLocaleString("tr-TR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-export function MuscleMap({ volumes, interactive = true, highlight, className }: Props) {
+export function MuscleMap({
+  volumes,
+  interactive = true,
+  highlight,
+  night = false,
+  pair = false,
+  onSelect,
+  className,
+}: Props) {
   const [region, setRegion] = useState<Region>("front");
   const [hovered, setHovered] = useState<MuscleVolume | null>(null);
 
   // Listede bir kasın üzerine gelindiğinde o kas hangi görünümdeyse ona geç.
-  // Aksi halde "Kanat" satırına gelen kullanıcı ön görünümde hiçbir şeyin
-  // değişmediğini görüyor ve işaretlemenin çalışmadığını sanıyor.
   const highlightRegion = highlight
     ? BODY_BACK.regions.some((r) => r.svgId === highlight)
       ? "back"
@@ -84,11 +119,18 @@ export function MuscleMap({ volumes, interactive = true, highlight, className }:
     return map;
   }, [volumes]);
 
-  const view = shown === "front" ? BODY_FRONT : BODY_BACK;
+  const bodies = pair
+    ? ([
+        ["front", BODY_FRONT],
+        ["back", BODY_BACK],
+      ] as const)
+    : ([[shown, shown === "front" ? BODY_FRONT : BODY_BACK]] as const);
+
+  const muted = night ? "var(--color-on-night-faint)" : "var(--color-ink-faint)";
 
   return (
     <div className={className}>
-      {interactive && (
+      {interactive && !pair && (
         <div className="seg mb-5" role="tablist" aria-label="Vücut görünümü">
           {(["front", "back"] as const).map((r) => (
             <button
@@ -105,51 +147,76 @@ export function MuscleMap({ volumes, interactive = true, highlight, className }:
         </div>
       )}
 
-      <BodySvg
-        view={view}
-        region={shown}
-        bySvgId={bySvgId}
-        interactive={interactive}
-        highlight={highlight ?? null}
-        onHover={setHovered}
-      />
+      {/* `items-end`: arka görünümün çizimi öndekinden uzun; alta
+          hizalanmayınca "Ön" ve "Arka" yazıları farklı yükseklikte kalıyordu. */}
+      <div className={pair ? "grid grid-cols-2 items-end gap-2 sm:gap-6" : ""}>
+        {bodies.map(([key, view]) => (
+          <figure key={key} className="m-0">
+            <BodySvg
+              view={view}
+              region={key}
+              bySvgId={bySvgId}
+              interactive={interactive}
+              // Haritanın kendi üzerindeki imleç önce: dışarıdan gelen işaret
+              // (seçili kas) imlecin gezdiği kası gölgelemesin.
+              highlight={hovered?.svgId ?? highlight ?? null}
+              night={night}
+              onHover={setHovered}
+              onSelect={onSelect}
+            />
+            {pair && (
+              <figcaption
+                className="label mt-2 text-center"
+                style={{ color: muted }}
+              >
+                {key === "front" ? "Ön" : "Arka"}
+              </figcaption>
+            )}
+          </figure>
+        ))}
+      </div>
 
       {interactive && (
-        <>
-          {/* Sabit yükseklik: üzerine gelindiğinde altındaki açıklama
-              zıplamasın. */}
-          <div className="mt-4 min-h-[2.75rem] text-center">
-            {hovered ? (
-              <p className="text-sm">
-                <span>{hovered.nameTr}</span>{" "}
-                <span className="tnum text-[var(--color-ink-muted)]">
-                  {setText(hovered.sets)} / {hovered.target} set
-                </span>
-              </p>
-            ) : (
-              <p className="text-xs text-[var(--color-ink-faint)]">
-                Bir kas grubuna gel — haftalık set hacmini gösterir.
-              </p>
-            )}
-          </div>
-
-          <ul className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-            {HEAT_STEPS.map(([label, color]) => (
-              <li
-                key={label}
-                className="flex items-center gap-1.5 text-2xs text-[var(--color-ink-muted)]"
-              >
-                <span
-                  className="inline-block size-2.5 rounded-[2px] border border-[var(--color-border)]"
-                  style={{ background: color }}
-                />
-                {label}
-              </li>
-            ))}
-          </ul>
-        </>
+        <div className="mt-4 min-h-[2.75rem] text-center" aria-live="polite">
+          {hovered ? (
+            <p className="text-sm" style={{ color: night ? "var(--color-on-night)" : undefined }}>
+              <span>{hovered.nameTr}</span>{" "}
+              <span className="tnum" style={{ color: muted }}>
+                {setText(hovered.sets)} / {hovered.target} set
+              </span>
+            </p>
+          ) : (
+            <p className="text-xs" style={{ color: muted }}>
+              Bir kas grubuna gel ya da dokun — haftalık set hacmini gösterir.
+            </p>
+          )}
+        </div>
       )}
     </div>
+  );
+}
+
+/** Isı ölçeği — renk ve adıyla, tek satır. */
+export function HeatLegend({ night = false }: { night?: boolean }) {
+  return (
+    <ul className="flex flex-wrap items-center gap-x-5 gap-y-2">
+      {HEAT_LABELS.map((label, step) => (
+        <li
+          key={label}
+          className="flex items-center gap-1.5 text-2xs"
+          style={{ color: night ? "var(--color-on-night-muted)" : "var(--color-ink-muted)" }}
+        >
+          <span
+            className="inline-block h-2.5 w-4"
+            style={{
+              background: heatColor(step, night),
+              boxShadow: night && step === 3 ? "0 0 8px oklch(90% 0.19 118 / 0.7)" : undefined,
+            }}
+          />
+          {label}
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -159,26 +226,37 @@ function BodySvg({
   bySvgId,
   interactive,
   highlight,
+  night,
   onHover,
+  onSelect,
 }: {
   view: BodyView;
   region: Region;
   bySvgId: Map<string, MuscleVolume>;
   interactive: boolean;
   highlight: string | null;
+  night: boolean;
   onHover: (volume: MuscleVolume | null) => void;
+  onSelect?: (svgId: string) => void;
 }) {
-  // `useId`: aynı sayfada iki harita bulunabiliyor ve clipPath kimlikleri
-  // çakışırsa biri diğerinin kırpmasını kullanıyor.
+  // `useId`: aynı sayfada iki harita bulunabiliyor ve kimlikler çakışırsa
+  // biri diğerinin kırpmasını ya da ışımasını kullanıyor.
   const uid = useId().replace(/:/g, "");
 
-  const paint = (svgId: string | null) => {
-    if (svgId === null) return "var(--color-surface-raised)";
+  const stepOf = (svgId: string) => {
     const volume = bySvgId.get(svgId);
-    // Veri gelmeyen bölge ile "0 set" aynı görünmeli; farklı renk vermek
-    // kullanıcıya olmayan bir ayrım gösterir.
-    return volume ? heatColor(volume.sets, volume.target) : "var(--color-heat-0)";
+    return volume ? heatStep(volume.sets, volume.target) : 0;
   };
+
+  const paint = (svgId: string | null) => {
+    if (svgId === null) return night ? "var(--color-silhouette)" : "var(--color-surface-raised)";
+    // Veri gelmeyen bölge ile "0 set" aynı görünmeli.
+    return heatColor(stepOf(svgId), night);
+  };
+
+  // Hedefteki kas gece sahnesinde hafifçe ışıyor.
+  const glow = (svgId: string | null) =>
+    night && svgId !== null && stepOf(svgId) === 3 ? `url(#${uid}-glow)` : undefined;
 
   const hoverProps = (svgId: string | null) => {
     if (!interactive || svgId === null) return {};
@@ -187,7 +265,9 @@ function BodySvg({
     return {
       onMouseEnter: () => onHover(volume),
       onMouseLeave: () => onHover(null),
+      onClick: onSelect ? () => onSelect(svgId) : undefined,
       className: "cursor-pointer",
+      style: { transition: "opacity var(--dur-micro) var(--ease-out)" },
     };
   };
 
@@ -195,17 +275,16 @@ function BodySvg({
     if (svgId === null) return null;
     const volume = bySvgId.get(svgId);
     if (!volume) return null;
-    return (
-      <title>{`${volume.nameTr}: ${setText(volume.sets)} / ${volume.target} set`}</title>
-    );
+    return <title>{`${volume.nameTr}: ${setText(volume.sets)} / ${volume.target} set`}</title>;
   };
 
-  // İşaretleme dolguyla DEĞİL konturla yapılıyor: dolguyu değiştirmek ısı
-  // rengini bozar, yani kullanıcı tam da okumak istediği veriyi kaybeder.
+  // İşaretleme dolguyla DEĞİL konturla: dolguyu değiştirmek ısı rengini
+  // bozar, kullanıcı tam da okumak istediği veriyi kaybeder.
+  const baseStroke = night ? "oklch(12% 0.01 115)" : "var(--color-border)";
+  const markStroke = night ? "oklch(99% 0 0)" : "var(--color-ink)";
   const strokeFor = (svgId: string | null) =>
-    svgId !== null && svgId === highlight ? "var(--color-ink)" : "var(--color-border)";
-  const widthFor = (svgId: string | null) =>
-    svgId !== null && svgId === highlight ? 3 : 1.2;
+    svgId !== null && svgId === highlight ? markStroke : baseStroke;
+  const widthFor = (svgId: string | null) => (svgId !== null && svgId === highlight ? 4 : 1.4);
 
   const split = view.splitDeltoid;
 
@@ -216,23 +295,35 @@ function BodySvg({
       role="img"
       aria-label={`${region === "front" ? "Ön" : "Arka"} vücut kas hacmi haritası`}
     >
-      {/* Ön omuz / yan omuz bölmesi. Kaynak veride omuz tek parça; anterior ve
-          lateral başı ayırmak için aynı yol iki kez çizilip dikey orta
-          çizgiden kırpılıyor. Dıştaki yarı yan omuz, içteki yarı ön omuz. */}
-      {split && (
-        <defs>
-          {split.midX.map((mid, i) => (
-            <g key={i}>
-              <clipPath id={`${uid}-lat-${i}`}>
-                <rect x={mid - 500} y={0} width={500} height={2000} />
-              </clipPath>
-              <clipPath id={`${uid}-ant-${i}`}>
-                <rect x={mid} y={0} width={500} height={2000} />
-              </clipPath>
-            </g>
-          ))}
-        </defs>
-      )}
+      <defs>
+        {night && (
+          <filter id={`${uid}-glow`} x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="9" result="blur" />
+            <feColorMatrix
+              in="blur"
+              type="matrix"
+              values="0 0 0 0 0.82  0 0 0 0 0.95  0 0 0 0 0.25  0 0 0 0.75 0"
+              result="tint"
+            />
+            <feMerge>
+              <feMergeNode in="tint" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        )}
+        {/* Ön omuz / yan omuz bölmesi. Kaynak veride omuz tek parça; aynı
+            yol iki kez çizilip dikey orta çizgiden kırpılıyor. */}
+        {split?.midX.map((mid, i) => (
+          <g key={i}>
+            <clipPath id={`${uid}-lat-${i}`}>
+              <rect x={mid - 500} y={0} width={500} height={2000} />
+            </clipPath>
+            <clipPath id={`${uid}-ant-${i}`}>
+              <rect x={mid} y={0} width={500} height={2000} />
+            </clipPath>
+          </g>
+        ))}
+      </defs>
 
       {view.regions.map((reg) => (
         <g
@@ -240,6 +331,7 @@ function BodySvg({
           fill={paint(reg.svgId)}
           stroke={strokeFor(reg.svgId)}
           strokeWidth={widthFor(reg.svgId)}
+          filter={glow(reg.svgId)}
           {...hoverProps(reg.svgId)}
         >
           {titleFor(reg.svgId)}
@@ -250,8 +342,6 @@ function BodySvg({
       ))}
 
       {split?.paths.map((d, i) => {
-        // Sol ve sağ omuz aynı dizide sırayla; hangi orta çizgiye ait olduğu
-        // sıraya göre belirleniyor.
         const half = i < split.paths.length / 2 ? 0 : 1;
         return (
           <g key={`delt-${i}`}>
@@ -259,6 +349,7 @@ function BodySvg({
               fill={paint("m-side-delts")}
               stroke={strokeFor("m-side-delts")}
               strokeWidth={widthFor("m-side-delts")}
+              filter={glow("m-side-delts")}
               {...hoverProps("m-side-delts")}
             >
               {titleFor("m-side-delts")}
@@ -268,6 +359,7 @@ function BodySvg({
               fill={paint("m-front-delts")}
               stroke={strokeFor("m-front-delts")}
               strokeWidth={widthFor("m-front-delts")}
+              filter={glow("m-front-delts")}
               {...hoverProps("m-front-delts")}
             >
               {titleFor("m-front-delts")}

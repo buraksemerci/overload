@@ -62,9 +62,18 @@ export default function SorenessPage() {
   const [picking, setPicking] = useState<MuscleGroupRow | null>(null);
   const [choosing, setChoosing] = useState(false);
 
-  if (groups.isLoading || soreness.isLoading) return <Loading />;
-  if (groups.isError)
-    return <ErrorBox error={groups.error} onRetry={() => void groups.refetch()} />;
+  // Bant veri beklemiyor: yüklenirken de aynı yerden açılıyor.
+  if (groups.isLoading || soreness.isLoading || groups.isError)
+    return (
+      <Page>
+        <PageHeader photo="app-stretch" position="right center" eyebrow="Vücut" title="Ağrı" />
+        {groups.isError ? (
+          <ErrorBox error={groups.error} onRetry={() => void groups.refetch()} />
+        ) : (
+          <Loading />
+        )}
+      </Page>
+    );
 
   const all = groups.data ?? [];
   const today = soreness.data ?? [];
@@ -75,6 +84,9 @@ export default function SorenessPage() {
   return (
     <Page>
       <PageHeader
+        photo="app-stretch"
+        position="right center"
+        eyebrow="Vücut"
         title="Ağrı"
         info={
           <>

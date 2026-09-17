@@ -66,7 +66,7 @@ export default function ProgressPage() {
 
   return (
     <Page>
-      <PageHeader title="İlerleme" />
+      <PageHeader title="İlerleme" photo="app-plates" eyebrow="Vücut" lead="Güç seviyen, tutarlılığın ve rekorların." />
 
       {/* --- Başlık: güç seviyesi ---------------------------------------- */}
       <Section

@@ -76,6 +76,9 @@ export default function ExercisesPage() {
   return (
     <Page>
       <PageHeader
+        photo="app-dumbbells"
+        position="right center"
+        eyebrow="Antrenman"
         title="Hareket Kütüphanesi"
         info={
           <>

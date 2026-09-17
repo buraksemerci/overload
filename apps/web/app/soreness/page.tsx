@@ -74,8 +74,10 @@ export default function SorenessPage() {
   const worst = sore[0];
   const ready = !groups.isLoading && !soreness.isLoading;
 
+  // Yüklenirken de iki satırlık bir cümle: dar ekranda tek satırlık bir
+  // metin veri gelince ikiye çıkıyor ve altındaki her şeyi aşağı itiyordu.
   const lead = !ready
-    ? "Bugün nerede ağrı var?"
+    ? "Bugün nerede ağrı var? İşaretlemek için vücuttaki bölgeye dokun."
     : sore.length === 0
       ? "Bugün işaretli ağrı yok. Ağrıyan bir yer varsa vücutta dokun."
       : `Bugün ${sore.length} bölge işaretli; en belirgini ${worst!.name_tr.toLocaleLowerCase("tr-TR")}.`;
@@ -145,7 +147,7 @@ export default function SorenessPage() {
 
       <div className="grid gap-4 lg:grid-cols-12">
         {/* --- Vücut ------------------------------------------------------ */}
-        <section aria-label="Vücut üzerinde işaretle" className="tile-night flex min-h-[26rem] flex-col p-5 sm:p-6 lg:col-span-7 lg:min-h-[34rem] lg:p-10">
+        <section aria-label="Vücut üzerinde işaretle" className="tile-night flex min-h-[30rem] flex-col p-5 sm:p-6 lg:col-span-7 lg:min-h-[34rem] lg:p-10">
           {ready && !groups.isError && (
             <>
               <MuscleMap

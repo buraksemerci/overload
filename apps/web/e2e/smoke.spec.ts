@@ -224,7 +224,13 @@ test.describe("oturum açıkken", () => {
       }
 
       await target.click();
-      await expect(page.getByRole("heading", { name: heading, level: 1 })).toBeVisible();
+      // Uzun bekleme BİLEREK: geliştirme sunucusu paralel koşan testlerin
+      // altında bir rotayı ilk kez derlerken 5 saniyeyi aşabiliyor. Üretim
+      // derlemesinde böyle bir gecikme yok; burada ölçülen şey gezinmenin
+      // çalışması, sunucunun derleme hızı değil.
+      await expect(page.getByRole("heading", { name: heading, level: 1 })).toBeVisible({
+        timeout: 20_000,
+      });
     }
   });
 

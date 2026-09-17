@@ -376,13 +376,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [open, close]);
 
   if (CHROMELESS.has(pathname)) {
-    /* Giriş ekranı kendi dolgusunu yönetiyor: tam genişlik bir anlatı
-       sahnesiyle başlıyor ve üstünde yapışkan bir çubuk var. Dışarıdan
-       verilen 2.5rem'lik üst dolgu, çubuğu ekranın tepesinden aşağı
-       itiyordu. Diğer oturumsuz ekranlar (parola kurtarma) sıradan metin;
-       onlar dolguyu koruyor. */
-    const bare = pathname === "/login" || pathname === "/onboarding";
-    return <main className={bare ? "px-6" : "px-6 py-10"}>{children}</main>;
+    /* Oturumsuz ekranların hepsi kendi dolgusunu yönetiyor: giriş anlatısı
+       tam genişlik bir sahneyle ve yapışkan bir çubukla başlıyor; parola ve
+       doğrulama ekranları da fotoğraflı bir kabukla ekranın kenarına
+       dayanıyor. Dışarıdan verilen dikey dolgu ikisini de bozuyordu. */
+    return <main className="px-6">{children}</main>;
   }
 
   const isActive = (href: Href) => {

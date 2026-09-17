@@ -305,6 +305,11 @@ export default function WorkoutPage() {
             </HeroStats>
             <Progress done={doneCount} total={steps.length} />
           </>
+        ) : today.isLoading ? (
+          /* Sayılar gelene kadar aynı yükseklik: bandın içeriği alta
+             yaslandığı için boş bırakılan yer başlığı aşağıda tutuyor ve
+             veri gelince hiçbir şey zıplamıyor. */
+          <div aria-busy="true" className="h-[13.5rem] sm:h-[8.75rem]" />
         ) : null}
       </Hero>
 

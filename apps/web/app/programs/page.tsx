@@ -126,6 +126,7 @@ export default function ProgramsPage() {
           </>
         }
       >
+        {mine.isLoading && <div aria-busy="true" className="h-[11rem] sm:h-[7rem]" />}
         {active && (
           <HeroStats>
             <HeroStat label="Haftada" value={active.days_per_week} unit="gün" />

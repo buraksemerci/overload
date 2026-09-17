@@ -13,6 +13,7 @@
  */
 
 import Link from "next/link";
+import { AuthScreen } from "@/components/AuthScreen";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { verifyEmail } from "@/lib/auth";
@@ -40,43 +41,39 @@ function Verify() {
   }, [token]);
 
   if (state === "working") {
-    return <p className="text-sm text-[var(--color-ink-muted)]">Doğrulanıyor…</p>;
+    return (
+      <AuthScreen title="Doğrulanıyor…" lead="E-posta adresin kontrol ediliyor.">
+        <span aria-busy="true" className="block h-12" />
+      </AuthScreen>
+    );
   }
 
   if (state === "ok") {
     return (
-      <>
-        <h1 className="display text-2xl">E-postan doğrulandı</h1>
-        <p className="mt-3 text-sm text-[var(--color-ink-muted)]">
-          Hesabın hazır.
-        </p>
-        <Link href="/" className="btn btn-primary mt-6 self-start">
+      <AuthScreen title="E-postan doğrulandı" lead="Hesabın hazır.">
+        <Link href="/" className="btn btn-primary px-6 py-3.5">
           Uygulamaya git
         </Link>
-      </>
+      </AuthScreen>
     );
   }
 
   return (
-    <>
-      <h1 className="display text-2xl">Doğrulanamadı</h1>
-      <p className="mt-3 text-sm text-[var(--color-ink-muted)]">
-        Bağlantının süresi dolmuş ya da daha önce kullanılmış olabilir.
-        Hesabına girip yeni bir doğrulama e-postası isteyebilirsin.
-      </p>
-      <Link href="/login" className="link mt-6 self-start text-sm">
+    <AuthScreen
+      title="Doğrulanamadı"
+      lead="Bağlantının süresi dolmuş ya da daha önce kullanılmış olabilir. Hesabına girip yeni bir doğrulama e-postası isteyebilirsin."
+    >
+      <Link href="/login" className="btn btn-on-photo">
         Giriş ekranına dön
       </Link>
-    </>
+    </AuthScreen>
   );
 }
 
 export default function VerifyPage() {
   return (
-    <div className="mx-auto flex min-h-[70dvh] w-full max-w-sm flex-col justify-center">
-      <Suspense fallback={null}>
-        <Verify />
-      </Suspense>
-    </div>
+    <Suspense fallback={null}>
+      <Verify />
+    </Suspense>
   );
 }

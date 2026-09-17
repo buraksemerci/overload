@@ -107,7 +107,10 @@ export default function NutritionPage() {
         actions={<DayNav date={date} onChange={setDate} />}
       >
         {day.isLoading ? (
-          <div className="h-56" aria-busy="true" />
+          /* Yer tutucu, gelecek içerikle AYNI yükseklikte: dar ekranda
+             halka ve makrolar alt alta diziliyor ve 14rem'lik bir kutu
+             veriyi görünce bandın içindeki başlığı yukarı zıplatıyordu. */
+          <div className="h-[24rem] sm:h-56" aria-busy="true" />
         ) : day.isError ? (
           <div className="max-w-md">
             <ErrorBox error={day.error} onRetry={() => void day.refetch()} />

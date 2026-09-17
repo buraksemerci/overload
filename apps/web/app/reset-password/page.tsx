@@ -20,6 +20,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { AuthField, AuthScreen } from "@/components/AuthScreen";
 import { resetPassword } from "@/lib/auth";
 
 const MIN_LENGTH = 8;
@@ -36,30 +37,24 @@ function ResetForm() {
 
   if (token === null) {
     return (
-      <>
-        <h1 className="display text-2xl">Bağlantı geçersiz</h1>
-        <p className="mt-3 text-sm text-[var(--color-ink-muted)]">
-          Bu adres bir sıfırlama kodu taşımıyor. E-postadaki bağlantıyı
-          olduğu gibi açtığından emin ol.
-        </p>
-        <Link href="/forgot-password" className="link mt-6 self-start text-sm">
+      <AuthScreen
+        title="Bağlantı geçersiz"
+        lead="Bu adres bir sıfırlama kodu taşımıyor. E-postadaki bağlantıyı olduğu gibi açtığından emin ol."
+      >
+        <Link href="/forgot-password" className="btn btn-on-photo">
           Yeni bağlantı iste
         </Link>
-      </>
+      </AuthScreen>
     );
   }
 
   if (done) {
     return (
-      <>
-        <h1 className="display text-2xl">Parolan değişti</h1>
-        <p className="mt-3 text-sm text-[var(--color-ink-muted)]">
-          Yeni parolanla giriş yapabilirsin.
-        </p>
-        <Link href="/login" className="btn btn-primary mt-6 self-start">
+      <AuthScreen title="Parolan değişti" lead="Yeni parolanla giriş yapabilirsin.">
+        <Link href="/login" className="btn btn-primary px-6 py-3.5">
           Giriş yap
         </Link>
-      </>
+      </AuthScreen>
     );
   }
 
@@ -93,37 +88,26 @@ function ResetForm() {
   }
 
   return (
-    <>
-      <h1 className="display text-2xl">Yeni parola</h1>
-      <p className="mt-3 text-sm text-[var(--color-ink-muted)]">
-        En az {MIN_LENGTH} karakter.
-      </p>
-
-      <form onSubmit={submit} className="mt-6 flex flex-col gap-3">
-        <label className="flex flex-col gap-1.5">
-          <span className="label">Yeni parola</span>
-          <input
-            type="password"
-            required
-            minLength={MIN_LENGTH}
-            autoComplete="new-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            className="field h-11 w-full px-3 text-sm"
-          />
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="label">Yeni parola (tekrar)</span>
-          <input
-            type="password"
-            required
-            minLength={MIN_LENGTH}
-            autoComplete="new-password"
-            value={repeat}
-            onChange={(event) => setRepeat(event.target.value)}
-            className="field h-11 w-full px-3 text-sm"
-          />
-        </label>
+    <AuthScreen title="Yeni parola" lead={`En az ${MIN_LENGTH} karakter.`}>
+      <form onSubmit={submit} className="flex flex-col gap-4">
+        <AuthField
+          label="Yeni parola"
+          type="password"
+          required
+          minLength={MIN_LENGTH}
+          autoComplete="new-password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+        />
+        <AuthField
+          label="Yeni parola (tekrar)"
+          type="password"
+          required
+          minLength={MIN_LENGTH}
+          autoComplete="new-password"
+          value={repeat}
+          onChange={(event) => setRepeat(event.target.value)}
+        />
 
         {error && (
           <p className="text-sm" style={{ color: "var(--color-danger)" }} role="alert">
@@ -133,24 +117,22 @@ function ResetForm() {
 
         <button
           type="submit"
-          className="btn btn-primary mt-1 w-full py-3"
+          className="btn btn-primary w-full py-3.5"
           disabled={busy || password.length < MIN_LENGTH}
         >
           {busy ? "…" : "Parolayı değiştir"}
         </button>
       </form>
-    </>
+    </AuthScreen>
   );
 }
 
 export default function ResetPasswordPage() {
+  /* `useSearchParams` Suspense sınırı istiyor: sayfa statik üretiliyor ve
+     adres ancak istemcide biliniyor. */
   return (
-    <div className="mx-auto flex min-h-[70dvh] w-full max-w-sm flex-col justify-center">
-      {/* `useSearchParams` Suspense sınırı istiyor: sayfa statik üretiliyor ve
-          adres ancak istemcide biliniyor. */}
-      <Suspense fallback={null}>
-        <ResetForm />
-      </Suspense>
-    </div>
+    <Suspense fallback={null}>
+      <ResetForm />
+    </Suspense>
   );
 }

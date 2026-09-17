@@ -17,6 +17,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { AuthField, AuthScreen } from "@/components/AuthScreen";
 import { requestPasswordReset } from "@/lib/auth";
 
 export default function ForgotPasswordPage() {
@@ -35,50 +36,46 @@ export default function ForgotPasswordPage() {
     setSent(true);
   }
 
-  return (
-    <div className="mx-auto flex min-h-[70dvh] w-full max-w-sm flex-col justify-center">
-      <h1 className="display text-2xl">Parolamı unuttum</h1>
+  if (sent) {
+    return (
+      <AuthScreen
+        photo="app-entry"
+        title="Bağlantı yolda"
+        lead="Bu adres kayıtlıysa sıfırlama bağlantısı gönderildi. Gelen kutunu kontrol et — gelmediyse adresi doğru yazdığından emin ol."
+      >
+        <Link href="/login" className="btn btn-on-photo">
+          Giriş ekranına dön
+        </Link>
+      </AuthScreen>
+    );
+  }
 
-      {sent ? (
-        <>
-          <p className="mt-3 text-sm text-[var(--color-ink-muted)]">
-            Bu adres kayıtlıysa sıfırlama bağlantısı gönderildi. Gelen kutunu
-            kontrol et — gelmediyse adresi doğru yazdığından emin ol.
-          </p>
-          <Link href="/login" className="link mt-6 self-start text-sm">
-            Giriş ekranına dön
-          </Link>
-        </>
-      ) : (
-        <>
-          <p className="mt-3 text-sm text-[var(--color-ink-muted)]">
-            E-posta adresini yaz; sıfırlama bağlantısını gönderelim.
-          </p>
-          <form onSubmit={submit} className="mt-6 flex flex-col gap-3">
-            <label className="flex flex-col gap-1.5">
-              <span className="label">E-posta</span>
-              <input
-                type="email"
-                required
-                autoComplete="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className="field h-11 w-full px-3 text-sm"
-              />
-            </label>
-            <button
-              type="submit"
-              className="btn btn-primary mt-1 w-full py-3"
-              disabled={busy || email.length === 0}
-            >
-              {busy ? "…" : "Bağlantıyı gönder"}
-            </button>
-          </form>
-          <Link href="/login" className="link mt-4 self-start text-xs">
-            Giriş ekranına dön
-          </Link>
-        </>
-      )}
-    </div>
+  return (
+    <AuthScreen
+      photo="app-entry"
+      title="Parolamı unuttum"
+      lead="E-posta adresini yaz; sıfırlama bağlantısını gönderelim."
+    >
+      <form onSubmit={submit} className="flex flex-col gap-4">
+        <AuthField
+          label="E-posta"
+          type="email"
+          required
+          autoComplete="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+        />
+        <button
+          type="submit"
+          className="btn btn-primary w-full py-3.5"
+          disabled={busy || email.length === 0}
+        >
+          {busy ? "…" : "Bağlantıyı gönder"}
+        </button>
+      </form>
+      <Link href="/login" className="link mt-6 inline-block text-sm">
+        Giriş ekranına dön
+      </Link>
+    </AuthScreen>
   );
 }

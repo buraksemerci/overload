@@ -28,7 +28,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { InfoTip, Page, PageHeader, Section } from "@/components/Layout";
+import { Hero, HeroStat, HeroStats, InfoTip, Page, Section } from "@/components/Layout";
 import { Photo } from "@/components/Photo";
 import { Sheet } from "@/components/Sheet";
 import { ErrorBox, Empty, Loading } from "@/components/States";
@@ -80,13 +80,42 @@ export default function ProgramsPage() {
   const programs = mine.data ?? [];
   const active = programs.find((program) => program.is_active) ?? null;
   const others = programs.filter((program) => !program.is_active);
+  // Aktif programın günleri: banttaki sayılar için. Panel de aynı önbelleği
+  // kullanıyor, ikinci istek gitmiyor.
+  const activeDetail = useProgram(active?.id ?? null);
+  const days = activeDetail.data?.days ?? [];
+  const exerciseCount = days.reduce((sum, day) => sum + day.exercises.length, 0);
 
   return (
     <Page>
-      <PageHeader
-        photo="app-shoes"
-        eyebrow="Antrenman"
-        title="Programlar"
+      {/* Ekranın sorusu "şu an hangi program aktif?" — cevabı bandın kendisi.
+          Aktif program yokken bant genel kalıyor ve altındaki boş durum yol
+          gösteriyor. */}
+      <Hero
+        photo={active ? (GOAL_PHOTO[active.goal] ?? "goal-general-fitness") : "app-shoes"}
+        size={active ? "lg" : "md"}
+        eyebrow={active ? "Aktif program" : "Antrenman"}
+        title={active ? active.name : "Programlar"}
+        lead={active ? summary(active) : "Aynı anda tek program aktif olabiliyor."}
+        actions={
+          active ? (
+            <>
+              <Link href="/workout" className="btn btn-primary">
+                Bugünkü antrenman
+              </Link>
+              <button type="button" className="btn btn-on-photo" onClick={() => setDetail(active)}>
+                Günleri gör
+              </button>
+              <Link href={`/programs/${active.id}/edit`} className="btn btn-on-photo">
+                Düzenle
+              </Link>
+            </>
+          ) : (
+            <Link href="/chat" className="btn btn-on-photo">
+              AI ile oluştur
+            </Link>
+          )
+        }
         info={
           <>
             Aktif program, <strong>Bugün</strong> ekranının hangi günü
@@ -96,25 +125,29 @@ export default function ProgramsPage() {
             kopyanı oluşturuyor ve onu düzenleyebiliyorsun.
           </>
         }
-        actions={
-          <Link href="/chat" className="btn btn-ghost">
-            AI ile oluştur
-          </Link>
-        }
-      />
+      >
+        {active && (
+          <HeroStats>
+            <HeroStat label="Haftada" value={active.days_per_week} unit="gün" />
+            <HeroStat label="Gün" value={days.length > 0 ? days.length : "—"} foot="programda tanımlı" />
+            <HeroStat label="Hareket" value={exerciseCount > 0 ? exerciseCount : "—"} />
+            <HeroStat label="Hedef" value={GOAL_LABEL[active.goal] ?? active.goal} foot={LEVEL_LABEL[active.level] ?? active.level} />
+          </HeroStats>
+        )}
+      </Hero>
+
+      {active && <Attribution program={active} />}
 
       {(activate.isError || clone.isError) && (
         <ErrorBox error={activate.error ?? clone.error} />
       )}
 
-      {/* --- Aktif program ------------------------------------------------ */}
+      {/* --- Aktif program yoksa ------------------------------------------ */}
       {mine.isLoading ? (
         <Loading />
       ) : mine.isError ? (
         <ErrorBox error={mine.error} onRetry={() => void mine.refetch()} />
-      ) : active ? (
-        <ActiveProgram program={active} onOpen={() => setDetail(active)} />
-      ) : (
+      ) : active ? null : (
         <Empty
           photo="goal-strength"
           title={
@@ -137,6 +170,36 @@ export default function ProgramsPage() {
             ) : undefined
           }
         />
+      )}
+
+      {/* --- Aktif programın günleri ---------------------------------------
+          Bandın altı boş kalmasın diye değil: "bu hafta ne var" sorusunun
+          cevabı bu ve panel açmadan görünüyor. */}
+      {active && days.length > 0 && (
+        <Section bare title="Program günleri">
+          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {days.map((day, index) => (
+              <li key={day.id} className="reveal" style={{ ["--i" as string]: index }}>
+                <button
+                  type="button"
+                  onClick={() => setDetail(active)}
+                  className="card lift flex h-full w-full flex-col p-5 text-left"
+                  aria-label={`${day.label} gününü gör`}
+                >
+                  <span className="flex items-baseline justify-between gap-3">
+                    <span className="display text-lg">{day.label}</span>
+                    <span className="tnum text-xs text-[var(--color-ink-faint)]">
+                      {day.exercises.length} hareket
+                    </span>
+                  </span>
+                  <span className="mt-3 line-clamp-3 text-sm text-[var(--color-ink-muted)]">
+                    {day.exercises.map((exercise) => exercise.exercise_name).join(" · ")}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Section>
       )}
 
       {/* --- Diğer programlar --------------------------------------------- */}
@@ -243,61 +306,6 @@ function Disclosure({
       </button>
       {open && <div className="mt-3">{children}</div>}
     </Section>
-  );
-}
-
-/* --- Aktif program -------------------------------------------------------- */
-
-function ActiveProgram({
-  program,
-  onOpen,
-}: {
-  program: ProgramSummary;
-  onOpen: () => void;
-}) {
-  /* Fotoğraf solda, içerik sağda bir sütundaydı — kart ikiye bölünüyor ve
-     görsel bir yan öğeye dönüşüyordu. Şimdi fotoğraf kartın TAMAMI ve
-     rozet, ad, özet, düğmeler onun üstünde. Etkileşim yüzeyi görselin
-     kendisi. */
-  return (
-    <section className="card overflow-hidden">
-      <Photo
-        slug={GOAL_PHOTO[program.goal] ?? "goal-general-fitness"}
-        ratio="21 / 9"
-        scrim
-      >
-        <div className="flex size-full flex-col justify-end gap-3 p-6 lg:p-10">
-          <div className="min-w-0">
-            <span className="badge badge-accent">AKTİF</span>
-            <h2
-              className="display mt-2.5 text-xl lg:text-2xl"
-              style={{ color: "oklch(99% 0 0)" }}
-            >
-              {program.name}
-            </h2>
-            <p
-              className="tnum mt-1 text-sm"
-              style={{ color: "oklch(88% 0.01 115)" }}
-            >
-              {summary(program)}
-            </p>
-            <Attribution program={program} onPhoto />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Link href="/workout" className="btn btn-primary">
-              Bugünkü antrenman
-            </Link>
-            <button type="button" className="btn btn-on-photo" onClick={onOpen}>
-              Günleri gör
-            </button>
-            <Link href={`/programs/${program.id}/edit`} className="btn btn-on-photo">
-              Düzenle
-            </Link>
-          </div>
-        </div>
-      </Photo>
-    </section>
   );
 }
 

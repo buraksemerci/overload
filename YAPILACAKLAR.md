@@ -7,7 +7,7 @@ Bir madde bitince altına kısa bir not düşülüyor.
 yazı) uygulamanın bütün ekranlarında. Koyu tema. Geniş, dolu, sade; grafikler,
 fotoğraflar, ödül alacak kalitede UI/UX.
 
-**Şu an:** `/programs` → `/exercises` → `/supplements` → `/coach` → boş durumlar, CLS, tam test.
+**Şu an:** boş durumlar, CLS ölçümü, hareket azaltma, giriş/tanışma koyu tema kontrolü, `pnpm build`.
 
 ---
 
@@ -82,8 +82,9 @@ fotoğraflar, ödül alacak kalitede UI/UX.
       hesaplayıcı (`lib/plates.ts` + test), ±15 sn dinlenme, ağırlık adımı ekipmana göre,
       yarım kalan set taslakları yerelde saklanıyor, önceki seti tekrarla
 - [ ] Klavye kısayolları (Enter = seti kaydet, +/- ağırlık)
-- [~] `/programs` bant (var) + kartlar
-- [~] `/exercises` bant (var) + ekipman karoları + kas etiketleri
+- [x] `/programs`: aktif program BANDIN kendisi (hedef fotoğrafı, ad, gün/hareket sayısı,
+      "bugünkü antrenman"), altında program günleri kartları; diğerleri ve şablonlar açılır
+- [x] `/exercises`: bantta cam arama kutusu + sayılar; ekipman karoları büyüdü
 - [x] `/history` bant + haftalık tonaj grafiği + seans kartları
   - Bant: toplam ton, seans (bu ay), set, rekor. Gece karosunda son 12 haftanın tonajı.
   - Satır yerine kart ızgarası: büyük gün rakamı, hareket adları, rozetler.
@@ -92,13 +93,13 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 ## 4. Beslenme
 
 - [x] `/nutrition` bant (kalan kalori halkası) + öğün fotoğrafları + makrolar + gün gezinmesi
-- [~] `/supplements` bant (var) + kartlar
+- [x] `/supplements`: bantta bugün/işaretlenen/tanımlı sayıları, satırlar büyüdü
 
 ## 5. Asistan
 
 - [x] `/chat` bant + büyük örnek kartları + "nasıl çalışıyor" yan sütunu +
       günlük kullanım göstergesi + yapışık yazı alanı
-- [~] `/coach` bant (var) + rapor okuma düzeni
+- [x] `/coach`: haftanın sayıları banda çıktı, rapor metni büyük ve 62ch okuma genişliğinde
 
 ## 6. Hesap ve diğerleri
 

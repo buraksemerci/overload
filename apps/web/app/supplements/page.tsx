@@ -25,7 +25,7 @@
  */
 
 import { useState } from "react";
-import { Page, PageHeader, Section } from "@/components/Layout";
+import { Hero, HeroStat, HeroStats, Page, Section } from "@/components/Layout";
 import { Sheet } from "@/components/Sheet";
 import { ErrorBox, Empty, Loading } from "@/components/States";
 import { useCreateSupplement, useMarkIntake, useSupplementsToday } from "@/lib/queries";
@@ -50,11 +50,21 @@ export default function SupplementsPage() {
 
   return (
     <Page>
-      <PageHeader
+      <Hero
         photo="app-supplements"
         position="right center"
+        size="md"
         eyebrow="Beslenme"
         title="Supplement"
+        lead={
+          rows.length === 0
+            ? "Aldıklarını tek dokunuşla işaretle."
+            : due.length === 0
+              ? "Bugün alınacak bir şey yok."
+              : answered === due.length
+                ? "Bugünün hepsi işaretli."
+                : `Bugün ${due.length - answered} tanesi işaretlenmeyi bekliyor.`
+        }
         info={
           <>
             Üç durum ayrı tutuluyor: <strong>alındı</strong>,{" "}
@@ -70,12 +80,20 @@ export default function SupplementsPage() {
            ekranda birbirini tekrar ediyordu. */
         actions={
           rows.length > 0 && (
-            <button type="button" className="btn btn-ghost" onClick={() => setAdding(true)}>
+            <button type="button" className="btn btn-on-photo" onClick={() => setAdding(true)}>
               Supplement ekle
             </button>
           )
         }
-      />
+      >
+        {rows.length > 0 && (
+          <HeroStats>
+            <HeroStat label="Bugün" value={due.length} unit="tane" foot="alınacak" />
+            <HeroStat label="İşaretlenen" value={answered} foot={`${Math.max(due.length - answered, 0)} kaldı`} />
+            <HeroStat label="Tanımlı" value={rows.length} unit="supplement" />
+          </HeroStats>
+        )}
+      </Hero>
 
       {mark.isError && <ErrorBox error={mark.error} />}
 
@@ -115,19 +133,19 @@ export default function SupplementsPage() {
                 {due.map((row, index) => (
                   <li
                     key={row.supplement.id}
-                    className="reveal flex items-center justify-between gap-4 py-3"
+                    className="reveal flex items-center justify-between gap-4 py-4"
                     style={{ ["--i" as string]: index }}
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm">
+                      <p className="truncate text-base">
                         {row.supplement.name}
                         {row.supplement.dose && (
-                          <span className="ml-1.5 text-xs text-[var(--color-ink-faint)]">
+                          <span className="ml-1.5 text-sm text-[var(--color-ink-faint)]">
                             {row.supplement.dose}
                           </span>
                         )}
                       </p>
-                      <p className="text-2xs text-[var(--color-ink-faint)]">
+                      <p className="text-xs text-[var(--color-ink-faint)]">
                         {SCHEDULE_LABEL[row.supplement.schedule] ??
                           row.supplement.schedule}
                       </p>

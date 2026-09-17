@@ -28,7 +28,7 @@
  */
 
 import { useMemo, useState } from "react";
-import { Page, PageHeader, Section } from "@/components/Layout";
+import { Hero, HeroStat, HeroStats, Page, Section } from "@/components/Layout";
 import { Photo } from "@/components/Photo";
 import { Sheet } from "@/components/Sheet";
 import { ErrorBox, Empty, Loading } from "@/components/States";
@@ -75,11 +75,29 @@ export default function ExercisesPage() {
 
   return (
     <Page>
-      <PageHeader
+      <Hero
         photo="app-dumbbells"
         position="right center"
+        size="md"
         eyebrow="Antrenman"
-        title="Hareket Kütüphanesi"
+        title="Hareket kütüphanesi"
+        lead="Ekipmandan gir ya da doğrudan ara."
+        actions={
+          <div className="glass flex w-full items-center gap-2 px-4 py-2 sm:w-[22rem]">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden style={{ color: "var(--color-on-night-muted)" }}>
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-3.5-3.5" strokeLinecap="round" />
+            </svg>
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Hareket ara…"
+              aria-label="Hareket ara"
+              className="h-10 min-w-0 flex-1 bg-transparent text-base outline-none"
+              style={{ color: "var(--color-on-night)" }}
+            />
+          </div>
+        }
         info={
           <>
             Her hareketin kas grubu eşlemesi var: birincil ve ikincil kaslar
@@ -90,15 +108,13 @@ export default function ExercisesPage() {
             hareketler iki katı.
           </>
         }
-      />
-
-      <input
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder="Hareket ara…"
-        aria-label="Hareket ara"
-        className="field h-12 w-full px-4 text-sm"
-      />
+      >
+        <HeroStats>
+          <HeroStat label="Hareket" value={all.data ? (all.data.length >= 50 ? `${all.data.length}+` : all.data.length) : "—"} foot="kütüphanede" />
+          <HeroStat label="Ekipman" value={all.data ? counts.size : "—"} unit="tür" />
+          <HeroStat label="Senin" value={all.data ? (all.data.filter((row) => row.is_custom).length || "—") : "—"} foot="eklediğin" />
+        </HeroStats>
+      </Hero>
 
       {/* --- Ekipman kartları --------------------------------------------- */}
       {!searching && (
@@ -114,24 +130,18 @@ export default function ExercisesPage() {
                     type="button"
                     aria-pressed={selected}
                     onClick={() => setEquipment(selected ? null : option.value)}
-                    className="card block w-full overflow-hidden text-left transition-[border-color]"
+                    className="card lift block w-full overflow-hidden text-left transition-[border-color]"
                     style={{
                       transitionDuration: "var(--dur-micro)",
                       borderColor: selected ? "var(--color-accent-deep)" : undefined,
                     }}
                   >
                     <Photo slug={option.photo} ratio="3 / 2" scrim>
-                      <div className="flex size-full flex-col justify-end p-3">
-                        <p
-                          className="text-sm font-semibold"
-                          style={{ color: "oklch(99% 0 0)" }}
-                        >
+                      <div className="flex size-full flex-col justify-end p-5">
+                        <p className="display text-lg" style={{ color: "oklch(99% 0 0)" }}>
                           {option.label}
                         </p>
-                        <p
-                          className="tnum text-2xs"
-                          style={{ color: "oklch(88% 0.01 115)" }}
-                        >
+                        <p className="tnum text-xs" style={{ color: "oklch(88% 0.01 115)" }}>
                           {count} hareket
                         </p>
                       </div>
@@ -177,12 +187,12 @@ export default function ExercisesPage() {
                   <button
                     type="button"
                     onClick={() => setOpen(exercise)}
-                    className="card flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--color-surface-raised)]"
+                    className="card lift flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
                     style={{ transitionDuration: "var(--dur-micro)" }}
                   >
                     <span className="min-w-0">
-                      <span className="block truncate text-sm">{exercise.name}</span>
-                      <span className="block truncate text-2xs text-[var(--color-ink-faint)]">
+                      <span className="block truncate text-base">{exercise.name}</span>
+                      <span className="block truncate text-xs text-[var(--color-ink-faint)]">
                         {equipmentLabel(exercise.equipment)}
                       </span>
                     </span>

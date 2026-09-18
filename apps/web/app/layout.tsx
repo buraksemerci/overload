@@ -34,6 +34,10 @@ export const metadata: Metadata = {
   // kalabalığında hangi ekranda olduğun görünüyor; kök sayfa sade kalıyor.
   title: { default: "overload", template: "%s · overload" },
   description: "Progresif overload merkezli antrenman, beslenme ve sağlık takibi.",
+  /* Paylaşım görselinin mutlak adresi buradan çözülüyor. Değişken yoksa
+     yerel adres: geliştirme sırasında uyarı çıkmasın, üretimde dağıtım
+     rehberindeki `NEXT_PUBLIC_SITE_URL` dolduruluyor. */
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   applicationName: "overload",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "overload", statusBarStyle: "default" },

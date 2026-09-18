@@ -112,14 +112,19 @@ Doğrulanmamış alan adından giden postalar spam'e düşüyor.
 
 Repoyu bağla, kök dizin `apps/web`.
 
-Tek değişken:
+İki değişken:
 
 ```
 NEXT_PUBLIC_API_URL=https://<api-adresin>
+NEXT_PUBLIC_SITE_URL=https://<sitenin-adresi>
 ```
 
 `NEXT_PUBLIC_` ön eki bu değerin **tarayıcıya gömüldüğü** anlamına geliyor;
 oraya gizli bir şey koyma.
+
+`NEXT_PUBLIC_SITE_URL` yalnızca paylaşım önizlemesi (Open Graph) görselinin
+mutlak adresini üretmek için: boş bırakılırsa bağlantı paylaşıldığında kart
+görselsiz görünür, uygulamanın kendisi çalışmaya devam eder.
 
 Derleme komutu `pnpm build`. Depoda `--webpack` bayrağı var ve bilerek:
 Turbopack üretim derlemesinde bu projede kararsız davranıyor.

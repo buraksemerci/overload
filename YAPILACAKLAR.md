@@ -157,6 +157,8 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 
 ## 7. Kalite
 
+- [x] Pano (`app/page.tsx`) 777 satırdı; bant bloğu, karolar, alt bölümler ve
+      yardımcılar `components/dashboard/` altına alındı — sayfa 153 satır.
 - [x] `components/AppShell.tsx` 906 satırdı; gezinme verisi (`nav/items.ts`), fotoğraf
       örtüsü, telefon çekmecesi ve profil menüsü ayrı dosyalara alındı — kabuk 462 satır.
 - [x] `app/onboarding/page.tsx` 990 satırdı; `model.ts` (cevaplar, adımlar, seçenekler),

@@ -643,3 +643,40 @@ test("/supplements — hepsi işaretliyken de volt bütçesi aşılmıyor", asyn
   const count = await page.evaluate(countVoltFills);
   expect(count, `altı işaretli satırda ${count} volt dolgu var`).toBeLessThanOrEqual(2);
 });
+
+/**
+ * Antrenman SEANS SIRASINDA da volt bütçesinde.
+ *
+ * Denetim listesi `/workout`u seans başlamadan ölçüyordu: orada tek volt
+ * "Antrenmanı başlat". Seans açıkken bant bir ilerleme çubuğu (volt dolgu) ve
+ * sahne "Seti kaydet" (volt dolgu) basıyor — bütçe tam sınırda ve üçüncü bir
+ * volt eklemek kolay. Bu test o sınırı sabitliyor.
+ */
+test("/workout — seans sırasında da en fazla iki volt öğesi", async ({ page }) => {
+  await signIn(page);
+  await mockApi(page);
+
+  const sessionId = "44444444-4444-4444-4444-444444444444";
+  const session = {
+    id: sessionId,
+    program_day_id: null,
+    started_at: new Date().toISOString(),
+    completed_at: null,
+    notes: null,
+    is_deload: false,
+    sets: [],
+  };
+  await page.route("http://localhost:8000/workouts/sessions", (route) =>
+    route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify(session) }),
+  );
+  await page.route(`http://localhost:8000/workouts/sessions/${sessionId}`, (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(session) }),
+  );
+
+  await openScreen(page, "/workout");
+  await page.getByRole("button", { name: "Antrenmanı başlat" }).click();
+  await expect(page.getByRole("button", { name: "Seti kaydet" })).toBeVisible();
+
+  const count = await page.evaluate(countVoltFills);
+  expect(count, `seans sırasında ${count} volt dolgu var`).toBeLessThanOrEqual(2);
+});

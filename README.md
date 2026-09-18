@@ -94,7 +94,7 @@ Backend   374  (pytest)      progresif overload, TDEE, güç standartları, öğ
                               AI tool sınırları, seed tutarlılığı
 Frontend   98  (Vitest)      tasarım belirteçleri, plaka hesabı, pano istatistikleri,
                               kilo hızı, SSE çerçeve ayrıştırıcısı
-E2E       207  (Playwright)  oturum, gezinme, set kaydı, beslenme akışı, kas haritası,
+E2E       224  (Playwright)  oturum, gezinme, set kaydı, beslenme akışı, kas haritası,
                               tasarım kuralları — masaüstü ve mobil profilde iki kez
 ```
 

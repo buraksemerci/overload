@@ -412,6 +412,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           bandıyla açılıyor ve çubuk o bandın üstünde cam — giriş ekranındaki
           gibi. Akışta dururken bandın üstünde kırık beyaz bir şerit
           kalıyordu. */}
+      {/* İçeriğe atlama: klavyeyle gelen kişi her ekranda önce on bağlantılık
+          gezinmeyi geçmek zorundaydı. Görünmez ama odaklanınca beliriyor. */}
+      <a
+        href="#icerik"
+        className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:top-4 focus-visible:left-4 focus-visible:z-50 focus-visible:bg-[var(--color-surface-raised)] focus-visible:px-4 focus-visible:py-2 focus-visible:text-sm"
+      >
+        İçeriğe geç
+      </a>
+
       <header
         className="absolute inset-x-0 top-0"
         style={{ zIndex: "var(--z-sticky)" }}
@@ -547,6 +556,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <OfflineNote />
 
       <main
+        id="icerik"
         className={`w-full flex-1 px-5 pb-20 sm:px-8 ${
           open !== null ? "behind-panel" : "behind-panel-idle"
         }`}

@@ -259,6 +259,17 @@ test.describe("oturum açıkken", () => {
     await expect(page.getByText(/Bağlantı yok/)).toHaveCount(0);
   });
 
+  test("klavyeyle ilk Tab içeriğe atlıyor", async ({ page }) => {
+    /* Klavyeyle gelen kişi her ekranda önce on bağlantılık gezinmeyi geçmek
+       zorundaydı. Bağlantı görünmez ama odaklanınca beliriyor. */
+    await page.goto("/");
+    await page.keyboard.press("Tab");
+
+    const skip = page.getByRole("link", { name: "İçeriğe geç" });
+    await expect(skip).toBeFocused();
+    await expect(skip).toBeVisible();
+  });
+
   test("olmayan adres uygulamanın kendi 404'üne düşüyor", async ({ page }) => {
     /* Next'in varsayılanı siyah beyaz bir sistem yazısı; uygulamanın içinde
        oraya düşmek "site bozuldu" hissi veriyordu. */

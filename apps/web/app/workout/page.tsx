@@ -238,7 +238,20 @@ export default function WorkoutPage() {
   const now = useNow(1000, active);
   const startedAt = session.data?.started_at ? new Date(session.data.started_at).getTime() : null;
 
-  const onRestDone = useCallback(() => setRest(null), []);
+  /**
+   * Ekran okuyucu için duyuru.
+   *
+   * Dinlenme bitince sahne kendiliğinden değişiyor: gören kişi büyük sayacın
+   * yerine set alanlarının geldiğini anlıyor, ekran okuyucu kullanan kişi
+   * hiçbir şey duymuyordu. Sayaç saniye saniye okunmuyor (işkence olurdu),
+   * yalnızca bitiş.
+   */
+  const [announce, setAnnounce] = useState("");
+
+  const onRestDone = useCallback(() => {
+    setRest(null);
+    setAnnounce("Dinlenme bitti.");
+  }, []);
   const { remaining, progress } = useRestCountdown(rest, audio, onRestDone);
 
   const draftKey = (exerciseId: string, setNumber: number) => `${exerciseId}:${setNumber}`;
@@ -511,6 +524,10 @@ export default function WorkoutPage() {
           )}
         </Sheet>
       )}
+
+      <p className="sr-only" role="status" aria-live="polite">
+        {announce}
+      </p>
 
       {startSession.isError && <ErrorBox error={startSession.error} />}
       {logSet.isError && <ErrorBox error={logSet.error} />}

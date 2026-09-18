@@ -110,6 +110,9 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 - [x] Klavye kısayolları: Enter seti kaydeder, dinlenmede Enter atlar, ← → ±15 sn;
       ok tuşları alanlarda adım adım değiştirir. Alana yazarken kısayol kapalı
       (`useHotkeys`), kısayol listesi günün hareketleri sütununun altında yazıyor.
+- [x] Şablon kartlarındaki "Başlat" volt olmaktan çıktı: kütüphane açıkken ekranda
+      dört volt dolgu oluyordu (kural: en fazla iki). Denetim testi artık kütüphane
+      AÇIKKEN de ölçüyor — kapalı hâlde ölçtüğü için bunu kaçırmıştı.
 - [x] Program adı değiştirilebiliyor ve program silinebiliyor (düzenleme ekranı);
       `PATCH`/`DELETE` uç noktaları vardı, arayüzde yolu yoktu
 - [x] `/programs`: aktif program BANDIN kendisi (hedef fotoğrafı, ad, gün/hareket sayısı,

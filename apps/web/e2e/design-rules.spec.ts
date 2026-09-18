@@ -569,3 +569,47 @@ test("düz zeminde metin kontrastı AA'yı geçiyor", async ({ page }) => {
 
   expect(problems, problems.join(" · ")).toEqual([]);
 });
+
+/**
+ * Şablon kütüphanesi AÇIKKEN de volt bütçesi geçerli.
+ *
+ * Denetim listesi `/programs` ekranını kütüphane KAPALI hâlde ölçüyordu:
+ * taklit veride şablon yoktu, açılır bölüm de kapalı başlıyor. Gerçek
+ * kullanımda orada üç-dört kart var ve her birinde bir "Başlat" düğmesi —
+ * volt dolgu bir anda dörde çıkıyordu. Kartlardaki düğme artık çerçeveli.
+ */
+test("/programs — şablonlar açıkken de en fazla iki volt öğesi", async ({ page }) => {
+  await signIn(page);
+  await mockApi(page);
+
+  const template = (id: string, name: string, goal: string) => ({
+    id,
+    name,
+    description: null,
+    goal,
+    level: "intermediate",
+    days_per_week: 4,
+    is_template: true,
+    is_active: false,
+    source_name: null,
+    source_url: null,
+  });
+  await page.route("http://localhost:8000/programs/templates", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        template("t1", "Push Pull Legs", "hypertrophy"),
+        template("t2", "5/3/1", "strength"),
+        template("t3", "Üst/Alt Split", "powerbuilding"),
+      ]),
+    }),
+  );
+
+  await openScreen(page, "/programs");
+  await page.getByRole("button", { name: "Şablon kütüphanesi" }).click();
+  await expect(page.getByText("Push Pull Legs")).toBeVisible();
+
+  const count = await page.evaluate(countVoltFills);
+  expect(count, `kütüphane açıkken ${count} volt dolgu var`).toBeLessThanOrEqual(2);
+});

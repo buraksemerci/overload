@@ -387,9 +387,14 @@ function TemplateCard({
           </div>
 
           <div className="mt-1 flex items-center gap-2">
+            {/* Volt DEĞİL: kütüphane açıldığında ekranda yan yana üç-dört
+                şablon oluyor ve her birinde volt bir düğme "ekran başına bir
+                volt" kuralını dörde katlıyordu. Ekranın tek volt aksiyonu
+                banttaki "Bugünkü antrenman"; buradaki başlatma fotoğrafın
+                üstünde çerçeveli duruyor. */}
             <button
               type="button"
-              className="btn btn-primary flex-1"
+              className="btn btn-on-photo flex-1"
               disabled={pending}
               onClick={onStart}
             >
@@ -397,7 +402,8 @@ function TemplateCard({
             </button>
             <button
               type="button"
-              className="btn btn-on-photo"
+              className="btn btn-quiet"
+              style={{ color: "oklch(88% 0.01 115)" }}
               onClick={onOpen}
               aria-label={`${template.name} günlerini gör`}
             >

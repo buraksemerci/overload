@@ -165,6 +165,9 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 - [x] "?" düğmelerinin dokunma alanı 18 → 38 piksel (görünen daire aynı) + test
 - [x] Bant fotoğrafı öncelikli yükleniyor (LCP), diğerleri tembel
 - [x] Yükleniyor durumu iskelet oldu (`.skeleton`, hareket azaltmada durağan)
+- [x] Boş durum kartındaki metin dar ekranda kırpılıyordu: oran verilmiş kutuya
+      yükseklik konunca tarayıcı GENİŞLİĞİ orandan türetiyor (608px) ve kutu
+      karttan taşıyordu. `w-full` ile düzeldi (otomatik kırpılma taraması).
 - [x] Çevrimdışı uyarısı: bağlantı yokken tek satırlık çubuk (+ test)
 - [x] Hata ve 404 ekranları uygulamanın dilinde: `app/not-found.tsx` (bantlı 404),
       `app/error.tsx` (tekrar dene + hata kodu), `app/global-error.tsx` (kök düzen

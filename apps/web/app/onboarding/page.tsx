@@ -227,10 +227,47 @@ export default function OnboardingPage() {
   return <Flow me={me.data} />;
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+/**
+ * Adım fotoğrafları.
+ *
+ * Her soru neyi belirlediğini anlatıyor; sağdaki kare de onu gösteriyor:
+ * boy-kilo sorusunda tartı, deneyim sorusunda plakalar, hedef sorusunda
+ * squat rafı. Uygulamanın geri kalanıyla aynı salon.
+ */
+const STEP_PHOTO: Record<StepId, string> = {
+  intro: "story-entry",
+  basics: "app-entry",
+  body: "app-scale",
+  experience: "app-plates",
+  goal: "app-squat",
+  day: "app-meal-bar",
+};
+
+function Shell({ children, photo }: { children: React.ReactNode; photo?: string }) {
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-xl flex-col px-1 pb-8 pt-6 lg:pt-12">
-      {children}
+    /* Geniş ekranda iki sütun: solda sorular, sağda sahne. Tek sütunda
+       masaüstünde ekranın üçte ikisi siyah kalıyordu ve akış, uygulamanın
+       geri kalanından kopuk duruyordu. Dar ekranda sahne YOK — orada yer
+       sorulara ait. */
+    <div className="grid min-h-dvh w-full lg:grid-cols-[minmax(0,38rem)_1fr]">
+      <div className="mx-auto flex w-full max-w-xl flex-col px-1 pb-8 pt-6 lg:px-6 lg:pt-12">
+        {children}
+      </div>
+
+      {photo !== undefined && (
+        <div aria-hidden className="relative hidden lg:block">
+          <div className="fixed top-0 right-0 h-dvh w-[calc(100vw-38rem)]">
+            <Photo slug={photo} fill position="center" className="size-full" eager />
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(to right, var(--color-ground) 0%, oklch(12% 0.01 115 / 0.45) 40%, oklch(12% 0.01 115 / 0.2) 100%)",
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -304,7 +341,7 @@ function Flow({ me }: { me: Me }) {
 
   if (done) {
     return (
-      <Shell>
+      <Shell photo="app-gym-wide">
         <Result answers={answers} headingRef={heading} />
       </Shell>
     );
@@ -314,7 +351,10 @@ function Flow({ me }: { me: Me }) {
   const answered = Math.max(index - 1, 0);
 
   return (
-    <Shell>
+    /* Sahne adımla değişiyor: sorunun konusu sağda duruyor. Açılış adımı
+       kendi tam genişlik sahnesini basıyor, orada ikinci bir fotoğraf
+       gereksiz. */
+    <Shell photo={step === "intro" ? undefined : STEP_PHOTO[step]}>
       <header className="flex items-center justify-between gap-4">
         <p className="display text-lg">overload</p>
         {index > 0 && (

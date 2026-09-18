@@ -141,6 +141,8 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 
 - [x] `/account` bant + kimlik bloğu
 - [x] `/onboarding`: açılış adımı tam genişlik sahne (salona giren kişi), büyük başlık
+  - Sorular geniş ekranda iki sütun: solda form, sağda o sorunun konusu
+    (boy-kilo → tartı, deneyim → plakalar, hedef → squat rafı). Dar ekranda sahne yok.
 - [x] Giriş ekranı koyu temada kontrol edildi: anlatı sahneleri ve finalde
       telefon ekranındaki açık temalı form yerinde
 - [x] Parola kurtarma / doğrulama ekranları: fotoğraflı ikili kabuk (`components/AuthScreen.tsx`)

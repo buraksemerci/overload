@@ -176,21 +176,47 @@ export default function WorkoutPage() {
     return map;
   }, [loggedSets]);
 
-  const steps: Step[] = useMemo(
-    () =>
-      (workout?.exercises ?? []).flatMap((exercise, exerciseIndex) => {
-        const planned = Math.max(
-          exercise.target_sets + (extra[exercise.exercise_id] ?? 0),
-          maxLoggedSet.get(exercise.exercise_id) ?? 0,
-        );
-        return Array.from({ length: planned }, (_, i) => ({
-          exercise,
-          setNumber: i + 1,
-          exerciseIndex,
-        }));
-      }),
-    [workout, extra, maxLoggedSet],
-  );
+  /**
+   * Günün adımları — SÜPERSET SIRASIYLA.
+   *
+   * Program bir hareketi "süperset 2" diye işaretlediğinde o gruptaki
+   * hareketler aralarında dinlenmeden sırayla yapılıyor: A1, B1, A2, B2…
+   * Akış bunu yok sayıp A'nın bütün setlerini üst üste diziyordu; yani ekran
+   * programın söylediğinden başka bir antrenman yaptırıyordu.
+   *
+   * Grup yalnızca ARDIŞIK hareketlerden kuruluyor: aynı numara programın iki
+   * ayrı yerinde geçiyorsa (nadiren de olsa) araya giren hareket ikisini
+   * ayırıyor ve tur mantığı bozulmuyor.
+   */
+  const steps: Step[] = useMemo(() => {
+    const exercises = workout?.exercises ?? [];
+    const plannedFor = (exercise: PlannedExercise) =>
+      Math.max(
+        exercise.target_sets + (extra[exercise.exercise_id] ?? 0),
+        maxLoggedSet.get(exercise.exercise_id) ?? 0,
+      );
+
+    const result: Step[] = [];
+    let index = 0;
+    while (index < exercises.length) {
+      const group = exercises[index]!.superset_group;
+      let end = index + 1;
+      if (group !== null) {
+        while (end < exercises.length && exercises[end]!.superset_group === group) end += 1;
+      }
+
+      const block = exercises.slice(index, end);
+      const rounds = Math.max(...block.map(plannedFor));
+      for (let round = 1; round <= rounds; round += 1) {
+        block.forEach((exercise, offset) => {
+          if (round > plannedFor(exercise)) return;
+          result.push({ exercise, setNumber: round, exerciseIndex: index + offset });
+        });
+      }
+      index = end;
+    }
+    return result;
+  }, [workout, extra, maxLoggedSet]);
   const findLogged = useCallback(
     (exerciseId: string, setNumber: number): WorkoutSet | undefined =>
       loggedSets.find((s) => s.exercise_id === exerciseId && s.set_number === setNumber),
@@ -285,9 +311,19 @@ export default function WorkoutPage() {
 
     setJump(null);
 
-    // Son set kaydedildiyse dinlenmeye gerek yok.
-    const isLast = cursor >= steps.length - 1;
-    if (!isLast) {
+    /* Son set kaydedildiyse dinlenmeye gerek yok. Süperset turunun ORTASINDA
+       da yok: gruptaki bir sonraki harekete dinlenmeden geçiliyor — sürenin
+       tamamı tur bittikten sonra veriliyor. */
+    /* Zincir yalnızca AYNI TUR içinde: A1 → B1 dinlenmesiz, ama B1 → A2 tur
+       sonu ve dinlenme tam orada. Tur numarası set sırasıyla aynı şey. */
+    const next = steps[cursor + 1];
+    const chained =
+      next !== undefined &&
+      step.exercise.superset_group !== null &&
+      next.exercise.superset_group === step.exercise.superset_group &&
+      next.setNumber === step.setNumber;
+
+    if (next !== undefined && !chained) {
       const seconds = step.exercise.rest_seconds ?? 150;
       setRest({ endsAt: Date.now() + seconds * 1000, total: seconds });
     }
@@ -510,6 +546,13 @@ export default function WorkoutPage() {
               <SetStage
                 step={step}
                 planned={steps.filter((s) => s.exerciseIndex === step.exerciseIndex).length}
+                supersetNext={
+                  step.exercise.superset_group !== null &&
+                  steps[cursor + 1]?.exercise.superset_group === step.exercise.superset_group &&
+                  steps[cursor + 1]?.setNumber === step.setNumber
+                    ? steps[cursor + 1]?.exercise.name
+                    : undefined
+                }
                 values={valuesFor(step)}
                 logged={findLogged(step.exercise.exercise_id, step.setNumber) !== undefined}
                 previous={
@@ -746,6 +789,7 @@ const KIND_LABEL: Record<string, string> = {
 function SetStage({
   step,
   planned,
+  supersetNext,
   values,
   logged,
   previous,
@@ -759,6 +803,8 @@ function SetStage({
   step: Step;
   /** Bu hareket için AÇIK slot sayısı — plana eklenen fazladan setler dâhil. */
   planned: number;
+  /** Süperset: bu setten sonra DİNLENMEDEN geçilecek hareketin adı. */
+  supersetNext?: string;
   values: Draft;
   /** Bu set daha önce kaydedildi mi? Haritadan geri dönülünce düzenleniyor. */
   logged: boolean;
@@ -804,6 +850,13 @@ function SetStage({
         {logged && (
           <p className="mt-3 text-xs text-[var(--color-ink-muted)]">
             Bu set kayıtlı — değiştirirsen üzerine yazılır.
+          </p>
+        )}
+        {/* Süperset: "kaydet"ten sonra sayaç GELMEYECEK. Bunu önceden
+            söylemek gerekiyor, yoksa ekran bozuk sanılıyor. */}
+        {supersetNext !== undefined && (
+          <p className="mt-3 text-xs" style={{ color: "var(--color-warning)" }}>
+            Süperset — dinlenmeden {supersetNext}
           </p>
         )}
       </div>

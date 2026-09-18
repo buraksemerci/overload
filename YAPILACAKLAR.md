@@ -95,6 +95,10 @@ fotoğraflar, ödül alacak kalitede UI/UX.
       hiç set yokken kapalı olduğu için seans sonsuza kadar açık kalıyordu.
 - [x] Set silme: kayıtlı seti sahneden sil (`DELETE /workouts/sets/{id}` vardı, arayüzde
       karşılığı yoktu); yanlışlıkla açılan boş slotu haritadan "−" ile geri al
+- [x] **Süperset akışı**: aynı süperset grubundaki hareketler turlar hâlinde geliyor
+      (A1, B1, A2, B2…) ve tur ortasında dinlenme yok; süre tur bitince başlıyor.
+      Sahne bunu önceden söylüyor ("Süperset — dinlenmeden …"). Program bunu
+      söylüyordu, akış yok sayıyordu.
 - [x] Isınma seti işaretlenebiliyor: kayıt tutuluyor ama hacme, rekora ve ilerleme
       motoruna girmiyor (sunucu `is_warmup` alanına bakıyordu, arayüzde karşılığı yoktu)
 - [x] Plana bir set daha eklenebiliyor (haritadaki "+"): sunucu plan dışı sırayı

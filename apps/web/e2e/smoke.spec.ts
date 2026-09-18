@@ -657,6 +657,94 @@ test.describe("antrenman modu", () => {
     await expect(page.getByRole("button", { name: "Seti güncelle" })).toBeVisible();
   });
 
+  test("süperset turlar hâlinde geliyor ve arada dinlenme yok", async ({ page }) => {
+    /* Program bir hareketi "süperset 2" diye işaretlediğinde o gruptaki
+       hareketler aralarında dinlenmeden sırayla yapılıyor: A1, B1, A2, B2…
+       Akış bunu yok sayıp A'nın bütün setlerini üst üste diziyordu. */
+    const sessionId = "44444444-4444-4444-4444-444444444444";
+    const sets: unknown[] = [];
+    const exercise = (id: string, name: string, group: number | null) => ({
+      program_exercise_id: `pe-${id}`,
+      exercise_id: id,
+      name,
+      equipment: "dumbbell",
+      order_index: 0,
+      target_sets: 2,
+      target_rep_min: 8,
+      target_rep_max: 12,
+      technique: "straight",
+      superset_group: group,
+      rest_seconds: 90,
+      last_session_summary: null,
+      progression: null,
+    });
+    await page.route("http://localhost:8000/workouts/today", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          program_name: "Üst/Alt",
+          program_day_id: "11111111-1111-1111-1111-111111111111",
+          day_label: "Süperset günü",
+          active_session_id: null,
+          is_deload_suggested: false,
+          exercises: [exercise("ex-a", "Dumbbell Curl", 1), exercise("ex-b", "Triceps Pushdown", 1)],
+        }),
+      }),
+    );
+    const session = () => ({
+      id: sessionId,
+      program_day_id: null,
+      started_at: new Date().toISOString(),
+      completed_at: null,
+      notes: null,
+      is_deload: false,
+      sets,
+    });
+    await page.route("http://localhost:8000/workouts/sessions", (route) =>
+      route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify(session()) }),
+    );
+    await page.route(`http://localhost:8000/workouts/sessions/${sessionId}/sets`, (route) => {
+      const body = route.request().postDataJSON() as { exercise_id: string; set_number: number };
+      sets.push({
+        id: `s${sets.length}`,
+        exercise_id: body.exercise_id,
+        set_number: body.set_number,
+        weight_kg: "20.00",
+        reps: 10,
+        rir: null,
+        is_warmup: false,
+        technique: "straight",
+      });
+      return route.fulfill({ status: 201, contentType: "application/json", body: "{}" });
+    });
+    await page.route(`http://localhost:8000/workouts/sessions/${sessionId}`, (route) =>
+      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(session()) }),
+    );
+
+    await page.goto("/workout");
+    await page.getByRole("button", { name: "Antrenmanı başlat" }).click();
+
+    // İlk adım A'nın 1. seti ve ekran süperseti söylüyor.
+    await expect(page.getByRole("heading", { name: "Dumbbell Curl", level: 2 })).toBeVisible();
+    await expect(page.getByText("Süperset — dinlenmeden Triceps Pushdown")).toBeVisible();
+
+    await page.getByLabel("Tekrar", { exact: true }).fill("10");
+    await page.getByRole("button", { name: "Seti kaydet" }).click();
+
+    // Dinlenme YOK: doğrudan B'nin 1. seti.
+    await expect(page.getByRole("heading", { name: "Triceps Pushdown", level: 2 })).toBeVisible();
+    await expect(page.getByRole("timer")).toHaveCount(0);
+
+    await page.getByLabel("Tekrar", { exact: true }).fill("10");
+    await page.getByRole("button", { name: "Seti kaydet" }).click();
+
+    // Tur bitti: şimdi dinlenme ve sırada A'nın 2. seti.
+    await expect(page.getByRole("timer")).toBeVisible();
+    await expect(page.getByText("Sırada")).toBeVisible();
+    await expect(page.getByText("Set 2 / 2")).toBeVisible();
+  });
+
   test("yanlışlıkla başlatılan antrenman iptal edilebiliyor", async ({ page }) => {
     /* Bitirme düğmesi hiç set yokken kapalı. İptal olmayınca seans sonsuza
        kadar açık kalıyor ve panel her gün "devam ediyor" diyordu. */

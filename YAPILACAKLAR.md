@@ -163,6 +163,10 @@ fotoğraflar, ödül alacak kalitede UI/UX.
       kabı oluyordu; sayfa kaydırılmışken paneller ekranın dışına taşıyordu. Panel
       artık `<body>`ye portal ediliyor (+ regresyon testi).
 - [x] "?" düğmelerinin dokunma alanı 18 → 38 piksel (görünen daire aynı) + test
+- [x] **Kontrast düzeltmesi**: `--color-ink-faint` gömülü yüzeyde 4,01 veriyordu
+      (AA sınırı 4,5). Koyu temada %58 → %62, açık temada %60 → %52. Otomatik
+      tarama artık tasarım kuralları testinde: düz zeminli her metin ölçülüyor.
+- [x] Çekmecede odak tuzağı: açıkken Tab dışarı kaçmıyor, kapanınca odak geri dönüyor
 - [x] "İçeriğe geç" atlama bağlantısı: klavyeyle gelen kişi gezinmeyi geçebiliyor
 - [x] Dinlenme bitişi ekran okuyucuya duyuruluyor (sayaç saniye saniye okunmuyor)
 - [x] Bant fotoğrafı öncelikli yükleniyor (LCP), diğerleri tembel

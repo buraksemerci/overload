@@ -69,7 +69,10 @@
      Saf beyaz yok: %95 parlaklık koyu zeminde göz yormuyor. */
   --color-ink: oklch(95% 0.006 115); /* ana metin */
   --color-ink-muted: oklch(75% 0.01 115); /* ikincil metin, etiket */
-  --color-ink-faint: oklch(58% 0.01 115); /* ipucu, pasif */
+  /* İpucu ve pasif metin. %58'den %62'ye çıktı: gömülü yüzeyde (%22,5)
+     kontrast 4,01 kalıyordu, yani WCAG AA'nın altında — "soluk" olmakla
+     "okunmaz" olmak arasındaki fark. Şimdi en düşük 4,7. */
+  --color-ink-faint: oklch(62% 0.01 115);
 
   /* --- Volt ---
      Koyu zeminde volt metin olarak da okunuyor, ama kural 1 duruyor: volt
@@ -190,7 +193,8 @@
   --color-border-strong: oklch(80% 0.011 115);
   --color-ink: oklch(21% 0.014 115);
   --color-ink-muted: oklch(46% 0.011 115);
-  --color-ink-faint: oklch(60% 0.010 115);
+  /* Açık temada da aynı düzeltme: %60 → %52 (kartta 3,85 → 5,37). */
+  --color-ink-faint: oklch(52% 0.010 115);
   --color-accent-deep: oklch(56% 0.14 118);
   --color-accent-wash: oklch(96.5% 0.05 118);
   --color-warning: oklch(72% 0.15 70);

@@ -472,3 +472,100 @@ test("dar ekranda kutusundan taşan metin yok", async ({ page }) => {
 
   expect(problems, problems.join(" · ")).toEqual([]);
 });
+
+/**
+ * Düz zemin üstündeki metinlerin KONTRASTI (WCAG AA).
+ *
+ * Bu denetim gerçek bir sorunu buldu: `--color-ink-faint` gömülü yüzeyde
+ * 4,01 veriyordu — "soluk" olmakla "okunmaz" olmak arasındaki fark. Token
+ * %58'den %62'ye çıkarıldı.
+ *
+ * Fotoğraf üstündeki yazılar ÖLÇÜLMÜYOR: orada okunurluğu perde ve gölge
+ * taşıyor, tek bir zemin rengi yok. Renkler `oklch()` biçiminde geldiği için
+ * gerçek RGB'ye tuvale çizilerek çevriliyor.
+ */
+test("düz zeminde metin kontrastı AA'yı geçiyor", async ({ page }) => {
+  test.slow();
+  await signIn(page);
+  await mockApi(page);
+
+  const problems: string[] = [];
+  for (const path of SCREENS) {
+    await openScreen(page, path);
+    const found = await page.evaluate(() => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1;
+      canvas.height = 1;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+      const cache = new Map<string, [number, number, number, number]>();
+      const toRgba = (value: string): [number, number, number, number] => {
+        const hit = cache.get(value);
+        if (hit) return hit;
+        ctx.clearRect(0, 0, 1, 1);
+        ctx.fillStyle = value;
+        ctx.fillRect(0, 0, 1, 1);
+        const data = ctx.getImageData(0, 0, 1, 1).data;
+        const rgba: [number, number, number, number] = [
+          data[0] ?? 0,
+          data[1] ?? 0,
+          data[2] ?? 0,
+          (data[3] ?? 255) / 255,
+        ];
+        cache.set(value, rgba);
+        return rgba;
+      };
+      const luminance = (color: number[]) => {
+        const channel = (raw: number) => {
+          const value = (raw ?? 0) / 255;
+          return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+        };
+        return 0.2126 * channel(color[0]!) + 0.7152 * channel(color[1]!) + 0.0722 * channel(color[2]!);
+      };
+      const contrast = (a: number[], b: number[]) => {
+        const first = luminance(a);
+        const second = luminance(b);
+        return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
+      };
+
+      const out: string[] = [];
+      for (const element of document.querySelectorAll<HTMLElement>("main *, header *")) {
+        const ownsText = [...element.childNodes].some(
+          (node) => node.nodeType === Node.TEXT_NODE && (node.textContent ?? "").trim().length > 0,
+        );
+        if (!ownsText) continue;
+        const style = getComputedStyle(element);
+        if (style.visibility === "hidden" || style.display === "none" || style.opacity === "0") continue;
+
+        let node: HTMLElement | null = element;
+        let background: string | null = null;
+        while (node) {
+          const nodeStyle = getComputedStyle(node);
+          // Fotoğraf ya da gradyan: tek bir zemin rengi yok, ölçme.
+          if (nodeStyle.backgroundImage !== "none") break;
+          if (toRgba(nodeStyle.backgroundColor)[3] >= 0.95) {
+            background = nodeStyle.backgroundColor;
+            break;
+          }
+          node = node.parentElement;
+        }
+        if (background === null) continue;
+
+        const size = Number.parseFloat(style.fontSize);
+        const weight = Number.parseInt(style.fontWeight, 10) || 400;
+        const large = size >= 24 || (size >= 18.66 && weight >= 700);
+        const value = contrast(toRgba(style.color), toRgba(background));
+        const minimum = large ? 3 : 4.5;
+        if (value < minimum) {
+          out.push(
+            `${value.toFixed(2)}<${minimum} ${element.tagName.toLowerCase()} ${Math.round(size)}px "${(element.textContent ?? "").trim().slice(0, 24)}"`,
+          );
+        }
+      }
+      return [...new Set(out)].slice(0, 3);
+    });
+
+    for (const item of found) problems.push(`${path}: ${item}`);
+  }
+
+  expect(problems, problems.join(" · ")).toEqual([]);
+});

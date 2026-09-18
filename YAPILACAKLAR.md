@@ -157,6 +157,8 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 
 ## 7. Kalite
 
+- [x] `app/onboarding/page.tsx` 990 satırdı; `model.ts` (cevaplar, adımlar, seçenekler),
+      `steps.tsx` (adım içerikleri) ve `Result.tsx` olarak ayrıldı — sayfa 308 satır.
 - [x] `app/workout/page.tsx` 1363 satırdı; dört dosyaya bölündü: `model.ts` (adım,
       taslak, ağırlık biçimi), `stages.tsx` (sahneler), `DayMap.tsx`, `Celebration.tsx`.
       Sayfa artık yalnızca akış (594 satır).

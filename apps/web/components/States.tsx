@@ -80,7 +80,9 @@ export function Empty({
        etkileşim yüzeyi oluyor. */
     return (
       <section className="card overflow-hidden">
-        <Photo slug={photo} ratio="2 / 1" scrim>
+        {/* Dar ekranda oran yetmiyor: başlık iki satıra çıkınca metin kutunun
+            dışına taşıyor ve kırpılıyordu. Alt sınır bunu kaldırıyor. */}
+        <Photo slug={photo} ratio="2 / 1" scrim className="min-h-[19rem] sm:min-h-0">
           <div className="flex size-full flex-col justify-end gap-3 p-6 lg:p-10">
             <p
               className="display max-w-[24ch] text-xl lg:text-2xl"

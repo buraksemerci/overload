@@ -149,6 +149,8 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 - [x] Commit: "Koyu tema ve sinematik ekranlar" (2026-09-17)
 - [x] ROADMAP güncellendi (Bölüm 5 ve yeni Bölüm 8: koyu tema ve sinematik dil)
 - [x] Sekme başlıkları: her bölümün kendi `layout.tsx` metadata'sı ("Kilo · overload")
+- [x] Sekme ikonu: `app/icon.png` ve `app/apple-icon.png` (önceden hiç `rel="icon"`
+      yoktu, sekmede boş bir kâğıt görünüyordu)
 - [x] Dar ekranda yatay kayma denetimi testi (`design-rules`)
 - [x] Menüdeki eski Unsplash kareleri kaldırıldı; menü ve bant aynı salonu gösteriyor
 - [x] **Panel hatası düzeldi:** `main` üzerindeki filtre `position: fixed` için konum

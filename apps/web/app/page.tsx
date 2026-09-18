@@ -37,6 +37,7 @@ import { ErrorBox, fmt } from "@/components/States";
 import {
   useConsistency,
   useHistory,
+  useLatestCoachReport,
   useMe,
   useMuscleVolume,
   useNutritionDay,
@@ -595,18 +596,34 @@ function ConsistencyTile({ className }: { className: string }) {
 }
 
 function CoachTile({ className }: { className: string }) {
+  const report = useLatestCoachReport();
+  /* Okunmamış rapor: kart bunu SÖYLÜYOR, yoksa pazartesi sabahı hazırlanan
+     rapor kimsenin haberi olmadan bekliyordu. İşaret volt DEĞİL — pano
+     bütçesi zaten "antrenmanı başlat" ve rekor rozetiyle dolu; burada beyaz
+     bir nokta ve tek satır yetiyor. */
+  const unread = report.data !== undefined && report.data.read_at === null;
+
   return (
     <Link href="/coach" className={`card lift block overflow-hidden ${className}`}>
       <Photo slug="app-review" fill scrim className="size-full min-h-[16rem]">
         <div className="flex size-full flex-col justify-end p-6 lg:p-8">
-          <p className="label on-photo-dark" style={{ color: "var(--color-on-night-faint)" }}>
+          <p className="label on-photo-dark flex items-center gap-2" style={{ color: "var(--color-on-night-faint)" }}>
+            {unread && (
+              <span
+                aria-hidden
+                className="inline-block size-2 rounded-full"
+                style={{ background: "var(--color-on-night)" }}
+              />
+            )}
             Asistan
           </p>
           <p className="display on-photo-dark mt-1 text-2xl lg:text-3xl" style={{ color: "var(--color-on-night)" }}>
             Haftalık rapor
           </p>
           <p className="on-photo-dark mt-1 max-w-[36ch] text-sm" style={{ color: "var(--color-on-night-muted)" }}>
-            Haftanın hacmi, rekorları ve bir sonraki haftanın önerisi — pazartesi sabahı hazır.
+            {unread
+              ? "Yeni rapor hazır — haftanın hacmi, rekorları ve bir sonraki haftanın önerisi."
+              : "Haftanın hacmi, rekorları ve bir sonraki haftanın önerisi — pazartesi sabahı hazır."}
           </p>
         </div>
       </Photo>

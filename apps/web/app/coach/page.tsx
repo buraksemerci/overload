@@ -26,15 +26,29 @@
  * metnini de raporlara taşıyabiliyor.
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Hero, HeroStat, HeroStats, Page, Section } from "@/components/Layout";
 import { ErrorBox, Loading, fmt } from "@/components/States";
-import { useCurrentWeek, useLatestCoachReport } from "@/lib/queries";
+import { useCurrentWeek, useLatestCoachReport, useMarkReportRead } from "@/lib/queries";
 
 export default function CoachPage() {
   const report = useLatestCoachReport();
   const week = useCurrentWeek();
+  const markRead = useMarkReportRead();
   const [showDetail, setShowDetail] = useState(false);
+
+  /* Rapor ekranda görününce okundu sayılıyor — panodaki "yeni" işareti
+     böyle sönüyor. `marked` bayrağı çift çağrıyı önlüyor: geliştirme kipinde
+     etkiler iki kez koşuyor ve uç nokta tek kullanımlık olmasa da iki istek
+     göndermenin anlamı yok. */
+  const marked = useRef<string | null>(null);
+  const reportId = report.data?.id ?? null;
+  const unread = report.data?.read_at === null;
+  useEffect(() => {
+    if (reportId === null || !unread || marked.current === reportId) return;
+    marked.current = reportId;
+    markRead.mutate(reportId);
+  }, [reportId, unread, markRead]);
 
   const metrics = (week.data?.metrics ?? {}) as Record<string, unknown>;
   const num = (key: string): number | null => {

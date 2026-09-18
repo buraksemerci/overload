@@ -389,8 +389,12 @@ test("ipucu düğmesinin çevresine basmak da açıyor", async ({ page }) => {
   await signIn(page);
   await mockApi(page);
   await page.goto("/weight");
+  // Veri gelince bant içeriği yerine oturuyor; ölçüm ondan sonra yapılmalı
+  // yoksa tıklama, kayan bir düğmenin eski yerine gidiyor.
+  await page.waitForLoadState("networkidle");
 
   const tip = page.getByRole("button", { name: /nasıl hesaplanıyor/ }).first();
+  await expect(tip).toBeVisible();
   const box = (await tip.boundingBox())!;
   await page.mouse.click(box.x + box.width / 2 + 9, box.y + box.height / 2 + 9);
   await expect(tip).toHaveAttribute("aria-expanded", "true");

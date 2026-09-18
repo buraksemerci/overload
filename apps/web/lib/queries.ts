@@ -894,6 +894,23 @@ export function useInjuries(): UseQueryResult<InjuryRow[]> {
   });
 }
 
+/**
+ * Haftalık raporu okundu işaretler.
+ *
+ * `read_at` alanı ve uç nokta baştan vardı ama hiç çağrılmıyordu: rapor
+ * ekranı açılsa da "okunmadı" kalıyordu, yani panodaki "yeni rapor" işareti
+ * hiç sönmezdi. Ekran raporu gösterdiği anda işaretleniyor.
+ */
+export function useMarkReportRead(): UseMutationResult<unknown, Error, string> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (reportId) => api.post(`/coach/reports/${reportId}/read`),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: keys.coachLatest });
+    },
+  });
+}
+
 export function useCurrentWeek(): UseQueryResult<CurrentWeek> {
   return useQuery({
     queryKey: keys.coachWeek,

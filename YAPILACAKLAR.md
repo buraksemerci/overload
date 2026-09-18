@@ -128,6 +128,8 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 - [x] `/chat` bant + büyük örnek kartları + "nasıl çalışıyor" yan sütunu +
       günlük kullanım göstergesi + yapışık yazı alanı
 - [x] `/coach`: haftanın sayıları banda çıktı, rapor metni büyük ve 62ch okuma genişliğinde
+  - Rapor görününce okundu işaretleniyor; panodaki karo okunmamış raporu
+    söylüyor (`read_at` ve uç nokta vardı, hiç çağrılmıyordu)
 
 ## 6. Hesap ve diğerleri
 

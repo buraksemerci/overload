@@ -59,4 +59,32 @@ test.describe("koç raporu", () => {
     await expect(page.getByText("Bench Press — 100 kg")).toBeVisible();
     await expect(page.getByText("Quadriceps")).toBeVisible();
   });
+
+  test("rapor görününce okundu işaretleniyor", async ({ page }) => {
+    /* `read_at` ve uç nokta baştan vardı ama hiç çağrılmıyordu: panodaki
+       "yeni rapor" işareti hiç sönmezdi. */
+    let marked = false;
+    await page.route(`${API}/coach/reports/latest`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: "r1",
+          week_start: "2026-09-07",
+          content: "Bu hafta hacim %8 arttı.",
+          metrics: null,
+          generated_at: "2026-09-14T06:00:00Z",
+          read_at: null,
+        }),
+      }),
+    );
+    await page.route(`${API}/coach/reports/r1/read`, (route) => {
+      marked = true;
+      return route.fulfill({ status: 204, body: "" });
+    });
+
+    await page.goto("/coach");
+    await expect(page.getByText("Bu hafta hacim %8 arttı.")).toBeVisible();
+    await expect.poll(() => marked).toBe(true);
+  });
 });

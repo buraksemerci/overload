@@ -106,6 +106,8 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 - [x] Klavye kısayolları: Enter seti kaydeder, dinlenmede Enter atlar, ← → ±15 sn;
       ok tuşları alanlarda adım adım değiştirir. Alana yazarken kısayol kapalı
       (`useHotkeys`), kısayol listesi günün hareketleri sütununun altında yazıyor.
+- [x] Program adı değiştirilebiliyor ve program silinebiliyor (düzenleme ekranı);
+      `PATCH`/`DELETE` uç noktaları vardı, arayüzde yolu yoktu
 - [x] `/programs`: aktif program BANDIN kendisi (hedef fotoğrafı, ad, gün/hareket sayısı,
       "bugünkü antrenman"), altında program günleri kartları; diğerleri ve şablonlar açılır
 - [x] `/exercises`: bantta cam arama kutusu + sayılar; ekipman karoları büyüdü

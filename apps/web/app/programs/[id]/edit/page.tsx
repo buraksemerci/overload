@@ -18,9 +18,11 @@ import { Page, PageHeader } from "@/components/Layout";
 import { SortableList } from "@/components/SortableList";
 import { ErrorBox, Loading } from "@/components/States";
 import {
+  useDeleteProgram,
   useExercises,
   useProgram,
   useReplaceProgramDays,
+  useUpdateProgram,
   type ProgramDayInput,
 } from "@/lib/queries";
 
@@ -53,9 +55,15 @@ export default function ProgramEditPage() {
   const program = useProgram(params.id ?? null);
   const library = useExercises("");
   const save = useReplaceProgramDays();
+  const rename = useUpdateProgram();
+  const removeProgram = useDeleteProgram();
 
   const [days, setDays] = useState<EditableDay[] | null>(null);
   const [dirty, setDirty] = useState(false);
+  /** Program adı — `null` iken sunucudaki ad gösteriliyor. */
+  const [name, setName] = useState<string | null>(null);
+  /** Silme iki adımda: program gidince günleri geri getirmenin yolu yok. */
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     if (program.data && days === null) {
@@ -165,6 +173,9 @@ export default function ProgramEditPage() {
     setDirty(true);
   };
 
+  const programName = name ?? program.data?.name ?? "";
+  const nameChanged = programName.trim().length > 0 && programName !== program.data?.name;
+
   const firstExerciseId = library.data?.[0]?.id;
 
   const emptyDay = days.some((day) => day.exercises.length === 0);
@@ -172,6 +183,42 @@ export default function ProgramEditPage() {
   return (
     <Page>
       {hero}
+
+      {/* Programın ADI — gün listesinden önce, çünkü bir programda ilk
+          değiştirilen şey genelde bu. Kaydetme ayrı: gün ağacını kaydeden
+          tek istek (`PUT .../days`) adı taşımıyor. */}
+      <section className="card flex flex-wrap items-end gap-3 p-6">
+        <label className="min-w-[14rem] flex-1">
+          <span className="label mb-1.5 block">Program adı</span>
+          <input
+            value={programName}
+            onChange={(event) => setName(event.target.value)}
+            aria-label="Program adı"
+            className="field h-12 w-full px-3 text-base"
+          />
+        </label>
+        <button
+          type="button"
+          className="btn btn-ghost"
+          disabled={!nameChanged || rename.isPending}
+          onClick={() =>
+            rename.mutate(
+              { id: params.id, name: programName.trim() },
+              { onSuccess: () => setName(null) },
+            )
+          }
+        >
+          {/* "Kaydet" DEĞİL: gün ağacını kaydeden düğme de o adı taşıyor ve
+              iki "Kaydet" yan yana hangisinin neyi kaydettiğini belirsiz
+              bırakıyordu. */}
+          {rename.isPending ? "Güncelleniyor…" : "Adı güncelle"}
+        </button>
+        {rename.isError && (
+          <div className="w-full">
+            <ErrorBox error={rename.error} />
+          </div>
+        )}
+      </section>
 
       <SortableList
         items={days}
@@ -425,6 +472,46 @@ export default function ProgramEditPage() {
       </div>
 
       {save.isError && <ErrorBox error={save.error} />}
+      {/* --- Programı sil --------------------------------------------------
+          Geçmiş seanslar SİLİNMİYOR; silinen şey plan. Uç nokta baştan vardı
+          ama arayüzde yolu yoktu ve denenen her şablon listede birikiyordu. */}
+      <section className="card p-6">
+        {confirmDelete ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="w-full text-sm text-[var(--color-ink-muted)]">
+              Bu program ve günleri silinir. Yapılmış antrenmanlar geçmişte kalır.
+            </p>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              style={{ color: "var(--color-danger)", borderColor: "var(--color-danger)" }}
+              disabled={removeProgram.isPending}
+              onClick={() =>
+                removeProgram.mutate(params.id, { onSuccess: () => router.replace("/programs") })
+              }
+            >
+              {removeProgram.isPending ? "Siliniyor…" : "Evet, programı sil"}
+            </button>
+            <button type="button" className="btn btn-quiet" onClick={() => setConfirmDelete(false)}>
+              Vazgeç
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="btn btn-quiet -ml-2.5"
+            onClick={() => setConfirmDelete(true)}
+          >
+            Programı sil
+          </button>
+        )}
+        {removeProgram.isError && (
+          <div className="mt-3">
+            <ErrorBox error={removeProgram.error} />
+          </div>
+        )}
+      </section>
+
     </Page>
   );
 }

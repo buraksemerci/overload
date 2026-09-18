@@ -82,4 +82,38 @@ test.describe("program düzenleyici", () => {
     // Değişiklik olunca kaydet açılıyor.
     await expect(page.getByRole("button", { name: "Kaydet" })).toBeEnabled();
   });
+
+  test("program adı değiştirilebiliyor", async ({ page }) => {
+    /* `PATCH /programs/{id}` baştan vardı; arayüzde yolu yoktu. Gün ağacını
+       kaydeden istek (`PUT .../days`) adı taşımıyor, o yüzden ayrı düğme. */
+    let patched: Record<string, unknown> | null = null;
+    await page.route(`http://localhost:8000/programs/${PROGRAM_ID}`, (route) => {
+      if (route.request().method() !== "PATCH") return route.fallback();
+      patched = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+    });
+
+    await page.goto(`/programs/${PROGRAM_ID}/edit`);
+    await page.getByLabel("Program adı").fill("Üst/Alt 4 Gün");
+    await page.getByRole("button", { name: "Adı güncelle" }).click();
+
+    await expect.poll(() => patched).toMatchObject({ name: "Üst/Alt 4 Gün" });
+  });
+
+  test("program silme iki adımda soruluyor", async ({ page }) => {
+    let deleted = false;
+    await page.route(`http://localhost:8000/programs/${PROGRAM_ID}`, (route) => {
+      if (route.request().method() !== "DELETE") return route.fallback();
+      deleted = true;
+      return route.fulfill({ status: 204, body: "" });
+    });
+
+    await page.goto(`/programs/${PROGRAM_ID}/edit`);
+    await page.getByRole("button", { name: "Programı sil" }).click();
+    expect(deleted, "tek dokunuşta silinmemeli").toBe(false);
+    await page.getByRole("button", { name: "Evet, programı sil" }).click();
+
+    await expect.poll(() => deleted).toBe(true);
+    await expect(page).toHaveURL(/\/programs$/);
+  });
 });

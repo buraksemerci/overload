@@ -729,6 +729,42 @@ export interface ProgramDayInput {
   }>;
 }
 
+/** Program başlığı ve etiketleri (ad, hedef, seviye). */
+export function useUpdateProgram(): UseMutationResult<
+  ProgramSummary,
+  Error,
+  { id: string; name?: string; goal?: string; level?: string }
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }) => api.patch<ProgramSummary>(`/programs/${id}`, body),
+    onSuccess: (_data, variables) => {
+      void client.invalidateQueries({ queryKey: keys.programs });
+      void client.invalidateQueries({ queryKey: keys.program(variables.id) });
+      // Bugünkü antrenman bandında programın adı yazıyor.
+      void client.invalidateQueries({ queryKey: keys.workouts });
+    },
+  });
+}
+
+/**
+ * Programı siler.
+ *
+ * Geçmiş seanslar silinmiyor — onlar kendi kayıtları. Silinen şey plan.
+ * Uç nokta baştan vardı; arayüzde yolu olmadığı için denenen her şablon
+ * listede birikiyordu.
+ */
+export function useDeleteProgram(): UseMutationResult<unknown, Error, string> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => api.delete(`/programs/${id}`),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: keys.programs });
+      void client.invalidateQueries({ queryKey: keys.workouts });
+    },
+  });
+}
+
 export function useReplaceProgramDays(): UseMutationResult<
   ProgramDetail,
   Error,

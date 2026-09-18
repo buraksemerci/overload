@@ -1173,7 +1173,16 @@ function DayMap({
                 {String(order + 1).padStart(2, "0")}
               </span>
               <span className="min-w-0 flex-1">
-                <span className={`block truncate text-sm ${isCurrent ? "font-semibold" : ""}`}>{exercise.name}</span>
+                <span className={`block truncate text-sm ${isCurrent ? "font-semibold" : ""}`}>
+                  {exercise.name}
+                  {/* Süperset işareti haritada da: sıranın neden hareketler
+                      arasında gidip geldiği ancak burada görünüyor. */}
+                  {exercise.superset_group !== null && (
+                    <span className="ml-2 text-2xs text-[var(--color-ink-faint)]">
+                      süperset {exercise.superset_group}
+                    </span>
+                  )}
+                </span>
                 <span className="mt-1.5 flex gap-1" aria-hidden>
                   {Array.from({ length: planned }, (_, i) => (
                     <span

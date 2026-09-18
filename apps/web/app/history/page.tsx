@@ -203,7 +203,12 @@ export default function HistoryPage() {
       {/* --- Seanslar ----------------------------------------------------- */}
       {months.map((month) => (
         <section key={month.label}>
-          <h2 className="display mb-4 text-xl lg:text-2xl">{month.label}</h2>
+          {/* Ay başlığı kaydırırken üstte kalıyor: altmış seansın içinde
+              hangi aya baktığını görmek için yukarı çıkmak gerekiyordu.
+              Zemin şart — saydam bir başlığın altından kartlar geçiyordu. */}
+          <h2 className="display sticky top-0 z-10 mb-4 bg-[var(--color-ground)] py-3 text-xl lg:text-2xl">
+            {month.label}
+          </h2>
           <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {month.sessions.map((session) => (
               <li key={session.id} className="rise">

@@ -158,6 +158,9 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 - [x] Bant fotoğrafı öncelikli yükleniyor (LCP), diğerleri tembel
 - [x] Yükleniyor durumu iskelet oldu (`.skeleton`, hareket azaltmada durağan)
 - [x] Çevrimdışı uyarısı: bağlantı yokken tek satırlık çubuk (+ test)
+- [x] Hata ve 404 ekranları uygulamanın dilinde: `app/not-found.tsx` (bantlı 404),
+      `app/error.tsx` (tekrar dene + hata kodu), `app/global-error.tsx` (kök düzen
+      çökerse satır içi stille okunur bir sayfa)
 
 ---
 

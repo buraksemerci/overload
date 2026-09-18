@@ -259,6 +259,15 @@ test.describe("oturum açıkken", () => {
     await expect(page.getByText(/Bağlantı yok/)).toHaveCount(0);
   });
 
+  test("olmayan adres uygulamanın kendi 404'üne düşüyor", async ({ page }) => {
+    /* Next'in varsayılanı siyah beyaz bir sistem yazısı; uygulamanın içinde
+       oraya düşmek "site bozuldu" hissi veriyordu. */
+    await page.goto("/boyle-bir-sayfa-yok");
+    await expect(page.getByRole("heading", { name: "Bu sayfa yok", level: 1 })).toBeVisible();
+    await page.getByRole("link", { name: "Panele dön" }).click();
+    await expect(page).toHaveURL(/localhost:3000\/$/);
+  });
+
   test("sekme başlığı hangi ekranda olduğunu söylüyor", async ({ page }) => {
     /* Uygulama tek sayfa gibi davranıyor ve bütün sekmeler "overload"
        yazıyordu; beş sekme açık olan biri hangisinin kilo, hangisinin

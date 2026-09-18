@@ -26,6 +26,7 @@
     "recharts": "^3.10.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@overload/shared-types": "workspace:*",
     "@playwright/test": "^1.63.0",
     "@serwist/next": "^9.5.12",

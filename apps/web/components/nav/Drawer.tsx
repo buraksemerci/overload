@@ -21,7 +21,10 @@ export function Drawer({
   isActive: (href: Href) => boolean;
   onClose: () => void;
 }) {
-  const panel = useRef<HTMLElement | null>(null);
+  /** Odak tuzağının sınırı: perde düğmesi de İÇİNDE. */
+  const panel = useRef<HTMLDivElement | null>(null);
+  /** İlk odak buraya: perdeye değil, menünün ilk bağlantısına. */
+  const list = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     /* Odak çekmecenin İÇİNE alınıyor ve Tab dışarı kaçmıyor: açık bir
@@ -29,7 +32,7 @@ export function Drawer({
        kişiyi görünmeyen bir menüde dolaştırıyordu. Kapanınca odak çekmeceyi
        açan düğmeye dönüyor. */
     const opener = document.activeElement as HTMLElement | null;
-    const first = panel.current?.querySelector<HTMLElement>("a,button");
+    const first = list.current?.querySelector<HTMLElement>("a,button");
     first?.focus();
 
     const onKey = (event: KeyboardEvent) => {
@@ -62,7 +65,24 @@ export function Drawer({
   }, [onClose]);
 
   return (
-    <div className="md:hidden" style={{ zIndex: "var(--z-modal)" }}>
+    /* Rolü ÇEKMECE değil PENCERE: odak içeride kalıyor, arkadaki sayfa
+       kaydırılmıyor ve Escape kapatıyor. Rol verilmeden ekran okuyucu bunu
+       sayfanın akışında sıradan bir menü sanıyordu — kullanıcı "nereye
+       girdim, nasıl çıkarım" sorusunun cevabını duymuyordu.
+
+       Perde düğmesi de bu kabın içinde: odak tuzağı onu da kapsasın, yoksa
+       klavyeyle çekmeceyi kapatmanın tek yolu Escape kalıyordu. */
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Menü"
+      ref={panel}
+      /* Kabın KENDİSİ de ekranı kaplıyor. İçindekiler `fixed` olduğu için
+         kutusu sıfırdı ve "pencere görünür mü" diye bakan her araç (testler
+         dahil) onu gizli sayıyordu. */
+      className="fixed inset-0 md:hidden"
+      style={{ zIndex: "var(--z-modal)" }}
+    >
       <button
         type="button"
         aria-label="Menüyü kapat"
@@ -71,7 +91,7 @@ export function Drawer({
         style={{ zIndex: "var(--z-modal)" }}
       />
       <nav
-        ref={panel}
+        ref={list}
         aria-label="Ana gezinme"
         className="scroll-thin fixed inset-y-0 left-0 flex w-[19rem] flex-col gap-6 overflow-y-auto bg-[var(--color-ground)] px-4 py-6"
         style={{

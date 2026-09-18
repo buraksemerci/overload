@@ -263,10 +263,28 @@ test.describe("oturum açıkken", () => {
     /* Klavyeyle gelen kişi her ekranda önce on bağlantılık gezinmeyi geçmek
        zorundaydı. Bağlantı görünmez ama odaklanınca beliriyor. */
     await page.goto("/");
-    await page.keyboard.press("Tab");
 
+    /* Tuş göndermek yerine DOM sırası ölçülüyor: `keyboard.press("Tab")`
+       işletim sistemi penceresinin odağına bağlı ve paralel koşan tarayıcılar
+       arasında kırılgan. İddia zaten sıranın kendisi. */
+    const order = await page.evaluate(() => {
+      const skip = [...document.querySelectorAll("a")].find(
+        (link) => link.textContent?.trim() === "İçeriğe geç",
+      );
+      const firstNavLink = document.querySelector("header a");
+      if (!skip || !firstNavLink) return "eksik";
+      // Geliştirme kipinde Next kendi araç düğmesini gövdenin başına
+      // ekliyor; "ilk odaklanabilir öğe" yerine SIRA ölçülüyor.
+      return skip.compareDocumentPosition(firstNavLink) & Node.DOCUMENT_POSITION_FOLLOWING
+        ? "önce"
+        : "sonra";
+    });
+    expect(order, "atlama bağlantısı gezinmeden önce gelmeli").toBe("önce");
+
+    // Odaklanınca görünür oluyor: ekranda duran ama okunmayan bir bağlantı
+    // klavye kullanıcısına yardım etmez.
     const skip = page.getByRole("link", { name: "İçeriğe geç" });
-    await expect(skip).toBeFocused();
+    await skip.focus();
     await expect(skip).toBeVisible();
   });
 

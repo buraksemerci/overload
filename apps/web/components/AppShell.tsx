@@ -696,16 +696,43 @@ function Drawer({
   isActive: (href: Href) => boolean;
   onClose: () => void;
 }) {
+  const panel = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
+    /* Odak çekmecenin İÇİNE alınıyor ve Tab dışarı kaçmıyor: açık bir
+       çekmecenin arkasındaki bağlantılara sekmek, ekran okuyucu kullanan
+       kişiyi görünmeyen bir menüde dolaştırıyordu. Kapanınca odak çekmeceyi
+       açan düğmeye dönüyor. */
+    const opener = document.activeElement as HTMLElement | null;
+    const first = panel.current?.querySelector<HTMLElement>("a,button");
+    first?.focus();
+
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = panel.current?.querySelectorAll<HTMLElement>("a,button");
+      if (!focusable || focusable.length === 0) return;
+      const start = focusable.item(0);
+      const end = focusable.item(focusable.length - 1);
+      if (event.shiftKey && document.activeElement === start) {
+        event.preventDefault();
+        end.focus();
+      } else if (!event.shiftKey && document.activeElement === end) {
+        event.preventDefault();
+        start.focus();
+      }
     };
+
     document.addEventListener("keydown", onKey);
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = previous;
+      opener?.focus?.();
     };
   }, [onClose]);
 
@@ -719,6 +746,7 @@ function Drawer({
         style={{ zIndex: "var(--z-modal)" }}
       />
       <nav
+        ref={panel}
         aria-label="Ana gezinme"
         className="scroll-thin fixed inset-y-0 left-0 flex w-[19rem] flex-col gap-6 overflow-y-auto bg-[var(--color-ground)] px-4 py-6"
         style={{

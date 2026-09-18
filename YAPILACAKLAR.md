@@ -208,6 +208,13 @@ fotoğraflar, ödül alacak kalitede UI/UX.
     panonun bölüm karolarında da geçtiği için dosya zaten önbellekte — panel
     sıfır bayta açılıyor. Menü fotoğraflarının ön ısıtması da aynı adayı
     seçiyor, yoksa telefonda dört kare TAM BOY iniyordu (~900 kB).
+- [x] **Erişilebilirlik taraması (axe)**: 18 ekran + açılan katmanlar (gezinme
+      paneli, alt sayfa, telefon çekmecesi) `e2e/a11y.spec.ts` içinde denetleniyor.
+      Kontrast bu taramada kapalı — projenin kendi taraması `design-rules` içinde.
+  - Tarama bir hata buldu: telefon çekmecesi odağı içeride tutup arkadaki sayfayı
+    kilitliyordu ama ROLÜ yoktu; ekran okuyucu onu sıradan bir menü sanıyordu.
+    Artık `role="dialog" aria-modal`. Perde düğmesi de odak tuzağının içinde:
+    klavyeyle kapatmanın tek yolu Escape kalmıştı.
 - [x] **Panel açıkken marka yazısı okunmuyordu**: çubuk şeffaf ve "overload"
       tam da salon penceresinin ışığına denk geliyordu. Çubuk yazıları da
       panelin bağlantıları gibi gölgeyle okunuyor (`.on-photo-*`).

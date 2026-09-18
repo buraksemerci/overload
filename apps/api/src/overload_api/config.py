@@ -69,7 +69,7 @@ class Settings(BaseSettings):
 
     # --- Besin veritabanları ---
     usda_api_key: SecretStr | None = None
-    off_user_agent: str = "overload/0.1 (github.com/kabese/overload)"
+    off_user_agent: str = "overload/0.1 (yerel gelistirme)"
 
     # --- E-posta ---
     # `smtp_host` tanımlandığı anda gerçek gönderim devreye giriyor; ayrı bir

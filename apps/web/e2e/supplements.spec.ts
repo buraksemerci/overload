@@ -72,4 +72,50 @@ test.describe("supplement", () => {
     // `taken: false` — kayıt SİLİNMİYOR, "alınmadı" olarak yazılıyor.
     expect(posted[0]!.body).toEqual({ taken: false });
   });
+
+  test("ada dokunmak düzenleme panelini açıyor; doz güncelleniyor", async ({ page }) => {
+    /* PATCH ve DELETE uç noktaları baştan vardı; arayüzde yalnızca ekleme
+       vardı ve yanlış yazılan bir adı düzeltmenin yolu yoktu. */
+    let patched: Record<string, unknown> | null = null;
+    await page.route(`${API}/supplements/s1`, (route) => {
+      if (route.request().method() !== "PATCH") return route.fallback();
+      patched = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ id: "s1", name: "Kreatin", dose: "10 g", schedule: "daily", is_active: true }),
+      });
+    });
+
+    await page.goto("/supplements");
+    await page.waitForLoadState("networkidle");
+
+    await page.getByRole("button", { name: "Kreatin ayarlarını düzenle" }).click();
+    const sheet = page.getByRole("dialog", { name: "Kreatin" });
+    await expect(sheet).toBeVisible();
+    await sheet.getByLabel("Doz").fill("10 g");
+    await sheet.getByRole("button", { name: "Kaydet" }).click();
+
+    await expect.poll(() => patched).toMatchObject({ dose: "10 g" });
+  });
+
+  test("silme iki adımda soruluyor", async ({ page }) => {
+    // Uyum geçmişi de gidiyor: tek dokunuşla olmamalı.
+    let deleted = false;
+    await page.route(`${API}/supplements/s1`, (route) => {
+      if (route.request().method() !== "DELETE") return route.fallback();
+      deleted = true;
+      return route.fulfill({ status: 204, body: "" });
+    });
+
+    await page.goto("/supplements");
+    await page.waitForLoadState("networkidle");
+
+    await page.getByRole("button", { name: "Kreatin ayarlarını düzenle" }).click();
+    await page.getByRole("button", { name: "Listeden sil" }).click();
+    expect(deleted, "tek dokunuşta silinmemeli").toBe(false);
+
+    await page.getByRole("button", { name: "Evet, sil" }).click();
+    await expect.poll(() => deleted).toBe(true);
+  });
 });

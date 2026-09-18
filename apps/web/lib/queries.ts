@@ -895,6 +895,40 @@ export function useCreateSupplement(): UseMutationResult<
   });
 }
 
+/** Supplement'i günceller (ad, doz, program). */
+export function useUpdateSupplement(): UseMutationResult<
+  SupplementRow,
+  Error,
+  { id: string; name?: string; dose?: string | null; schedule?: string }
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }) => api.patch<SupplementRow>(`/supplements/${id}`, body),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: keys.supplements });
+      void client.invalidateQueries({ queryKey: keys.supplementsToday });
+    },
+  });
+}
+
+/**
+ * Supplement'i siler.
+ *
+ * Uyum geçmişi de gidiyor; "artık almıyorum" demek için doğru yol bu değil —
+ * ama listede kalmasını istemeyen biri için tek yol buydu ve arayüzde hiç
+ * yoktu. Panelde onay isteniyor.
+ */
+export function useDeleteSupplement(): UseMutationResult<unknown, Error, string> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => api.delete(`/supplements/${id}`),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: keys.supplements });
+      void client.invalidateQueries({ queryKey: keys.supplementsToday });
+    },
+  });
+}
+
 /**
  * Sakatlık notu ekler.
  *

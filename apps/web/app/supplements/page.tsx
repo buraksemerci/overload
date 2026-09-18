@@ -28,7 +28,14 @@ import { useState } from "react";
 import { Hero, HeroStat, HeroStats, Page, Section } from "@/components/Layout";
 import { Sheet } from "@/components/Sheet";
 import { ErrorBox, Empty, Loading } from "@/components/States";
-import { useCreateSupplement, useMarkIntake, useSupplementsToday } from "@/lib/queries";
+import {
+  useCreateSupplement,
+  useDeleteSupplement,
+  useMarkIntake,
+  useSupplementsToday,
+  useUpdateSupplement,
+  type SupplementRow,
+} from "@/lib/queries";
 
 const SCHEDULE_LABEL: Record<string, string> = {
   daily: "Her gün",
@@ -41,6 +48,8 @@ export default function SupplementsPage() {
   const today = useSupplementsToday();
   const mark = useMarkIntake();
   const [adding, setAdding] = useState(false);
+  /** Düzenlenen supplement. `null` = panel kapalı. */
+  const [editing, setEditing] = useState<SupplementRow | null>(null);
   const [showOther, setShowOther] = useState(false);
 
   const rows = today.data ?? [];
@@ -136,20 +145,26 @@ export default function SupplementsPage() {
                     className="reveal flex items-center justify-between gap-4 py-4"
                     style={{ ["--i" as string]: index }}
                   >
-                    <div className="min-w-0">
-                      <p className="truncate text-base">
+                    {/* Ad düğme: dokununca düzenleme paneli açılıyor. Adı ve
+                        dozu değiştirmenin başka yolu yoktu. */}
+                    <button
+                      type="button"
+                      onClick={() => setEditing(row.supplement)}
+                      aria-label={`${row.supplement.name} ayarlarını düzenle`}
+                      className="min-w-0 flex-1 text-left"
+                    >
+                      <span className="block truncate text-base">
                         {row.supplement.name}
                         {row.supplement.dose && (
                           <span className="ml-1.5 text-sm text-[var(--color-ink-faint)]">
                             {row.supplement.dose}
                           </span>
                         )}
-                      </p>
-                      <p className="text-xs text-[var(--color-ink-faint)]">
-                        {SCHEDULE_LABEL[row.supplement.schedule] ??
-                          row.supplement.schedule}
-                      </p>
-                    </div>
+                      </span>
+                      <span className="block text-xs text-[var(--color-ink-faint)]">
+                        {SCHEDULE_LABEL[row.supplement.schedule] ?? row.supplement.schedule}
+                      </span>
+                    </button>
 
                     <Answer
                       taken={row.taken}
@@ -184,15 +199,19 @@ export default function SupplementsPage() {
                       className="card reveal flex items-center justify-between gap-4 px-4 py-3"
                       style={{ ["--i" as string]: index }}
                     >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm text-[var(--color-ink-muted)]">
+                      <button
+                        type="button"
+                        onClick={() => setEditing(row.supplement)}
+                        aria-label={`${row.supplement.name} ayarlarını düzenle`}
+                        className="min-w-0 flex-1 text-left"
+                      >
+                        <span className="block truncate text-sm text-[var(--color-ink-muted)]">
                           {row.supplement.name}
-                        </p>
-                        <p className="text-2xs text-[var(--color-ink-faint)]">
-                          {SCHEDULE_LABEL[row.supplement.schedule] ??
-                            row.supplement.schedule}
-                        </p>
-                      </div>
+                        </span>
+                        <span className="block text-2xs text-[var(--color-ink-faint)]">
+                          {SCHEDULE_LABEL[row.supplement.schedule] ?? row.supplement.schedule}
+                        </span>
+                      </button>
                       {/* Bugün gerekmese de alınabiliyor: program bir öneri,
                           yasak değil. */}
                       <Answer
@@ -210,7 +229,10 @@ export default function SupplementsPage() {
         </>
       )}
 
-      {adding && <AddSheet onClose={() => setAdding(false)} />}
+      {adding && <SupplementSheet onClose={() => setAdding(false)} />}
+      {editing && (
+        <SupplementSheet existing={editing} onClose={() => setEditing(null)} />
+      )}
     </Page>
   );
 }
@@ -286,33 +308,52 @@ function Answer({
 
 /* --- Ekleme paneli -------------------------------------------------------- */
 
-function AddSheet({ onClose }: { onClose: () => void }) {
+/**
+ * Supplement paneli — ekleme ve düzenleme aynı form.
+ *
+ * Düzenleme uç noktaları (PATCH, DELETE) baştan vardı; arayüzde yalnızca
+ * ekleme vardı. Yanlış yazılan bir ad ya da değişen bir doz için listeyi
+ * silip yeniden kurmak gerekiyordu.
+ */
+function SupplementSheet({
+  existing,
+  onClose,
+}: {
+  existing?: SupplementRow;
+  onClose: () => void;
+}) {
   const create = useCreateSupplement();
-  const [name, setName] = useState("");
-  const [dose, setDose] = useState("");
-  const [schedule, setSchedule] = useState("daily");
+  const update = useUpdateSupplement();
+  const remove = useDeleteSupplement();
+  const [name, setName] = useState(existing?.name ?? "");
+  const [dose, setDose] = useState(existing?.dose ?? "");
+  const [schedule, setSchedule] = useState(existing?.schedule ?? "daily");
+  /** Silme iki adımda: tek dokunuşla uyum geçmişi gitmesin. */
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const pending = create.isPending || update.isPending;
+  const error = create.isError ? create.error : update.isError ? update.error : null;
 
   const submit = () => {
     if (!name.trim()) return;
-    create.mutate(
-      { name: name.trim(), dose: dose.trim() || null, schedule },
-      { onSuccess: onClose },
-    );
+    const body = { name: name.trim(), dose: dose.trim() || null, schedule };
+    if (existing) update.mutate({ id: existing.id, ...body }, { onSuccess: onClose });
+    else create.mutate(body, { onSuccess: onClose });
   };
 
   return (
     <Sheet
-      title="Yeni supplement"
+      title={existing ? existing.name : "Yeni supplement"}
       onClose={onClose}
       width="26rem"
       footer={
         <button
           type="button"
           className="btn btn-primary w-full py-3"
-          disabled={create.isPending || !name.trim()}
+          disabled={pending || !name.trim()}
           onClick={submit}
         >
-          {create.isPending ? "Ekleniyor…" : "Ekle"}
+          {pending ? "Kaydediliyor…" : existing ? "Kaydet" : "Ekle"}
         </button>
       }
     >
@@ -323,7 +364,7 @@ function AddSheet({ onClose }: { onClose: () => void }) {
           submit();
         }}
       >
-        {create.isError && <ErrorBox error={create.error} />}
+        {error !== null && <ErrorBox error={error} />}
 
         <label className="flex flex-col gap-1.5">
           <span className="label">Ad</span>
@@ -363,7 +404,45 @@ function AddSheet({ onClose }: { onClose: () => void }) {
             ))}
           </div>
         </div>
+
+        {existing && (
+          <div className="mt-2 border-t border-[var(--color-border)] pt-4">
+            {confirmDelete ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="w-full text-sm text-[var(--color-ink-muted)]">
+                  Uyum geçmişi de silinir. Emin misin?
+                </p>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  style={{ color: "var(--color-danger)", borderColor: "var(--color-danger)" }}
+                  disabled={remove.isPending}
+                  onClick={() => remove.mutate(existing.id, { onSuccess: onClose })}
+                >
+                  {remove.isPending ? "Siliniyor…" : "Evet, sil"}
+                </button>
+                <button type="button" className="btn btn-quiet" onClick={() => setConfirmDelete(false)}>
+                  Vazgeç
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-quiet -ml-2.5"
+                onClick={() => setConfirmDelete(true)}
+              >
+                Listeden sil
+              </button>
+            )}
+            {remove.isError && (
+              <div className="mt-3">
+                <ErrorBox error={remove.error} />
+              </div>
+            )}
+          </div>
+        )}
       </form>
     </Sheet>
   );
 }
+

@@ -118,6 +118,8 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 
 - [x] `/nutrition` bant (kalan kalori halkası) + öğün fotoğrafları + makrolar + gün gezinmesi
 - [x] `/supplements`: bantta bugün/işaretlenen/tanımlı sayıları, satırlar büyüdü
+  - Ada dokununca düzenleme paneli: ad, doz, program; iki adımlı silme.
+    (PATCH/DELETE uç noktaları vardı, arayüzde yolu yoktu.)
 
 ## 5. Asistan
 

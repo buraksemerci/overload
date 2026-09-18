@@ -157,6 +157,8 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 
 ## 7. Kalite
 
+- [x] `components/AppShell.tsx` 906 satırdı; gezinme verisi (`nav/items.ts`), fotoğraf
+      örtüsü, telefon çekmecesi ve profil menüsü ayrı dosyalara alındı — kabuk 462 satır.
 - [x] `app/onboarding/page.tsx` 990 satırdı; `model.ts` (cevaplar, adımlar, seçenekler),
       `steps.tsx` (adım içerikleri) ve `Result.tsx` olarak ayrıldı — sayfa 308 satır.
 - [x] `app/workout/page.tsx` 1363 satırdı; dört dosyaya bölündü: `model.ts` (adım,

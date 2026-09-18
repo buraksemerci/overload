@@ -431,3 +431,44 @@ test("her ekranda tek h1 ve atlanmış başlık düzeyi yok", async ({ page }) =
 
   expect(problems, problems.join(" · ")).toEqual([]);
 });
+
+/**
+ * Kutusundan TAŞAN ve kırpılan metin yok.
+ *
+ * Bu denetim gerçek bir hatayı yakaladı: boş durum kartındaki fotoğraf
+ * kutusuna oran (2/1) verilmişken dar ekranda yükseklik de sabitlenince
+ * tarayıcı GENİŞLİĞİ orandan türetiyor — kutu 608 piksel oluyor, kart 348 ve
+ * `overflow: hidden` aradaki metni kesiyor. Ekranda "işaretleyebilirsin"in
+ * yarısı görünmüyordu ama hiçbir test kırılmıyordu.
+ *
+ * Kaydırılabilir alanlar, tek satıra kırpılan başlıklar (`truncate`) ve tam
+ * genişlik bantların bir-iki piksellik payı dışarıda: onlar kasıtlı.
+ */
+test("dar ekranda kutusundan taşan metin yok", async ({ page }) => {
+  test.slow();
+  await page.setViewportSize({ width: 390, height: 800 });
+  await signIn(page);
+  await mockApi(page);
+
+  const problems: string[] = [];
+  for (const path of SCREENS) {
+    await openScreen(page, path);
+    const found = await page.evaluate(() => {
+      const out: string[] = [];
+      for (const element of document.querySelectorAll<HTMLElement>("main *")) {
+        const style = getComputedStyle(element);
+        if (style.overflowX !== "hidden" && style.overflowX !== "clip") continue;
+        if (style.textOverflow === "ellipsis" || style.whiteSpace === "nowrap") continue;
+        if (element.scrollWidth - element.clientWidth <= 8) continue;
+        if ((element.textContent ?? "").trim().length === 0) continue;
+        out.push(
+          `${element.tagName.toLowerCase()}.${(element.getAttribute("class") ?? "").slice(0, 40)} ${element.scrollWidth}>${element.clientWidth}`,
+        );
+      }
+      return out.slice(0, 3);
+    });
+    for (const item of found) problems.push(`${path}: ${item}`);
+  }
+
+  expect(problems, problems.join(" · ")).toEqual([]);
+});

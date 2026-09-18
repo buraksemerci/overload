@@ -33,4 +33,29 @@ test.describe("asistan", () => {
     await page.goto("/chat");
     await expect(page.getByRole("button", { name: "Gönder" })).toBeDisabled();
   });
+
+  test("Enter gönderiyor, Shift+Enter satır atlıyor", async ({ page }) => {
+    /* Sohbet kutusunun beklenen davranışı. Tek satırlık `input` uzun
+       cümlelerde ne yazdığını göstermiyordu; alan artık içerikle büyüyor. */
+    let sent = false;
+    await page.route("http://localhost:8000/chat/stream", (route) => {
+      sent = true;
+      return route.fulfill({
+        status: 200,
+        headers: { "content-type": "text/event-stream" },
+        body: 'data: {"type":"text","data":{"text":"Tamam."}}\n\n',
+      });
+    });
+
+    await page.goto("/chat");
+    const box = page.getByLabel("Mesaj");
+    await box.fill("Birinci satır");
+    await box.press("Shift+Enter");
+    await box.type("ikinci satır");
+    await expect(box).toHaveValue("Birinci satır\nikinci satır");
+    expect(sent, "Shift+Enter göndermemeli").toBe(false);
+
+    await box.press("Enter");
+    await expect.poll(() => sent).toBe(true);
+  });
 });

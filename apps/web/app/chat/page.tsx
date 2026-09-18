@@ -57,7 +57,7 @@ export default function ChatPage() {
   const [uploading, setUploading] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const client = useQueryClient();
 
   const send = useCallback(async () => {
@@ -349,13 +349,36 @@ export default function ChatPage() {
                   <circle cx="12" cy="13" r="3.4" />
                 </svg>
               </button>
-              <input
+              {/* Tek satırlık `input` DEĞİL: "haftada 4 gün üst/alt split kur,
+                  bench press'i öne al" gibi cümleler kutuya sığmıyordu ve
+                  yazarken ne yazdığın görünmüyordu. Alan içerikle birlikte
+                  altı satıra kadar büyüyor.
+
+                  Enter GÖNDERİYOR, Shift+Enter satır atlıyor: sohbet
+                  kutusunun beklenen davranışı bu. */}
+              <textarea
                 ref={inputRef}
                 value={input}
+                rows={1}
                 onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter" || e.shiftKey) return;
+                  // IME (Türkçe klavye değil ama Japonca/Çince girişte) henüz
+                  // kelimeyi onaylıyorsa Enter gönderim değil, onaydır.
+                  if (e.nativeEvent.isComposing) return;
+                  e.preventDefault();
+                  void send();
+                }}
                 placeholder={photo ? "Not ekle (isteğe bağlı)…" : "Bir şey sor ya da anlat…"}
                 aria-label="Mesaj"
-                className="h-11 min-w-0 flex-1 bg-transparent px-2 text-base outline-none placeholder:text-[var(--color-ink-faint)]"
+                className="scroll-thin max-h-40 min-w-0 flex-1 resize-none bg-transparent px-2 py-2.5 text-base outline-none placeholder:text-[var(--color-ink-faint)]"
+                style={{
+                  // İçerikle büyüyen yükseklik: `scrollHeight` satır sayısını
+                  // biliyor, JS ölçümüne gerek yok — alanı sıfırlayıp yeniden
+                  // ayarlamak yerine `field-sizing` destekleyen tarayıcıda o
+                  // çalışıyor, desteklemeyende `rows={1}` + max yükseklik.
+                  fieldSizing: "content",
+                } as React.CSSProperties}
                 disabled={busy}
               />
               <button

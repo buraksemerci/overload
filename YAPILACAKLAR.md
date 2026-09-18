@@ -129,6 +129,8 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 
 ## 5. Asistan
 
+- [x] Sohbet kutusu artık çok satırlı: içerikle büyüyor, Enter gönderiyor,
+      Shift+Enter satır atlıyor (uzun istekler tek satıra sığmıyordu)
 - [x] `/chat` bant + büyük örnek kartları + "nasıl çalışıyor" yan sütunu +
       günlük kullanım göstergesi + yapışık yazı alanı
 - [x] `/coach`: haftanın sayıları banda çıktı, rapor metni büyük ve 62ch okuma genişliğinde

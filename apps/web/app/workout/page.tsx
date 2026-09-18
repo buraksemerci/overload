@@ -469,7 +469,9 @@ export default function WorkoutPage() {
         ) : !empty && workout ? (
           <>
             <HeroStats>
-              <HeroStat label="Set" value={`${doneCount}/${steps.length}`} foot="tamamlanan" />
+              {/* Sayaç ÇALIŞMA seti sayıyor: ısınma seti kaydedilebiliyor ama
+                  hacme de bu sayıya da girmiyor. */}
+              <HeroStat label="Set" value={`${doneCount}/${steps.length}`} foot="çalışma seti" />
               <HeroStat
                 label="Süre"
                 value={startedAt ? formatElapsed(now - startedAt) : "—"}

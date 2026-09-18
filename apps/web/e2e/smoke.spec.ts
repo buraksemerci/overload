@@ -263,6 +263,9 @@ test.describe("oturum açıkken", () => {
     /* Klavyeyle gelen kişi her ekranda önce on bağlantılık gezinmeyi geçmek
        zorundaydı. Bağlantı görünmez ama odaklanınca beliriyor. */
     await page.goto("/");
+    // Kabuk basılana kadar bekle: `AuthGate` önce bir yükleme durumu
+    // gösteriyor ve o anda başlıkta bağlantı yok.
+    await expect(page.locator("header a").first()).toBeVisible();
 
     /* Tuş göndermek yerine DOM sırası ölçülüyor: `keyboard.press("Tab")`
        işletim sistemi penceresinin odağına bağlı ve paralel koşan tarayıcılar

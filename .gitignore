@@ -31,6 +31,9 @@ dist/
 # --- Test / araçlar ---
 playwright-report/
 test-results/
+# Geçici ölçüm/ekran görüntüsü testleri: alt çizgiyle başlıyorlar ve
+# depoya girmiyorlar (tur, akış, kayma ölçümü…).
+apps/web/e2e/_*.spec.ts
 .vitest/
 
 # --- Editör / OS ---

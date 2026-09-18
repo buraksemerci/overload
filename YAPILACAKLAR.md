@@ -157,6 +157,10 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 
 ## 7. Kalite
 
+- [x] `app/workout/page.tsx` 1363 satırdı; dört dosyaya bölündü: `model.ts` (adım,
+      taslak, ağırlık biçimi), `stages.tsx` (sahneler), `DayMap.tsx`, `Celebration.tsx`.
+      Sayfa artık yalnızca akış (594 satır).
+
 - [x] e2e testleri yeni tasarıma göre güncellendi (pano, antrenman, beslenme, hoş geldin)
 - [x] Tasarım kuralları testi: yeni ekran `/body` eklendi (124/124 geçti)
 - [x] Tam test paketi (424 e2e koşumu / 212 senaryo, 98 birim) + `pnpm build` başarılı

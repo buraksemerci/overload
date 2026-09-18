@@ -145,6 +145,22 @@ test.describe("beslenme gün görünümü", () => {
     }
   });
 
+  test("ok tuşları günler arasında geziniyor", async ({ page }) => {
+    /* Geçmişe bakarken her gün için küçük bir oka nişan almak gerekiyordu.
+       Alanlara yazarken ve panel açıkken kısayol kapalı. */
+    await page.goto("/nutrition");
+    // Bant başlığında da "Bugün" yazıyor; ölçülen şey gün gezinmesindeki
+    // etiket, o yüzden düğmelerin arasındaki metin seçiliyor.
+    const label = page.getByRole("button", { name: "Önceki gün" }).locator("+ span");
+    await expect(label).toHaveText("Bugün");
+
+    await page.keyboard.press("ArrowLeft");
+    await expect(label).toHaveText("Dün");
+
+    await page.keyboard.press("ArrowRight");
+    await expect(label).toHaveText("Bugün");
+  });
+
   test("gün gezinmesi bugünden ileriye gitmiyor", async ({ page }) => {
     await mockDay(page, []);
     await page.goto("/nutrition");

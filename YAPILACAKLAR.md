@@ -123,6 +123,7 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 ## 4. Beslenme
 
 - [x] `/nutrition` bant (kalan kalori halkası) + öğün fotoğrafları + makrolar + gün gezinmesi
+  - Ok tuşlarıyla gün değiştirme (panel açıkken ve alana yazarken kapalı)
 - [x] `/supplements`: bantta bugün/işaretlenen/tanımlı sayıları, satırlar büyüdü
   - Ada dokununca düzenleme paneli: ad, doz, program; iki adımlı silme.
     (PATCH/DELETE uç noktaları vardı, arayüzde yolu yoktu.)

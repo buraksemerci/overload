@@ -27,6 +27,7 @@
  */
 
 import { useMemo, useState } from "react";
+import { useHotkeys } from "@/lib/device";
 import Link from "next/link";
 import { Meter, Ring } from "@/components/Charts";
 import { FoodSheet, type SheetMode } from "@/components/FoodSheet";
@@ -72,6 +73,18 @@ export default function NutritionPage() {
   // Odaktaki öğün saate göre başlıyor ama kilitli değil.
   const [focused, setFocused] = useState<string>(() => currentMeal());
   const [sheet, setSheet] = useState<SheetMode | null>(null);
+
+  /* Gün değiştirmek için ok tuşları: geçmişe bakarken her gün için fareyle
+     küçük bir oka nişan almak gerekiyordu. Panel açıkken ya da bir alana
+     yazarken çalışmıyor (`useHotkeys` odağa bakıyor). */
+  useHotkeys(
+    {
+      ArrowLeft: () => setDate((current) => shiftDay(current, -1)),
+      // Bugünden ileri gidilemiyor: gelecekte yenen bir şey yok.
+      ArrowRight: () => setDate((current) => (current === null ? current : shiftDay(current, 1))),
+    },
+    sheet === null,
+  );
 
   const data = day.data;
 

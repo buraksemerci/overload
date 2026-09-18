@@ -197,6 +197,20 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 - [x] Hata ve 404 ekranları uygulamanın dilinde: `app/not-found.tsx` (bantlı 404),
       `app/error.tsx` (tekrar dene + hata kodu), `app/global-error.tsx` (kök düzen
       çökerse satır içi stille okunur bir sayfa)
+- [x] **Fotoğraflar iki boyda**: `scripts/photo-variants.mjs` her kareden 1200
+      piksellik bir varyant (`<slug>-sm.jpg`) ve varyantı olanların listesini
+      (`lib/photo-sm.ts`) üretiyor. `Photo` `srcset` veriyor, her çağrı yerinde
+      `sizes` var. Panoda ölçüm (1440 px, DPR 1): **1541 kB → 652 kB**.
+  - Liste ŞART: onsuz bileşen her kare için varyant varsayıyordu ve zaten 1200
+    piksel olan öğün kareleri için tarayıcı olmayan dosyayı isteyip 404 alıyordu
+    (beslenme ekranında sayfa başına dört boş istek).
+  - Gezinme örtüsü 1600 pikselin altında küçük varyantı kullanıyor: aynı kare
+    panonun bölüm karolarında da geçtiği için dosya zaten önbellekte — panel
+    sıfır bayta açılıyor. Menü fotoğraflarının ön ısıtması da aynı adayı
+    seçiyor, yoksa telefonda dört kare TAM BOY iniyordu (~900 kB).
+- [x] **Panel açıkken marka yazısı okunmuyordu**: çubuk şeffaf ve "overload"
+      tam da salon penceresinin ışığına denk geliyordu. Çubuk yazıları da
+      panelin bağlantıları gibi gölgeyle okunuyor (`.on-photo-*`).
 
 ---
 

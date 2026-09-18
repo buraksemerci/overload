@@ -775,7 +775,7 @@ function Caption({ phase }: { phase: Phase }) {
 function FlatCard({ phase }: { phase: Phase }) {
   return (
     <section className="card overflow-hidden">
-      <Photo slug={phase.photo} ratio="2 / 1" scrim>
+      <Photo slug={phase.photo} ratio="2 / 1" scrim sizes="(min-width: 1024px) 60rem, 92vw">
         <div className="flex size-full items-end p-6 lg:p-10">
           <Caption phase={phase} />
         </div>

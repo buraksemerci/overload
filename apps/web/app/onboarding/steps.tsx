@@ -355,7 +355,7 @@ function GoalCard({
         transition: "outline-color var(--dur-micro) var(--ease-out)",
       }}
     >
-      <Photo slug={photo} ratio="4 / 3" scrim>
+      <Photo slug={photo} ratio="4 / 3" scrim sizes="(min-width: 1024px) 18rem, 45vw">
         <span className="flex size-full flex-col justify-end p-3 lg:p-4">
           <span className="display block text-lg leading-tight" style={{ color: "oklch(99% 0 0)" }}>
             {label}

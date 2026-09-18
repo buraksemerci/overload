@@ -353,7 +353,13 @@ function FocusedMeal({
 
   return (
     <article className="card grid overflow-hidden lg:col-span-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
-      <Photo slug={MEAL_PHOTO[meal] ?? "meal-lunch"} fill scrim className="min-h-[15rem] lg:min-h-full">
+      <Photo
+        slug={MEAL_PHOTO[meal] ?? "meal-lunch"}
+        fill
+        scrim
+        sizes="(min-width: 1024px) 33vw, 100vw"
+        className="min-h-[15rem] lg:min-h-full"
+      >
         <div className="flex size-full flex-col justify-end p-6 lg:p-8">
           <p className="label on-photo-dark" style={{ color: "var(--color-on-night-faint)" }}>
             Şu an
@@ -434,7 +440,13 @@ function OtherMeals({
               aria-label={`${mealLabel(meal)} öğününe geç`}
               className="card lift block h-32 w-full overflow-hidden text-left lg:h-full lg:min-h-[8.5rem]"
             >
-              <Photo slug={MEAL_PHOTO[meal] ?? "meal-lunch"} fill scrim className="size-full">
+              <Photo
+                slug={MEAL_PHOTO[meal] ?? "meal-lunch"}
+                fill
+                scrim
+                sizes="(min-width: 1024px) 25vw, 100vw"
+                className="size-full"
+              >
                 <div className="flex size-full items-end justify-between gap-3 p-4 lg:p-5">
                   <span className="display on-photo-dark text-xl" style={{ color: "var(--color-on-night)" }}>
                     {mealLabel(meal)}

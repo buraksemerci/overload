@@ -120,6 +120,7 @@ export function Result({
               }
               ratio="21 / 9"
               scrim
+              sizes="(min-width: 1024px) 36rem, 92vw"
             >
               <div className="flex size-full flex-col justify-end p-6">
                 <p className="text-2xs" style={{ color: "oklch(86% 0.01 115)" }}>

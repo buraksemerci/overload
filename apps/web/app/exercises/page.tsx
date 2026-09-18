@@ -142,7 +142,7 @@ export default function ExercisesPage() {
                       borderColor: selected ? "var(--color-accent-deep)" : undefined,
                     }}
                   >
-                    <Photo slug={option.photo} ratio="3 / 2" scrim>
+                    <Photo slug={option.photo} ratio="3 / 2" scrim sizes="(min-width: 1024px) 25vw, 50vw">
                       <div className="flex size-full flex-col justify-end p-5">
                         <p className="display text-lg" style={{ color: "oklch(99% 0 0)" }}>
                           {option.label}

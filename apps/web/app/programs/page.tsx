@@ -364,6 +364,7 @@ function TemplateCard({
         slug={GOAL_PHOTO[template.goal] ?? "app-gym-wide"}
         ratio="3 / 4"
         scrim
+        sizes="(min-width: 1280px) 30vw, (min-width: 640px) 45vw, 90vw"
       >
         <div className="flex size-full flex-col justify-end gap-2.5 p-5">
           <div className="min-w-0">

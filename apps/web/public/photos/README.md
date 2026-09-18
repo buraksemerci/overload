@@ -5,7 +5,39 @@ Bu klasördeki dosyalar `<Photo slug="..." />` bileşeni tarafından
 altındaki nötr işlem katmanı görünüyor. Yani bir fotoğraf eklemek dosyayı bu
 klasöre doğru adla atmaktan ibaret; kod değişmiyor.
 
-Şu an 26 dosya, toplam ~4,5 MB.
+Şu an 26 kare (+ 21 küçük varyant), toplam ~6 MB.
+
+## İki boy
+
+Bantların kaynağı 2400 piksel: retina bir dizüstünde tam genişlik fotoğraf
+için doğru boy, telefondaki 390 piksellik bir karo için israf. Her kareden
+1200 piksellik bir varyant üretiliyor:
+
+```bash
+cd apps/web
+node scripts/photo-variants.mjs
+```
+
+Betik iki şey yapıyor:
+
+1. `<slug>.jpg` → `<slug>-sm.jpg` (1200 piksel, mozjpeg 76) — kare başına
+   ortalama 130 kB daha küçük.
+2. `lib/photo-sm.ts` — hangi karelerin varyantı olduğunun listesi.
+
+`Photo` bileşeni `srcset`i **yalnızca listedeki kareler** için veriyor.
+Liste olmadan bileşen her kare için varyant varsayıyordu ve zaten 1200
+piksel olan öğün kareleri için tarayıcı olmayan dosyayı isteyip 404 alıyordu.
+Yeni bir fotoğraf klasöre atılıp betik koşulmadıysa liste dışında kalıyor ve
+tam boy iniyor — ekran bozulmuyor, sadece dosya büyük oluyor.
+
+Her çağrı yerinde `sizes` var: tarayıcıya kutunun ekranda ne kadar yer
+kapladığı söyleniyor, aday seçimi ona göre yapılıyor. Panoda ölçüm (1440
+piksel, DPR 1): **1541 kB → 652 kB**.
+
+Gezinme panelinin örtüsü tam genişlik olmasına rağmen 1600 pikselin altında
+küçük varyantı kullanıyor: görsel perdenin arkasında, üstünde karartma ve
+yazı var; buna karşılık aynı kare panonun bölüm karolarında da geçtiği için
+dosya zaten önbellekte — panel sıfır bayta açılıyor.
 
 ## Hazırlama
 

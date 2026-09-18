@@ -72,7 +72,14 @@ export function Intro({
       {/* Kap mutlak konumlu: `Photo` kendi kökünü `relative` yapıyor ve
           yüksekliğini dışarıdan alıyor; min-height tek başına 0 bırakıyordu. */}
       <div className="absolute inset-0">
-      <Photo slug="app-chalk" fill scrim position="70% center" className="size-full">
+      <Photo
+        slug="app-chalk"
+        fill
+        scrim
+        position="70% center"
+        sizes="(min-width: 1024px) 60vw, 100vw"
+        className="size-full"
+      >
         <div className="flex size-full flex-col justify-end gap-5 p-8 lg:p-12">
           <p className="label on-photo-dark" style={{ color: "var(--color-on-night-faint)" }}>
             Bugün

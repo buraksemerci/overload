@@ -89,7 +89,7 @@ export function Drawer({
           <div key={group.title}>
             {/* Telefonda fotoğraf grup başlığı olarak: kısa bir şerit, dikey
                 kart ekranın yarısını yiyordu. */}
-            <Photo slug={group.photo} ratio="21 / 9" scrim>
+            <Photo slug={group.photo} ratio="21 / 9" scrim sizes="19rem">
               <div className="flex size-full items-end p-3">
                 <p className="display text-md" style={{ color: "oklch(99% 0 0)" }}>
                   {group.title}

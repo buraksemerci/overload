@@ -103,7 +103,14 @@ export default function BodyPage() {
           {DETAILS.map((detail) => (
             <li key={String(detail.href)}>
               <Link href={detail.href} className="card lift block size-full overflow-hidden">
-                <Photo slug={detail.photo} fill scrim position={detail.position} className="size-full">
+                <Photo
+                  slug={detail.photo}
+                  fill
+                  scrim
+                  position={detail.position}
+                  sizes="(min-width: 1024px) 25vw, 100vw"
+                  className="size-full"
+                >
                   <div className="flex size-full flex-col justify-end p-6">
                     <p className="display on-photo-dark text-2xl" style={{ color: "var(--color-on-night)" }}>
                       {detail.title}

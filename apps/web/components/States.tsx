@@ -85,7 +85,13 @@ export function Empty({
         {/* `w-full` ŞART: oran belirlenmişken yükseklik sabitlenince tarayıcı
             GENİŞLİĞİ orandan türetiyor (304 × 2 = 608 piksel) ve kutu kartın
             dışına taşıp kırpılıyordu — yazının sağı kesiliyordu. */}
-        <Photo slug={photo} ratio="2 / 1" scrim className="min-h-[19rem] w-full sm:min-h-0">
+        <Photo
+          slug={photo}
+          ratio="2 / 1"
+          scrim
+          sizes="(min-width: 1024px) 50vw, 92vw"
+          className="min-h-[19rem] w-full sm:min-h-0"
+        >
           <div className="flex size-full flex-col justify-end gap-3 p-6 lg:p-10">
             <p
               className="display max-w-[24ch] text-xl lg:text-2xl"

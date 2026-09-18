@@ -122,7 +122,13 @@ export function SectionGrid() {
       {SECTIONS.map((section) => (
         <li key={String(section.href)} className={section.className}>
           <Link href={section.href} className="card lift block size-full overflow-hidden">
-            <Photo slug={section.photo} fill scrim className="size-full">
+            <Photo
+              slug={section.photo}
+              fill
+              scrim
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              className="size-full"
+            >
               <div className="flex size-full flex-col justify-end p-6 lg:p-8">
                 <p className="display on-photo-dark text-2xl lg:text-3xl" style={{ color: "var(--color-on-night)" }}>
                   {section.title}

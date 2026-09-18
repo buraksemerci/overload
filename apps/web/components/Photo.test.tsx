@@ -122,4 +122,32 @@ describe("Photo", () => {
     const wrap = container.firstElementChild as HTMLElement;
     expect(wrap.style.background).toBe("");
   });
+
+  it("varyantı olan karede iki aday veriliyor", () => {
+    const { container } = render(<Photo slug="app-plates" sizes="50vw" />);
+    const img = container.querySelector("img")!;
+    expect(img.getAttribute("srcset")).toBe(
+      "/photos/app-plates-sm.jpg 1200w, /photos/app-plates.jpg 2400w",
+    );
+    expect(img.getAttribute("sizes")).toBe("50vw");
+  });
+
+  it("varyantı OLMAYAN karede srcset yok", () => {
+    // Liste dışındaki kare için `srcset` yazmak, tarayıcının olmayan dosyayı
+    // isteyip 404 alması demek: sayfa başına boşa giden istekler.
+    const { container } = render(<Photo slug="meal-lunch" sizes="50vw" />);
+    const img = container.querySelector("img")!;
+    expect(img.getAttribute("srcset")).toBeNull();
+    expect(img.getAttribute("sizes")).toBeNull();
+  });
+
+  it("varyant istenip bulunamazsa tam boya düşüyor", () => {
+    // Liste bayatsa (dosya silinmiş, betik koşmamış) ekranda kırık bir kutu
+    // kalmamalı.
+    const { container } = render(<Photo slug="app-plates" />);
+    const img = container.querySelector("img")!;
+    fireEvent.error(img);
+    expect(img.getAttribute("srcset")).toBeNull();
+    expect(img).toHaveAttribute("src", "/photos/app-plates.jpg");
+  });
 });

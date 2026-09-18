@@ -15,6 +15,7 @@ import {
   type NavGroup,
 } from "@/components/nav/items";
 import { OfflineNote } from "@/components/OfflineNote";
+import { HAS_SMALL } from "@/lib/photo-sm";
 
 /**
  * Uygulama kabuğu — üstte gezinme çubuğu, açılan geniş panel.
@@ -205,13 +206,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
    * "yüklenen kutu" gibi iniyordu.
    *
    * Sayfa açılışını GECİKTİRMEDEN yapılıyor: `requestIdleCallback` ile
-   * tarayıcı boşa çıkınca. Dört dosya toplam ~360 KB ve kullanıcı gezinmeye
-   * dokunana kadar çoktan önbellekte oluyor.
+   * tarayıcı boşa çıkınca. Kullanıcı gezinmeye dokunana kadar çoktan
+   * önbellekte oluyor.
+   *
+   * `srcset` ısınmaya da veriliyor: yoksa telefonda TAM BOY dört kare
+   * iniyordu (~900 kB), oysa çekmecedeki kutu 19rem — orada küçük varyant
+   * gösteriliyor. Isınma ile gerçek kutu aynı adayı seçmezse önbellek
+   * ıskalanıyor ve dosya iki kez iniyor.
    */
   useEffect(() => {
     const warm = () => {
+      /* Masaüstünde fotoğraf çubuğun altındaki panelde tam genişlik;
+         telefonda çekmecedeki 19rem'lik kutuda. `PhotoBackdrop` ve
+         `Drawer` ile aynı değerler. */
+      const wide = window.matchMedia("(min-width: 768px)").matches;
       for (const group of GROUPS) {
         const image = new Image();
+        if (HAS_SMALL.has(group.photo)) {
+          image.sizes = wide ? "(min-width: 1600px) 100vw, 1200px" : "19rem";
+          image.srcset = `/photos/${group.photo}-sm.jpg 1200w, /photos/${group.photo}.jpg 2400w`;
+        }
         image.src = `/photos/${group.photo}.jpg`;
       }
     };
@@ -331,7 +345,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             transitionDuration: "var(--dur-micro)",
           }}
         >
-          <div className={`mx-auto flex h-full items-center px-5 sm:px-8 ${CONTENT_WIDTH}`}>
+          {/* Panel açıkken çubuk şeffaf ve yazılar DOĞRUDAN fotoğrafın
+              üstünde. "overload" tam da salon penceresinin ışığına denk
+              geliyordu ve beyaz yazı kayboluyordu. Panelin kendi bağlantıları
+              gibi çubuk da gölgeyle okunuyor — perde fotoğrafı örterdi.
+              `text-shadow` kalıtımla iniyor, tek yerde veriliyor. */}
+          <div
+            className={`mx-auto flex h-full items-center px-5 sm:px-8 ${CONTENT_WIDTH} ${
+              overPhoto ? tone.shadow : ""
+            }`}
+          >
             <button
               type="button"
               onClick={() => setDrawer(true)}

@@ -76,7 +76,19 @@ export function PhotoBackdrop({
             "linear-gradient(to right, #000 0%, #000 70.6%, transparent 100%)",
         }}
       >
-        <Photo slug={group.photo} fill className="size-full" />
+        {/* Kutu tam genişlik ama görsel PERDE ARKASI: üstünde karartma,
+            sağında zemine soluş, önünde yazı. 1200 pikselik varyant 1440'lık
+            bir ekranda 1,2 kat büyütülüyor ve fark görünmüyor — buna karşılık
+            aynı kare panonun bölüm karolarında da kullanılıyor, yani dosya
+            zaten önbellekte: panel sıfır bayta açılıyor.
+
+            Retina ve 1600 üstü ekranlarda tam boy iniyor. */}
+        <Photo
+          slug={group.photo}
+          fill
+          sizes="(min-width: 1600px) 100vw, 1200px"
+          className="size-full"
+        />
       </div>
 
       {/* --- Menü: ekranın yarısından sonra, alt alta --------------------- */}

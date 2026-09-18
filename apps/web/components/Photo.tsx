@@ -21,9 +21,14 @@
  *      giriyor. Buradaki fotoğraflar elle optimize edilmiş, sabit ve sayıları
  *      az; ek bir katmana ihtiyaç yok.
  *
- * Bedeli: srcset yok. Karşılığı: davranış öngörülebilir ve dosya eklemek
- * kod değişikliği gerektirmiyor. `public/photos/README.md` hangi dosyanın
- * hangi boyutta olması gerektiğini yazıyor.
+ * Karşılığı: davranış öngörülebilir ve dosya eklemek kod değişikliği
+ * gerektirmiyor. `public/photos/README.md` hangi dosyanın hangi boyutta
+ * olması gerektiğini yazıyor.
+ *
+ * `srcset` yine de VAR ama elle: `scripts/photo-variants.mjs` her kareden
+ * 1200 piksellik bir varyant üretiyor ve hangi karelerin varyantı olduğunu
+ * `lib/photo-sm.ts` listesine yazıyor. Optimize edici yok, derleme zamanı
+ * bağımlılığı yok; sadece iki dosya ve bir liste.
  *
  * --------------------------------------------------------------------------
  * METİN HER ZAMAN PERDE ÜSTÜNDE
@@ -34,6 +39,7 @@
  */
 
 import { useState } from "react";
+import { HAS_SMALL } from "@/lib/photo-sm";
 
 /**
  * Dört kenarı saydama götüren maske.
@@ -87,6 +93,12 @@ export function Photo({
    */
   feather = false,
   /**
+   * Tarayıcıya kutunun ekranda ne kadar yer kapladığını söylüyor: `srcset`
+   * seçimi buna göre yapılıyor. Varsayılan tam genişlik (bantlar); karolar
+   * kendi ölçüsünü veriyor.
+   */
+  sizes = "100vw",
+  /**
    * Sayfa açılır açılmaz gereken görsel: giriş bandının fotoğrafı.
    *
    * Varsayılan `lazy` ekranın ALTINDAKİ kartlar için doğru, ama bandın
@@ -106,6 +118,7 @@ export function Photo({
   position?: string;
   fill?: boolean;
   feather?: boolean;
+  sizes?: string;
   eager?: boolean;
 }) {
   /**
@@ -118,8 +131,21 @@ export function Photo({
    * altındaki işlem katmanı kalıyor ve hiçbir an kırık bir şey görünmüyor.
    */
   const [loaded, setLoaded] = useState(false);
+  /**
+   * `srcset` kapalı mı?
+   *
+   * Varyant listesi (`lib/photo-sm.ts`) bayatsa — dosya silinmiş, liste
+   * yenilenmemiş — tarayıcı olmayan varyantı isteyip başarısız oluyor. O
+   * durumda tam boya düşülüyor: ekranda kırık bir kutu kalmıyor.
+   */
+  const [plain, setPlain] = useState(false);
   /** Yüklenen görselin gerçek oranı — `feather` kipinde kutuyu o belirliyor. */
   const [natural, setNatural] = useState<number | null>(null);
+
+  /* Varyantı OLAN karelerde iki aday veriliyor. Listede yoksa (yeni atılmış
+     bir fotoğraf ya da zaten 1200 pikselden dar bir kare) `srcset` hiç
+     yazılmıyor — boşuna 404 istemek yerine tek dosya iniyor. */
+  const small = !plain && HAS_SMALL.has(slug);
 
   const box = feather
     ? {
@@ -157,6 +183,15 @@ export function Photo({
     >
       <img
         src={`/photos/${slug}.jpg`}
+        /* İki boy: bantların kaynağı 2400 piksel (retina dizüstünde tam
+           genişlik), telefonda 390 piksellik bir karo için ise israf. Varyant
+           yarı genişlikte ve kare başına ortalama 130 kB daha küçük. */
+        srcSet={small ? `/photos/${slug}-sm.jpg 1200w, /photos/${slug}.jpg 2400w` : undefined}
+        sizes={small ? sizes : undefined}
+        onError={() => {
+          // Varyant beklendiği yerde yoksa `srcset`i bırak, tam boyu dene.
+          if (small) setPlain(true);
+        }}
         alt={alt}
         loading={eager ? "eager" : "lazy"}
         fetchPriority={eager ? "high" : undefined}

@@ -329,7 +329,13 @@ export function CoachTile({ className }: { className: string }) {
 
   return (
     <Link href="/coach" className={`card lift block overflow-hidden ${className}`}>
-      <Photo slug="app-review" fill scrim className="size-full min-h-[16rem]">
+      <Photo
+        slug="app-review"
+        fill
+        scrim
+        sizes="(min-width: 1024px) 42vw, 100vw"
+        className="size-full min-h-[16rem]"
+      >
         <div className="flex size-full flex-col justify-end p-6 lg:p-8">
           <p className="label on-photo-dark flex items-center gap-2" style={{ color: "var(--color-on-night-faint)" }}>
             {unread && (

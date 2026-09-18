@@ -86,15 +86,18 @@ içinde ekranın büyük sayıları duruyor, altında grafikler ve kartlar geliy
   kayma, hareket azaltma tercihi, "?" düğmesinin dokunma alanı.
 - Düzen kayması (CLS) 15 ekranda ölçülü: masaüstünde en yüksek 0,005, 390
   pikselde 0,024.
+- Fotoğraflar iki boyda (2400 ve 1200 piksel) ve her kutu `sizes` ile ne kadar
+  yer kapladığını söylüyor: panoda 1541 kB yerine 652 kB iniyor. Varyantları
+  `apps/web/scripts/photo-variants.mjs` üretiyor.
 
 ### Testler
 
 ```
 Backend   374  (pytest)      progresif overload, TDEE, güç standartları, öğün önerisi,
                               AI tool sınırları, seed tutarlılığı
-Frontend   98  (Vitest)      tasarım belirteçleri, plaka hesabı, pano istatistikleri,
+Frontend  101  (Vitest)      tasarım belirteçleri, plaka hesabı, pano istatistikleri,
                               kilo hızı, SSE çerçeve ayrıştırıcısı
-E2E       229  (Playwright)  oturum, gezinme, set kaydı, beslenme akışı, kas haritası,
+E2E       232  (Playwright)  oturum, gezinme, set kaydı, beslenme akışı, kas haritası,
                               tasarım kuralları — masaüstü ve mobil profilde iki kez
 ```
 

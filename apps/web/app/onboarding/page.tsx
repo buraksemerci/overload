@@ -120,7 +120,17 @@ function Shell({ children, photo }: { children: React.ReactNode; photo?: string 
       {photo !== undefined && (
         <div aria-hidden className="relative hidden lg:block">
           <div className="fixed top-0 right-0 h-dvh w-[calc(100vw-38rem)]">
-            <Photo slug={photo} fill position="center" className="size-full" eager />
+            <Photo
+              slug={photo}
+              fill
+              position="center"
+              /* Dar ekranda sahne YOK (`hidden lg:block`) ama görsel yine de
+                 indiriliyordu. 1 piksel diyerek tarayıcı en küçük adayı
+                 seçiyor; geniş ekranda sütunun gerçek genişliği veriliyor. */
+              sizes="(min-width: 1024px) calc(100vw - 38rem), 1px"
+              className="size-full"
+              eager
+            />
             <div
               className="absolute inset-0"
               style={{

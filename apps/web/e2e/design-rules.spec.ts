@@ -613,3 +613,33 @@ test("/programs — şablonlar açıkken de en fazla iki volt öğesi", async ({
   const count = await page.evaluate(countVoltFills);
   expect(count, `kütüphane açıkken ${count} volt dolgu var`).toBeLessThanOrEqual(2);
 });
+
+/**
+ * Listede ÇOĞALAN durum işaretleri volt bütçesini bozmuyor.
+ *
+ * "Aldım" işareti volt DOLGUYDU: sekiz supplement tanımlayan biri sekiz volt
+ * dolgu görüyordu. Taklit veride iki satır olduğu için denetim bunu
+ * görmüyordu. İşaret artık volt yıkama + okunur volt tik.
+ */
+test("/supplements — hepsi işaretliyken de volt bütçesi aşılmıyor", async ({ page }) => {
+  await signIn(page);
+  await mockApi(page);
+
+  await page.route("http://localhost:8000/supplements/today", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(
+        ["Kreatin", "D Vitamini", "Omega 3", "Magnezyum", "Çinko", "Protein"].map((name, index) => ({
+          supplement: { id: `s${index}`, name, dose: "1", schedule: "daily", is_active: true },
+          taken: true,
+          due_today: true,
+        })),
+      ),
+    }),
+  );
+
+  await openScreen(page, "/supplements");
+  const count = await page.evaluate(countVoltFills);
+  expect(count, `altı işaretli satırda ${count} volt dolgu var`).toBeLessThanOrEqual(2);
+});

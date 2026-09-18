@@ -110,6 +110,9 @@ fotoğraflar, ödül alacak kalitede UI/UX.
 - [x] Klavye kısayolları: Enter seti kaydeder, dinlenmede Enter atlar, ← → ±15 sn;
       ok tuşları alanlarda adım adım değiştirir. Alana yazarken kısayol kapalı
       (`useHotkeys`), kısayol listesi günün hareketleri sütununun altında yazıyor.
+- [x] Supplement "aldım" işareti volt dolgu yerine volt yıkama + okunur tik:
+      sekiz supplement tanımlayan biri sekiz volt dolgu görüyordu. Denetim testi
+      artık hepsi işaretliyken de ölçüyor.
 - [x] Şablon kartlarındaki "Başlat" volt olmaktan çıktı: kütüphane açıkken ekranda
       dört volt dolgu oluyordu (kural: en fazla iki). Denetim testi artık kütüphane
       AÇIKKEN de ölçüyor — kapalı hâlde ölçtüğü için bunu kaçırmıştı.

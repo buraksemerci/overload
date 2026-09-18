@@ -258,11 +258,14 @@ function Answer({
           transitionDuration: "var(--dur-micro)",
           ...(taken === true
             ? {
-                // Volt DOLGU: ekrandaki tek aksiyon işareti ve kazanılmış
-                // bir durum. Metin `--color-ink`, volt üstünde okunuyor.
-                background: "var(--color-accent)",
-                borderColor: "transparent",
-                color: "var(--color-on-accent)",
+                /* Volt DOLGU değil, volt YIKAMA + okunur volt işaret.
+                   Sekiz supplement tanımlayan biri sekiz volt dolgu
+                   görüyordu: ekran başına bir volt kuralı, listede kendini
+                   çoğaltan bir durum işaretiyle çöküyor. Aynı hue, aynı
+                   "tamam" hissi, bütçeyi bozmadan. */
+                background: "var(--color-accent-wash)",
+                borderColor: "var(--color-accent-deep)",
+                color: "var(--color-accent-deep)",
               }
             : {
                 borderColor: "var(--color-border-strong)",
